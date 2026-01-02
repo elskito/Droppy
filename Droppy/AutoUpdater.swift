@@ -66,39 +66,56 @@ class AutoUpdater {
         // Detailed script with logging and pauses
         let script = """
         #!/bin/bash
-        echo "⬇️  Droppy Update Started..."
         
-        # Wait for app to close
-        echo "Waiting for app to close..."
+        # Colors
+        BLUE='\\033[0;34m'
+        PURPLE='\\033[0;35m'
+        CYAN='\\033[0;36m'
+        GREEN='\\033[0;32m'
+        BOLD='\\033[1m'
+        NC='\\033[0m'
+        
+        clear
+        echo -e "${BLUE}${BOLD}"
+        echo "    ____  ____  ____  ____  ______  __"
+        echo "   / __ \\/ __ \\/ __ \\/ __ \\/ __ \\ \\/ /"
+        echo "  / / / / /_/ / / / / /_/ / /_/ /\\  / "
+        echo " / /_/ / _, _/ /_/ / ____/ ____/ / /  "
+        echo "/_____/_/ |_|\\____/_/   /_/     /_/   "
+        echo -e "${NC}"
+        echo -e "${PURPLE}${BOLD}    >>> NEW UPDATE DETECTED <<<${NC}"
+        echo ""
+        
+        # 1. Wait
+        echo -e "${CYAN}⏳ Closing old version...${NC}"
         sleep 2
         
-        # Mount DMG
-        echo "Mounting Update Image..."
-        hdiutil attach "\(dmgPath)" -nobrowse -mountpoint /Volumes/DroppyUpdate
+        # 2. Mount
+        echo -e "${CYAN}📦 Mounting Update Image...${NC}"
+        hdiutil attach "\(dmgPath)" -nobrowse -mountpoint /Volumes/DroppyUpdate > /dev/null
         
+        # 3. Copy
+        echo -e "${CYAN}🚀 Installing new Droppy...${NC}"
+        # Remove old app
+        rm -rf "\(appPath)"
         # Copy new app
-        echo "Installing Droppy..."
-        echo "Replacing: \(appPath)"
+        cp -R "/Volumes/DroppyUpdate/\(appName)" "\(appPath)"
         
-        # Remove old app (verbose)
-        rm -rfv "\(appPath)"
-        
-        # Copy new app (verbose)
-        cp -Rv "/Volumes/DroppyUpdate/\(appName)" "\(appPath)"
-        
-        # Cleanup
-        echo "Cleaning up..."
-        hdiutil detach /Volumes/DroppyUpdate
+        # 4. Cleanup
+        echo -e "${CYAN}🧹 Cleaning up temporary files...${NC}"
+        hdiutil detach /Volumes/DroppyUpdate > /dev/null
         rm -f "\(dmgPath)"
         
-        # Relaunch
-        echo "🚀 Relaunching Droppy..."
+        # 5. Relaunch
+        echo ""
+        echo -e "${GREEN}${BOLD}✅ UPDATE COMPLETE!${NC}"
+        echo -e "${PURPLE}Droppy is ready to go.${NC}"
+        echo ""
+        echo -e "${BLUE}Starting the new version now...${NC}"
+        
         open -n "\(appPath)"
         
-        echo "✅ Update Complete!"
-        echo "You can close this window."
-        
-        # Remove this script (self-destruct after small delay)
+        # Self-destruct
         (sleep 1 && rm -f "$0") &
         exit
         """
