@@ -52,7 +52,11 @@ struct NotchShelfView: View {
     }
     
     private var shouldShowVisualNotch: Bool {
+        // Always show when expanded or during drag/hover (for drop indication)
         if state.isExpanded { return true }
+        if dragMonitor.isDragging || state.isMouseHovering || state.isDropTargeted { return true }
+        
+        // Hide on external displays when setting is enabled (static state only)
         if hideNotchOnExternalDisplays && !isBuiltInDisplay {
             return false
         }
@@ -71,7 +75,7 @@ struct NotchShelfView: View {
                 )
                 .opacity(shouldShowVisualNotch ? 1.0 : 0.0)
                 .background {
-                    if useTransparentBackground {
+                    if useTransparentBackground && shouldShowVisualNotch {
                         Color.clear
                             .liquidGlass(shape: NotchShape(bottomRadius: state.isExpanded ? 20 : 16))
                     }
