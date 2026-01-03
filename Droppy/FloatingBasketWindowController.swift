@@ -17,10 +17,7 @@ final class FloatingBasketWindowController: NSObject {
     /// Shared instance
     static let shared = FloatingBasketWindowController()
     
-    /// Whether the basket feature is enabled
-    private var showFloatingBasket: Bool {
-        UserDefaults.standard.bool(forKey: "showFloatingBasket")
-    }
+    /// (Removed beta setting property)
     
     /// Prevent re-entrance
     private var isShowingOrHiding = false
