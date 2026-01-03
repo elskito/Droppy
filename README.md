@@ -117,9 +117,9 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-# Fixes
-- **Stability**: Fixed a crash in the notch controller related to high-frequency updates.
-- **Universal**: Confirmed Universal Binary for all macOS architectures.
+# New
+- **Fullscreen Mode**: Droppy now smartly hides when you're playing a game or watching a video in fullscreen (even borderless modes).
+- **Light Mode**: Improved text contrast for notifications and the basket when using Light Mode.
 <!-- CHANGELOG_END -->
 
 ---
