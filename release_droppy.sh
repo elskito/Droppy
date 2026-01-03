@@ -154,7 +154,7 @@ echo "$CASK_CONTENT" > "Casks/droppy.rb"
 
 git add .
 git commit -m "Update Droppy to v$VERSION"
-git push origin main
+git push --force origin main
 
 # 8. Confirmation
 if [ "$3" == "-y" ] || [ "$3" == "--yes" ]; then
