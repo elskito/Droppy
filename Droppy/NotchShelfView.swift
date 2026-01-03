@@ -222,7 +222,7 @@ struct NotchShelfView: View {
             
             Text("Drop!")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundStyle(.primary)
                 .shadow(radius: 2)
         }
         .padding(.horizontal, 20)
@@ -240,7 +240,7 @@ struct NotchShelfView: View {
             
             Text("Open Shelf")
                 .font(.system(size: 15, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundStyle(.primary)
                 .shadow(radius: 2)
         }
         .padding(.horizontal, 20)

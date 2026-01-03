@@ -213,12 +213,12 @@ struct FloatingBasketView: View {
         VStack(spacing: 12) {
             Image(systemName: state.isBasketTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
                 .font(.system(size: 32, weight: .light))
-                .foregroundStyle(state.isBasketTargeted ? .blue : .white.opacity(0.7))
+                .foregroundStyle(state.isBasketTargeted ? .blue : .primary.opacity(0.7))
                 .symbolEffect(.bounce, value: state.isBasketTargeted)
             
             Text(state.isBasketTargeted ? "Drop!" : "Drop files here")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(state.isBasketTargeted ? .white : .white.opacity(0.5))
+                .foregroundStyle(state.isBasketTargeted ? .primary : .secondary)
         }
         .allowsHitTesting(false) // Don't block drag gestures
     }
@@ -234,7 +234,7 @@ struct FloatingBasketView: View {
             HStack {
                 Text("\(state.basketItems.count) item\(state.basketItems.count == 1 ? "" : "s")")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
                 
                 Spacer()
                 
@@ -269,7 +269,7 @@ struct FloatingBasketView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white.opacity(isCloseButtonHovering ? 1.0 : 0.6))
+                        .foregroundStyle(.secondary.opacity(isCloseButtonHovering ? 1.0 : 0.6))
                         .padding(8)
                         .background(Color.white.opacity(isCloseButtonHovering ? 0.25 : 0.1))
                         .clipShape(Circle())
@@ -881,7 +881,7 @@ private struct BasketItemContent: View {
             } else {
                 Text(item.name)
                     .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.85))
+                    .foregroundStyle(isSelected ? .white : .primary.opacity(0.85))
                     .lineLimit(1)
                     .frame(width: 68)
                     .padding(.horizontal, 4)
