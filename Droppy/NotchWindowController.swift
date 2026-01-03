@@ -96,6 +96,7 @@ final class NotchWindowController: NSObject, ObservableObject {
     /// Closes the notch window
     func closeWindow() {
         stopMonitors()
+        notchWindow?.isValid = false  // Mark as invalid before closing
         notchWindow?.close()
         notchWindow = nil
     }
@@ -107,7 +108,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         // Timer for periodic hit test updates (every 30ms)
         // Capture window reference directly to avoid accessing self.notchWindow during potential deallocation
         updateTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
-            guard let self = self, let window = self.notchWindow else {
+            guard let self = self, let window = self.notchWindow, window.isValid else {
                 timer.invalidate()
                 return
             }
@@ -154,7 +155,8 @@ final class NotchWindowController: NSObject, ObservableObject {
 
 class NotchWindow: NSWindow {
     
-    // The notch activation area (centered at top of screen)
+    /// Flag to indicate if the window is still valid for event handling
+    var isValid: Bool = true
     private var notchRect: NSRect {
         guard let screen = NSScreen.main else { return .zero }
         let notchWidth: CGFloat = 180
@@ -196,7 +198,7 @@ class NotchWindow: NSWindow {
     }
     
     deinit {
-        // Monitors are now managed by NotchWindowController
+        isValid = false
     }
     
     func handleGlobalMouseEvent(_ event: NSEvent) {
@@ -228,6 +230,9 @@ class NotchWindow: NSWindow {
     }
     
     func updateMouseEventHandling() {
+        // Early exit if window is being deallocated
+        guard isValid else { return }
+        
         let state = DroppyState.shared
         let dragMonitor = DragMonitor.shared
         
