@@ -27,19 +27,20 @@
 
 Droppy provides a **temporary shelf** for your files. Drag files to the top of your screen (the Notch) or "jiggle" your mouse to summon a Basket right where you are. It's the perfect holding zone when moving files between apps, spaces, or folders.
 
-🚀 **Version 2.3.2 is here!** Now fully **Universal** (Intel & Apple Silicon), with better compression and size guards.
+🚀 **Version 2.5.0 is here!** Now with **"Move To"** Actions (perfect for NAS/Network drives), Async Operations, and Smart Fullscreen Hiding!
 
 ---
 
 ## ✨ Key Features
 
-| Feature | Description |
-| :--- | :--- |
-| **🗂️ Notch Shelf** | Drag files to the Notch. They vanish into a sleek shelf, ready when you are. |
-| **🧺 Floating Basket** | **"Jiggle" your mouse** while dragging to summon a basket instantly at your cursor. |
-| **📉 Smart Compression** | Right-click to compress Images, PDFs, and Videos. Now with **Size Guard** 🛡️ to prevent bloat. |
-| **⚡️ Fast Actions** | Convert images/docs, extract text (OCR), zip, or rename directly in the shelf. |
-| **🖥️ Multi-Monitor** | Works beautifully on external displays. Auto-hides the visual notch if you prefer. |
+|Feature|Description|
+|:---|:---|
+|**🗂️ Notch Shelf**|Drag files to the Notch. They vanish into a sleek shelf, ready when you are.|
+|**🧺 Floating Basket**|**"Jiggle" your mouse** while dragging to summon a basket instantly at your cursor.|
+|**📦 Move To...**|Move files directly to saved folders (like your NAS) from the shelf. **Non-blocking** & fast.|
+|**📉 Smart Compression**|Right-click to compress Images, PDFs, and Videos. Now with **Size Guard** 🛡️ to prevent bloat.|
+|**⚡️ Fast Actions**|Convert images/docs, extract text (OCR), zip, or rename directly in the shelf.|
+|**🖥️ Multi-Monitor**|Works beautifully on external displays. Auto-hides on fullscreen games/videos.|
 
 ---
 
@@ -52,9 +53,10 @@ Droppy provides a **temporary shelf** for your files. Drag files to the top of y
 ### 2. Tweak it 🪄
 - **Hover** over the Notch or Basket to see your files.
 - **Right-click** any item to:
+    - **Move To...** (Quickly send to saved Favorites/NAS).
     - **Compress** (Auto or Target Size).
     - **Convert** (e.g., HEIC towards JPEG).
-    - **extract Text** (Copy text from images).
+    - **Extract Text** (Copy text from images).
     - **Share** or **Reveal in Finder**.
 
 ### 3. Drop it 📤
