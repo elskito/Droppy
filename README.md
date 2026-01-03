@@ -118,8 +118,8 @@ brew install --cask iordv/tap/droppy
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
 # Fixes
-- **Intel Mac Support**: Fixed an issue where the app would not run on Intel-based Macs. Droppy is now a fully persistent Universal Binary.
-- **Universal Build**: Verified support for macOS 14+ on both Apple Silicon and Intel.
+- **Stability**: Fixed a crash in the notch controller related to high-frequency updates.
+- **Universal**: Confirmed Universal Binary for all macOS architectures.
 <!-- CHANGELOG_END -->
 
 ---
