@@ -260,18 +260,10 @@ class NotchWindow: NSWindow {
         let isNativeFullscreen = screen.visibleFrame.equalTo(screen.frame)
         
         // 2. Check frontmost application presentation options (Games/Video Players)
-        // Many games hide the menu bar/dock explicitly without triggering the visibleFrame change immediately
-        var isAppFullscreen = false
-        if let frontApp = NSWorkspace.shared.frontmostApplication {
-            let options = frontApp.presentationOptions
-            // If dragging, we might want to ignore this to allow dropping INTO a fullscreen app (if supported)
-            // But usually, the notch shouldn't overlay a fullscreen game.
-            if options.contains(.hideMenuBar) || options.contains(.fullScreen) {
-                isAppFullscreen = true
-            }
-        }
+        // Note: NSRunningApplication does not expose presentationOptions. 
+        // We rely on visibleFrame check which detects if Menu Bar / Dock are hidden.
         
-        let shouldHide = isNativeFullscreen || isAppFullscreen
+        let shouldHide = isNativeFullscreen
         let newTargetAlpha: CGFloat = shouldHide ? 0.0 : 1.0
         
         // Only trigger animation if the TARGET has changed, not just because current alpha is in flux
