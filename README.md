@@ -38,10 +38,10 @@ brew install --cask iordv/tap/droppy
 3. Right-click → Open (required for unsigned apps)
 
 <!-- CHANGELOG_START -->
-Fixed: Critical 'objc_release' crash in DragMonitor by refactoring pasteboard access.
-Performance: Optimized jiggle detection polling for better CPU efficiency.
-Automation: Fully automated GitHub Releases with binary consistency.
-🛡️ Stability and memory management hardened for production.
+- **Fix**: Resolved an issue where the notch was visible on external displays even when disabled.
+- **Fix**: Fixed a bug where transparent background mode would show the notch on external displays incorrectly.
+- **Feature**: Added "drag-to-reveal" functionality on external displays – the notch now appears when dragging files or hovering to provide visual drop feedback even when hidden.
+- **Improvement**: Added ASCII art logo to the Homebrew Cask installation message.
 <!-- CHANGELOG_END -->
 
 ## Features
