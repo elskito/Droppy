@@ -117,10 +117,8 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-# New
-- **Move Files**: You can now move files directly to a destination (like a network drive/NAS) from the context menu. Droppy remembers your recent destinations for quick access!
-- **Fullscreen Smarts**: Droppy intelligently hides when games or video players are fullscreen.
-- **Light Mode improvements**: Better readability for the light mode interface.
+# Bug Fixes
+- **Move To...**: Fixed an issue where the "Choose Folder..." dialog wouldn't appear for some users.
 <!-- CHANGELOG_END -->
 
 ---
