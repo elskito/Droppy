@@ -10,6 +10,9 @@
 - **Better Image Host Support**: Improved detection for direct image links from sites like Postimg and Imgur.
 - Added a loading indicator for URL previews.
 
+### 🎨 UI Polish
+- **OCR Consistency**: Fixed the button shapes in the "Extracted Text" view to use the app's signature squarcle design instead of pill shapes.
+
 ### 🩹 Stability & Performance
 - Fixed a lag when favoriting items by making disk operations asynchronous.
 - Resolved a critical graphics crash in the Hexagon animated background.

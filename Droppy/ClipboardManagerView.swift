@@ -64,7 +64,7 @@ struct ClipboardManagerView: View {
             Divider().overlay(Color.white.opacity(0.1))
             previewPane
         }
-        .frame(minWidth: 720, maxWidth: .infinity, minHeight: 640, maxHeight: .infinity)
+        .frame(minWidth: 864, maxWidth: .infinity, minHeight: 640, maxHeight: .infinity)
         .background(useTransparentBackground ? Color.clear : Color.black)
         .background {
             if useTransparentBackground {
@@ -478,7 +478,7 @@ struct ClipboardManagerView: View {
             } // Close else
 
         }
-        .frame(width: 300)
+        .frame(width: 360)
         .frame(maxHeight: .infinity) // Sidebar takes full height, but width fixed
         .background(Color.black.opacity(0.3)) // Slight separation for sidebar
     }
@@ -677,7 +677,7 @@ struct ClipboardManagerView: View {
             }
         }
 
-        .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minWidth: 504, maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.2))
     }
 }
