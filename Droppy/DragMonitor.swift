@@ -63,10 +63,10 @@ final class DragMonitor: ObservableObject {
         lastDragDirection = .zero
     }
     
+    private let dragPasteboard = NSPasteboard(name: .drag)
+
     private func checkForActiveDrag() {
-        autoreleasepool {
-            let dragPasteboard = NSPasteboard(name: .drag)
-            let currentChangeCount = dragPasteboard.changeCount
+        let currentChangeCount = dragPasteboard.changeCount
         let mouseIsDown = NSEvent.pressedMouseButtons & 1 != 0
         
         // Detect drag START
@@ -97,13 +97,12 @@ final class DragMonitor: ObservableObject {
             isDragging = false
             dragEndNotified = true
             
-            // Notify controller that drag ended - this will handle auto-hiding if empty
+            // Notify controller that drag ended
             FloatingBasketWindowController.shared.onDragEnded()
             
             resetJiggle()
         }
     }
-}
     
     private func detectJiggle(currentLocation: CGPoint) {
         let dx = currentLocation.x - lastDragLocation.x
