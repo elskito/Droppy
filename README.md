@@ -27,7 +27,7 @@
 
 Droppy provides a **temporary shelf** for your files. Drag files to the top of your screen (the Notch) or "jiggle" your mouse to summon a Basket right where you are. It's the perfect holding zone when moving files between apps, spaces, or folders.
 
-🚀 **Version 2.7.1 is here!** Introducing the **Liquid Clipboard Manager** with Direct Editing, Morphing UI, and rock-solid stability!
+🚀 **Version 2.7.4 is here!** Introducing the **Liquid Update** with a custom redesign, fixed stability, and refined aesthetics!
 
 ---
 
