@@ -140,16 +140,15 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-Release v3.1.5
+Release v3.1.6
 
 New:
+- **Menu Bar Icon**: Droppy now features a custom, polished stencil icon in the menu bar (replacing the generic system symbol).
+- **Branding**: The "About" screen now proudly displays the official App Icon.
+
+Fixed in v3.1.5:
 - **Settings Shortcut**: Added a Settings (gear) icon to the shelf when it's empty.
-
-Fixes:
-- **Crash Fix**: Resolved a timer-related crash in Drag Monitor that could occur during usage.
-
-Fixed in v3.1.4:
-- **Icon Compatibility**: Ensured the new app icon uses the correct PNG format for compatibility with all macOS versions.
+- **Crash Fix**: Resolved a timer-related crash in Drag Monitor.
 <!-- CHANGELOG_END -->
 
 ---
