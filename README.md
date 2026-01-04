@@ -143,12 +143,14 @@ brew install --cask iordv/tap/droppy
 Release v3.0.5
 
 Improvements:
-- Enhanced favorite scroll animation for smoother, more reliable scrolling when favoriting items from further down the list
+- Enhanced favorite scroll animation for smoother, more reliable scrolling when favoriting items
 - Animation now uses easeInOut timing for better coordination with list reordering
 
 Bug Fixes:
-- Fixed critical objc_release crashes in timer callbacks
-- Fixed visual padding consistency between entries list and action buttons
+- Fixed persistent objc_release crash in NotchWindowController with additional safety checks
+- Added contentView validation before timer callbacks
+- Improved isValid flag management to prevent crashes during window deallocation
+- Fixed objc_release crash in DragMonitor
 <!-- CHANGELOG_END -->
 
 ---
