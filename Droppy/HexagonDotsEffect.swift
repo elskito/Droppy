@@ -17,6 +17,9 @@ struct HexagonDotsEffect: View {
     var body: some View {
         GeometryReader { proxy in
             Canvas { context, size in
+                // Early exit if size is invalid
+                guard size.width > 0 && size.height > 0 else { return }
+                
                 // Coordinate transformation:
                 // mouseLocation is in the named coordinate space.
                 // We need to convert it to local space.
@@ -26,12 +29,12 @@ struct HexagonDotsEffect: View {
                     y: mouseLocation.y - myFrame.minY
                 )
                 
-                let spacing: CGFloat = 8 // Much tinier spacing
-                let radius: CGFloat = 0.8 // Much smaller dots
+                let spacing: CGFloat = 10 // Slightly larger spacing for fewer draw calls
+                let radius: CGFloat = 0.8
                 let hexHeight = spacing * sqrt(3) / 2
                 
-                let cols = Int(size.width / spacing) + 2
-                let rows = Int(size.height / hexHeight) + 2
+                let cols = min(Int(size.width / spacing) + 2, 200) // Cap max columns
+                let rows = min(Int(size.height / hexHeight) + 2, 200) // Cap max rows
                 
                 for row in 0..<rows {
                     for col in 0..<cols {
@@ -43,15 +46,10 @@ struct HexagonDotsEffect: View {
                         let distance = sqrt(pow(point.x - localMouse.x, 2) + pow(point.y - localMouse.y, 2))
                         
                         // Effect logic
-                        let limit: CGFloat = 80 // Slightly tighter radius
+                        let limit: CGFloat = 80
                         if isHovering && distance < limit {
-                            let intensity = 1 - (distance / limit) // 0 to 1
-                            
-                            // Scale up
-                            let scale = 1 + (intensity * 0.5) // Reduced scale even further (was 0.8)
-                            
-                            // Opacity boost
-                            // Base 0.02, Max around 0.15 - MUCH more faded
+                            let intensity = 1 - (distance / limit)
+                            let scale = 1 + (intensity * 0.5)
                             let opacity = 0.02 + (intensity * 0.13)
                             
                             let rect = CGRect(
@@ -62,23 +60,26 @@ struct HexagonDotsEffect: View {
                             )
                             
                             context.opacity = opacity
-                            context.fill(Circle().path(in: rect), with: .color(.white))
+                            let path = Circle().path(in: rect)
+                            context.fill(path, with: .color(.white))
                             
                         } else {
                             // Base state
-                            context.opacity = 0.015 // Extremely subtle base opacity (was 0.04)
+                            context.opacity = 0.015
                             let rect = CGRect(
                                 x: x - radius,
                                 y: y - radius,
                                 width: radius * 2,
                                 height: radius * 2
                             )
-                            context.fill(Circle().path(in: rect), with: .color(.white))
+                            let path = Circle().path(in: rect)
+                            context.fill(path, with: .color(.white))
                         }
                     }
                 }
             }
         }
-        .allowsHitTesting(false) // Purely visual
+        .allowsHitTesting(false)
+        .animation(nil, value: mouseLocation) // Disable animations for this view to prevent lag
     }
 }

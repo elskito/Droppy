@@ -935,6 +935,7 @@ struct ClipboardPreviewView: View {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
         panel.showsTagField = false
+        panel.level = .floating // Ensure it appears above the clipboard window
         
         // Configure based on item type
         switch item.type {
@@ -1062,16 +1063,40 @@ struct ClipboardPreviewView: View {
                             .padding(12)
                     } else {
                         VStack(spacing: 16) {
+                            // Loading state
+                            if isLoadingLinkPreview {
+                                VStack(spacing: 12) {
+                                    ProgressView()
+                                        .controlSize(.regular)
+                                    Text("Loading preview...")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(height: 100)
+                            }
                             // Direct image link - show the image
-                            if isDirectImageLink, let previewImage = linkPreviewImage {
-                                Image(nsImage: previewImage)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxHeight: 200)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            else if isDirectImageLink {
+                                if let previewImage = linkPreviewImage {
+                                    Image(nsImage: previewImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(maxHeight: 200)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                } else {
+                                    // Failed to load image
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 32))
+                                            .foregroundStyle(.secondary)
+                                        Text("Image could not be loaded")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(height: 80)
+                                }
                             }
                             // Website preview with metadata
-                            else if !isDirectImageLink {
+                            else {
                                 VStack(spacing: 12) {
                                     // Preview image (if available)
                                     if let previewImage = linkPreviewImage {
@@ -1085,15 +1110,7 @@ struct ClipboardPreviewView: View {
                                     
                                     // Title and domain
                                     VStack(alignment: .leading, spacing: 6) {
-                                        if isLoadingLinkPreview {
-                                            HStack(spacing: 8) {
-                                                ProgressView()
-                                                    .controlSize(.small)
-                                                Text("Loading preview...")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        } else if let title = linkPreviewTitle {
+                                        if let title = linkPreviewTitle {
                                             Text(title)
                                                 .font(.headline)
                                                 .foregroundStyle(.white)
@@ -1336,6 +1353,7 @@ struct ClipboardPreviewView: View {
                     .buttonStyle(.plain)
                     .help("Save to File")
                     .disabled(isSavingFile)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
                     .onHover { hovering in
                         withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                             isDownloadHovering = hovering

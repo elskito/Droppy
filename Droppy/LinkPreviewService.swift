@@ -70,19 +70,14 @@ class LinkPreviewService {
         guard let url = URL(string: urlString) else { return nil }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await URLSession.shared.data(from: url)
             
-            // Verify it's an image response
-            if let httpResponse = response as? HTTPURLResponse,
-               let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type"),
-               contentType.starts(with: "image/") || isDirectImageURL(urlString) {
-                
-                if let image = NSImage(data: data) {
-                    await MainActor.run {
-                        self.imageCache[urlString] = image
-                    }
-                    return image
+            // Try to create image from data - some servers don't return proper content-type
+            if let image = NSImage(data: data) {
+                await MainActor.run {
+                    self.imageCache[urlString] = image
                 }
+                return image
             }
         } catch {
             print("Image fetch error: \(error.localizedDescription)")
