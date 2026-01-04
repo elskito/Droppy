@@ -140,15 +140,14 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-Release v3.1.2
+Release v3.1.3
 
-New:
-- **Brand New Icon**: A fresh "Soft 3D" icon representing the trio of Droppy's tools: Notch Shelf, Floating Basket, and Clipboard Manager.
-- **Icon Rendering Fix**: Resolved an issue where the app icon appeared huge on macOS Sequoia. It now includes proper transparent padding for perfect sizing on all macOS versions (Sequoia, Tahoe, and older).
+Hotfix:
+- **Crash Fix**: Resolved a startup crash related to saving preferences. This ensures the app launches reliably for all users.
 
-Features (from v3.1.1):
-- **Crash Fix**: Resolved a critical crash related to notch interaction monitoring.
-- **Download Stats**: Secure, privacy-first download counting in Settings.
+New in v3.1.2:
+- **Brand New Icon**: A fresh "Soft 3D" icon representing the trio of Droppy's tools.
+- **Icon Rendering Fix**: Resolved an issue where the app icon appeared huge on macOS Sequoia.
 <!-- CHANGELOG_END -->
 
 ---
