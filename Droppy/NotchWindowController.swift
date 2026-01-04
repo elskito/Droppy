@@ -292,14 +292,9 @@ class NotchWindow: NSWindow {
         if self.targetAlpha != newTargetAlpha {
             self.targetAlpha = newTargetAlpha
             
-            // Use NSAnimationContext directly on the main thread without the animator() proxy.
-            // The animator() proxy can spin up background threads (DisplayLink) that are
-            // unstable during high-frequency checks or window lifecycle changes.
-            NSAnimationContext.runAnimationGroup({ [weak self] context in
-                context.duration = 0.5
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                self?.alphaValue = newTargetAlpha
-            }, completionHandler: nil)
+            // Directly set alpha without animation to prevent Core Animation / WindowServer crashes
+            // The previous NSAnimationContext approach caused 'stepTransactionFlush' crashes on some systems
+            self.alphaValue = newTargetAlpha
         }
     }
     
