@@ -275,12 +275,20 @@ struct NotchShelfView: View {
                 
                 Spacer()
                 
-                // Clear button
+                // Clear button OR Settings button (when empty)
                 if !state.items.isEmpty {
                     NotchControlButton(icon: "trash") {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             state.clearAll()
                         }
+                    }
+                    .padding(.trailing, 16)
+                } else {
+                    NotchControlButton(icon: "gearshape") {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            state.isExpanded = false
+                        }
+                        SettingsWindowController.shared.showSettings()
                     }
                     .padding(.trailing, 16)
                 }
