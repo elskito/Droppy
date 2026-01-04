@@ -148,23 +148,28 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-# What's New in v3.2.5
+# What's New in v3.2.6
 
-### 🎨 Major UI Refinements
-- **Settings Sidebar Overhaul**: Navigation tabs now use modern squircle button styling with hover animations
-- **Unified Button Design**: All buttons across Settings now share the same polished squircle style
-- **"Check for Updates" Window**: Replaced the basic alert with a beautiful styled window matching the "Update Available" screen
-- **Buy Me a Coffee Button**: Now styled as a vibrant yellow squircle button with hover effects
+### 💾 Save to File
+- New download button in the clipboard preview pane
+- Save any clipboard item directly to your disk:
+  - Images save as PNG/JPG
+  - Text saves as .txt files
+  - Files are copied to your chosen location
+- Full NSSavePanel integration with format selection
 
-### ✨ Keyboard Shortcut Recorder
-- Completely restyled with new squircle button design
-- Fixed button width to prevent text wrapping when switching between "Record Shortcut" and "Press Keys..."
-- Smooth color morph animation from blue to red when recording
+### 🔗 Link Previews
+- URLs now show rich previews with website metadata:
+  - Page title
+  - Domain name
+  - Preview image when available
+- Direct image URLs (`.png`, `.jpg`, `.gif`, etc.) display the image directly
+- Async loading with cached results for fast re-display
 
-### � Improvements
-- History Limit text field now matches the clipboard search bar styling
-- Wider Settings sidebar to prevent text wrapping
-- Fixed potential race conditions in event handling for improved stability
+### 🎨 Visual Improvements
+- Save button matches the existing squircle icon button styling
+- Smooth loading states with progress indicators
+- Link preview cards with subtle glass background
 <!-- CHANGELOG_END -->
 
 ---
