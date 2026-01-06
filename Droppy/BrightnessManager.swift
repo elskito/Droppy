@@ -243,23 +243,25 @@ final class BrightnessManager: ObservableObject {
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
         timer.schedule(deadline: .now() + 0.5, repeating: .milliseconds(100))
         timer.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            
-            if let current = self.getCurrentBrightness() {
-                self.pollFailCount = 0
-                // Detect if brightness changed (with small threshold to avoid noise)
-                if abs(current - self.lastPolledBrightness) > 0.01 {
-                    self.lastPolledBrightness = current
-                    self.publish(brightness: current, touchDate: true)
-                }
-            } else {
-                // Stop polling if we get too many failures
-                self.pollFailCount += 1
-                if self.pollFailCount > 10 {
-                    print("BrightnessManager: Too many poll failures, stopping")
-                    self.pollTimer?.cancel()
-                    DispatchQueue.main.async {
-                        self.isSupported = false
+            autoreleasepool {
+                guard let self = self else { return }
+                
+                if let current = self.getCurrentBrightness() {
+                    self.pollFailCount = 0
+                    // Detect if brightness changed (with small threshold to avoid noise)
+                    if abs(current - self.lastPolledBrightness) > 0.01 {
+                        self.lastPolledBrightness = current
+                        self.publish(brightness: current, touchDate: true)
+                    }
+                } else {
+                    // Stop polling if we get too many failures
+                    self.pollFailCount += 1
+                    if self.pollFailCount > 10 {
+                        print("BrightnessManager: Too many poll failures, stopping")
+                        self.pollTimer?.cancel()
+                        DispatchQueue.main.async {
+                            self.isSupported = false
+                        }
                     }
                 }
             }
