@@ -163,10 +163,10 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-v4.4.8 - Visual Update
+v4.4.9 - Stability Hotfix
 
-Updates:
-- Updated clipboard manager preview GIF in settings
+Fixes:
+- Fixed potential crash in media key handling (HID race condition)
 <!-- CHANGELOG_END -->
 
 ---
