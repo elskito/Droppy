@@ -261,8 +261,10 @@ final class BrightnessManager: ObservableObject {
         guard isSupported else { return }
         
         print("BrightnessManager: Starting brightness polling")
-        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
-        timer.schedule(deadline: .now() + 0.5, repeating: .milliseconds(100))
+        // CRITICAL: Poll on main thread to avoid XPC/DisplayServices thread safety crashes
+        // DisplayServicesGetBrightness makes XPC calls that are not thread-safe
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + 0.5, repeating: .milliseconds(250)) // Slower polling is acceptable
         timer.setEventHandler { [weak self] in
             autoreleasepool {
                 guard let self = self else { return }
@@ -272,7 +274,8 @@ final class BrightnessManager: ObservableObject {
                     // Detect if brightness changed (with small threshold to avoid noise)
                     if abs(current - self.lastPolledBrightness) > 0.01 {
                         self.lastPolledBrightness = current
-                        self.publish(brightness: current, touchDate: true)
+                        self.lastChangeAt = Date()
+                        self.rawBrightness = current
                     }
                 } else {
                     // Stop polling if we get too many failures
@@ -280,9 +283,7 @@ final class BrightnessManager: ObservableObject {
                     if self.pollFailCount > 10 {
                         print("BrightnessManager: Too many poll failures, stopping")
                         self.pollTimer?.cancel()
-                        DispatchQueue.main.async {
-                            self.isSupported = false
-                        }
+                        self.isSupported = false
                     }
                 }
             }
