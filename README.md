@@ -163,10 +163,10 @@ brew install --cask iordv/tap/droppy
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-v4.4.7 - Visual Update
+v4.4.8 - Visual Update
 
 Updates:
-- New clipboard manager preview GIF
+- Updated clipboard manager preview GIF in settings
 <!-- CHANGELOG_END -->
 
 ---
