@@ -74,24 +74,54 @@ final class DroppyState {
     
     /// Removes an item from the shelf
     func removeItem(_ item: DroppedItem) {
-        item.cleanupIfTemporary()  // Clean up temp file before removing
+        item.cleanupIfTemporary()
         items.removeAll { $0.id == item.id }
         selectedItems.remove(item.id)
+        cleanupTempFoldersIfEmpty()
     }
     
     /// Removes selected items
     func removeSelectedItems() {
+        let itemsToRemove = items.filter { selectedItems.contains($0.id) }
+        for item in itemsToRemove {
+            item.cleanupIfTemporary()
+        }
         items.removeAll { selectedItems.contains($0.id) }
         selectedItems.removeAll()
+        cleanupTempFoldersIfEmpty()
     }
     
     /// Clears all items from the shelf
     func clearAll() {
         for item in items {
-            item.cleanupIfTemporary()  // Clean up each temp file
+            item.cleanupIfTemporary()
         }
         items.removeAll()
         selectedItems.removeAll()
+        cleanupTempFoldersIfEmpty()
+    }
+    
+    /// Cleans up orphaned temp folders when both shelf and basket are empty
+    private func cleanupTempFoldersIfEmpty() {
+        guard items.isEmpty && basketItems.isEmpty else { return }
+        
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory
+        
+        // Clean up DroppyClipboard folder
+        let clipboardDir = tempDir.appendingPathComponent("DroppyClipboard")
+        if fileManager.fileExists(atPath: clipboardDir.path) {
+            try? fileManager.removeItem(at: clipboardDir)
+        }
+        
+        // Clean up DroppyDrops-* folders
+        if let contents = try? fileManager.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil) {
+            for url in contents {
+                if url.lastPathComponent.hasPrefix("DroppyDrops-") {
+                    try? fileManager.removeItem(at: url)
+                }
+            }
+        }
     }
     
     /// Replaces an item in the shelf with a new item (for conversions)
@@ -157,18 +187,20 @@ final class DroppyState {
     
     /// Removes an item from the basket
     func removeBasketItem(_ item: DroppedItem) {
-        item.cleanupIfTemporary()  // Clean up temp file before removing
+        item.cleanupIfTemporary()
         basketItems.removeAll { $0.id == item.id }
         selectedBasketItems.remove(item.id)
+        cleanupTempFoldersIfEmpty()
     }
     
     /// Clears all items from the basket
     func clearBasket() {
         for item in basketItems {
-            item.cleanupIfTemporary()  // Clean up each temp file
+            item.cleanupIfTemporary()
         }
         basketItems.removeAll()
         selectedBasketItems.removeAll()
+        cleanupTempFoldersIfEmpty()
     }
     
     /// Moves all basket items to the shelf

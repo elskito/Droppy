@@ -678,9 +678,11 @@ struct NotchShelfView: View {
                 
                 // Clear button OR Settings button (when empty)
                 if !state.items.isEmpty {
-                    NotchControlButton(icon: "trash") {
+                    NotchControlButton(icon: "eraser.fill") {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             state.clearAll()
+                            state.isExpanded = false
+                            state.isMouseHovering = false // Reset to hide indicator
                         }
                     }
                     .padding(.trailing, 16)
@@ -958,13 +960,14 @@ extension NotchShelfView {
 
     private var emptyShelfContent: some View {
         HStack(spacing: 12) {
-            Image(systemName: "tray")
+            Image(systemName: state.isDropTargeted ? "tray.and.arrow.down.fill" : "tray")
                 .font(.system(size: 24, weight: .light))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(state.isDropTargeted ? .blue : .white.opacity(0.7))
+                .symbolEffect(.bounce, value: state.isDropTargeted)
             
-            Text(state.isDropTargeted ? "It tickles! Drop it please" : "Drop files here")
+            Text(state.isDropTargeted ? "Drop!" : "Drop files here")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(state.isDropTargeted ? Color.white : Color.white.opacity(0.5))
                 .contentTransition(.numericText())
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -981,6 +984,8 @@ extension NotchShelfView {
                 )
         )
         .padding(EdgeInsets(top: 10, leading: 20, bottom: 20, trailing: 20))
+        .scaleEffect(state.isDropTargeted ? 1.03 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: state.isDropTargeted)
         .onAppear {
             withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
                 dropZoneDashPhase -= 280 // Multiple of 14 (6+8) for smooth loop
@@ -1073,14 +1078,15 @@ struct NotchItemView: View {
                         }
                     } catch {
                         let errorDescription = error.localizedDescription
+                        let itemName = item.name
                         DispatchQueue.main.async {
                             print("Failed to move file: \(errorDescription)")
-                            let alert = NSAlert()
-                            alert.messageText = "Move Failed"
-                            alert.informativeText = "Could not move \(item.name): \(errorDescription)"
-                            alert.alertStyle = .warning
-                            // Check if window is still available to attach sheet, otherwise runModal
-                            alert.runModal()
+                            Task {
+                                await DroppyAlertController.shared.showError(
+                                    title: "Move Failed",
+                                    message: "Could not move \(itemName): \(errorDescription)"
+                                )
+                            }
                         }
                     }
                 }
@@ -1750,6 +1756,8 @@ private struct AutoSelectTextField: NSViewRepresentable {
         
         // Make it the first responder and select all text after a brief delay
         DispatchQueue.main.async {
+            // CRITICAL: Make the window key first so it can receive keyboard input
+            textField.window?.makeKeyAndOrderFront(nil)
             textField.window?.makeFirstResponder(textField)
             textField.selectText(nil)
             textField.currentEditor()?.selectedRange = NSRange(location: 0, length: textField.stringValue.count)

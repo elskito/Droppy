@@ -322,34 +322,33 @@ class ClipboardWindowController: NSObject, NSWindowDelegate {
             return
         }
         
-        // Only show our custom dialog if permissions are actually missing
-        let alert = NSAlert()
-        alert.messageText = "Permissions Required"
-        alert.informativeText = "To work in password fields and all apps, Droppy needs specific permissions:\n\n"
-        
+        // Build message with missing permissions
         var missingPermissions: [String] = []
         if !isAccessibilityTrusted { missingPermissions.append("• Accessibility (for Paste)") }
         if !inputMonitoringOk { missingPermissions.append("• Input Monitoring (for Global Hotkey)") }
         
-        alert.informativeText += missingPermissions.joined(separator: "\n")
-        alert.informativeText += "\n\nPlease enable them in System Settings."
+        let message = "To work in password fields and all apps, Droppy needs:\n\n" +
+            missingPermissions.joined(separator: "\n") +
+            "\n\nPlease enable them in System Settings."
         
-        alert.addButton(withTitle: "Open Settings")
-        alert.addButton(withTitle: "Later")
+        // Save whether input monitoring was the issue for when user clicks Open Settings
+        let needsInputMonitoring = !inputMonitoringOk
         
-        alert.window.level = .floating
-        
-        // Bring app to front to show alert
-        NSApp.activate(ignoringOtherApps: true)
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if !inputMonitoringOk {
-                // Open Input Monitoring (Privacy_ListenEvent)
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
-            } else {
-                // Open Accessibility
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+        // Show styled alert
+        Task { @MainActor in
+            let shouldOpen = await DroppyAlertController.shared.showPermissions(
+                title: "Permissions Required",
+                message: message
+            )
+            
+            if shouldOpen {
+                if needsInputMonitoring {
+                    // Open Input Monitoring (Privacy_ListenEvent)
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
+                } else {
+                    // Open Accessibility
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                }
             }
         }
     }

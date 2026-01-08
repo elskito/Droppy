@@ -12,6 +12,7 @@ enum TempFileType {
     case data(Data, suggestedName: String?)
     case text(String)
     case url(URL)
+    case namedWeblocURL(URL, name: String) // For emails with a subject line
 }
 
 /// Service for managing temporary file lifecycle
@@ -122,6 +123,33 @@ class TemporaryFileStorageService {
                 return fileURL
             } catch {
                 print("❌ TemporaryFileStorageService: Failed to create temp webloc file: \(error)")
+                return nil
+            }
+            
+        case .namedWeblocURL(let url, let name):
+            // Sanitize the name for use as a filename
+            let sanitizedName = name
+                .replacingOccurrences(of: "/", with: "-")
+                .replacingOccurrences(of: ":", with: "-")
+                .replacingOccurrences(of: "\\", with: "-")
+                .trimmingCharacters(in: .whitespaces)
+            let filename = "\(String(sanitizedName.prefix(100))).webloc"
+            let dirURL = tempDir.appendingPathComponent(uuid, isDirectory: true)
+            let fileURL = dirURL.appendingPathComponent(filename)
+            
+            let weblocContent = createWeblocContent(for: url)
+            guard let data = weblocContent.data(using: .utf8) else {
+                print("❌ TemporaryFileStorageService: Failed to create named webloc data")
+                return nil
+            }
+            
+            do {
+                try FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+                try data.write(to: fileURL)
+                print("✅ TemporaryFileStorageService: Created temp named webloc file: \(filename)")
+                return fileURL
+            } catch {
+                print("❌ TemporaryFileStorageService: Failed to create temp named webloc file: \(error)")
                 return nil
             }
         }

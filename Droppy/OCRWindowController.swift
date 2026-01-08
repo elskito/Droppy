@@ -18,58 +18,47 @@ final class OCRWindowController: NSObject {
     }
     
     func show(with text: String) {
-        // If window already exists, update content close and reopen to refresh or just bring to front
-        // For simplicity, close and recreate or just update state if I had an observable object.
-        // Creating a new one ensures clean state.
-        
+        // If window already exists, close and recreate to ensure clean state
         close()
-        
-        let mouseLocation = NSEvent.mouseLocation
-        let windowWidth: CGFloat = 480
-        let windowHeight: CGFloat = 580
-        
-        // Center near mouse but ensure on screen
-        var x = mouseLocation.x - windowWidth / 2
-        var y = mouseLocation.y - windowHeight / 2
-        
-        // Basic screen bounds check
-        if let screen = NSScreen.main {
-            x = max(screen.frame.minX + 20, min(x, screen.frame.maxX - windowWidth - 20))
-            y = max(screen.frame.minY + 20, min(y, screen.frame.maxY - windowHeight - 20))
-        }
-        
-        let frame = NSRect(x: x, y: y, width: windowWidth, height: windowHeight)
-        
-        let panel = NSPanel(
-            contentRect: frame,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.level = .screenSaver // Ensure it floats above Clipboard (.popUpMenu)
-        panel.isMovableByWindowBackground = true // Allow moving
-        panel.hidesOnDeactivate = false
         
         let contentView = OCRResultView(text: text) { [weak self] in
             self?.close()
         }
+        let hostingView = NSHostingView(rootView: contentView)
         
-        panel.contentView = NSHostingView(rootView: contentView)
+        let newWindow = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 400),
+            styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        
+        newWindow.center()
+        newWindow.title = "Extracted Text"
+        newWindow.titlebarAppearsTransparent = true
+        newWindow.titleVisibility = .visible
+        
+        newWindow.isMovableByWindowBackground = false
+        newWindow.backgroundColor = .clear
+        newWindow.isOpaque = false
+        newWindow.hasShadow = true
+        newWindow.isReleasedWhenClosed = false
+        newWindow.level = .screenSaver
+        newWindow.hidesOnDeactivate = false
+        
+        newWindow.contentView = hostingView
         
         // Fade in
-        panel.alphaValue = 0
-        panel.makeKeyAndOrderFront(nil)
+        newWindow.alphaValue = 0
+        NSApp.activate(ignoringOtherApps: true)
+        newWindow.makeKeyAndOrderFront(nil)
         
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.25
-            panel.animator().alphaValue = 1.0
+            newWindow.animator().alphaValue = 1.0
         }
         
-        self.window = panel
+        self.window = newWindow
     }
     
     func close() {

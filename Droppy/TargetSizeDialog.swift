@@ -16,106 +16,61 @@ struct TargetSizeDialogView: View {
     let onCancel: () -> Void
     @AppStorage("useTransparentBackground") private var useTransparentBackground = false
     @State private var targetSizeMB: String = ""
-    @State private var dashPhase: CGFloat = 0
-    @State private var hoverLocation: CGPoint = .zero
-    @State private var isBgHovering: Bool = false
     @State private var isCompressButtonHovering = false
     @State private var isCancelButtonHovering = false
     @State private var inputDashPhase: CGFloat = 0
     
-    private let cornerRadius: CGFloat = 24
-    
     var body: some View {
-        ZStack {
-            // Background with hexagon effect
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(useTransparentBackground ? Color.clear : Color.black)
-                .background {
-                    if useTransparentBackground {
-                        Color.clear
-                            .liquidGlass(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                    }
-                }
-                .overlay {
-                    HexagonDotsEffect(
-                        mouseLocation: hoverLocation,
-                        isHovering: isBgHovering,
-                        coordinateSpaceName: "compressDialog"
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius - 8, style: .continuous)
-                        .stroke(
-                            Color.white.opacity(0.2),
-                            style: StrokeStyle(
-                                lineWidth: 1.5,
-                                lineCap: .round,
-                                dash: [6, 8],
-                                dashPhase: dashPhase
-                            )
-                        )
-                        .padding(12)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 10)
-            
-            // Content
-            VStack(spacing: 20) {
-                // Header
-                HStack {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.blue.gradient)
-                    
-                    VStack(alignment: .leading) {
-                        Text("Compress File")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Text(fileName)
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineLimit(1)
-                    }
-                    
-                    Spacer()
+        VStack(spacing: 0) {
+            // Header
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.blue)
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Compress File")
+                        .font(.headline)
+                    Text(fileName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 
+                Spacer()
+            }
+            .padding(20)
+            
+            Divider()
+                .padding(.horizontal, 20)
+            
+            // Content
+            VStack(spacing: 16) {
                 // Current size info
                 HStack {
-                    Text("Current Size:")
-                        .foregroundStyle(.white.opacity(0.6))
+                    Text("Current Size")
                     Spacer()
                     Text(FileCompressor.formatSize(currentSize))
                         .fontWeight(.medium)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 
-                // Target size input - using same style as rename text field
+                // Target size input
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Target Size (MB)")
+                    Text("Target Size")
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.6))
                     
                     HStack(spacing: 8) {
-                        // Text field with animated dotted border (same as rename)
                         TargetSizeTextField(
                             text: $targetSizeMB,
                             onSubmit: compress,
                             onCancel: onCancel
                         )
-                        .frame(width: 200)
+                        .frame(width: 120)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.black.opacity(0.3))
-                        )
-                        // Animated dotted blue outline (same as rename)
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .stroke(
@@ -130,78 +85,77 @@ struct TargetSizeDialogView: View {
                         )
                         
                         Text("MB")
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                             .font(.system(size: 14, weight: .medium))
                     }
                 }
-                
-                // Buttons
-                HStack(spacing: 12) {
-                    Button {
-                        onCancel()
-                    } label: {
-                        Text("Cancel")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(isCancelButtonHovering ? 0.25 : 0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isCancelButtonHovering)
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovering in
-                        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                            isCancelButtonHovering = isHovering
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Button {
-                        compress()
-                    } label: {
-                        Text("Compress")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(Color.blue.opacity(isCompressButtonHovering ? 1.0 : 0.8))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isCompressButtonHovering)
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { isHovering in
-                        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                            isCompressButtonHovering = isHovering
-                        }
-                    }
-                    .disabled(targetBytes == nil || targetBytes! >= currentSize)
-                    .opacity(targetBytes == nil || targetBytes! >= currentSize ? 0.5 : 1.0)
+            }
+            .padding(20)
+            
+            Divider()
+                .padding(.horizontal, 20)
+            
+            // Action buttons
+            HStack(spacing: 10) {
+                Button {
+                    onCancel()
+                } label: {
+                    Text("Cancel")
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(isCancelButtonHovering ? 0.15 : 0.08))
+                        .foregroundStyle(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
                 }
+                .buttonStyle(.plain)
+                .onHover { h in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                        isCancelButtonHovering = h
+                    }
+                }
+                
+                Spacer()
+                
+                Button {
+                    compress()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Compress")
+                    }
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(isCompressButtonHovering ? 1.0 : 0.8))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { h in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                        isCompressButtonHovering = h
+                    }
+                }
+                .disabled(targetBytes == nil || targetBytes! >= currentSize)
+                .opacity(targetBytes == nil || targetBytes! >= currentSize ? 0.5 : 1.0)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 22)
-            .padding(.bottom, 24)
+            .padding(16)
         }
-        .frame(width: 340, height: 268)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .background(Color.clear)
-        .coordinateSpace(name: "compressDialog")
-        .onContinuousHover(coordinateSpace: .named("compressDialog")) { phase in
-            switch phase {
-            case .active(let location):
-                hoverLocation = location
-                isBgHovering = true
-            case .ended:
-                isBgHovering = false
-            }
-        }
+        .frame(width: 380)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(useTransparentBackground ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.black))
         .onAppear {
-            // Animate dashed borders
-            withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
-                dashPhase -= 280
-            }
+            // Animate input border
             withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
                 inputDashPhase = 6
             }
@@ -336,52 +290,35 @@ class TargetSizeDialogController {
                 }
             )
             
-            let windowWidth: CGFloat = 340
-            let windowHeight: CGFloat = 268
+            let hostingView = NSHostingView(rootView: dialogView)
             
             // Use custom CompressPanel that can become key (like BasketPanel)
             let panel = CompressPanel(
-                contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
-                styleMask: [.borderless, .nonactivatingPanel],
+                contentRect: NSRect(x: 0, y: 0, width: 380, height: 280),
+                styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
             )
             
-            panel.isOpaque = false
+            panel.center()
+            panel.title = "Compress File"
+            panel.titlebarAppearsTransparent = true
+            panel.titleVisibility = .visible
+            
+            panel.isMovableByWindowBackground = false
             panel.backgroundColor = .clear
-            panel.hasShadow = false // We handle shadow in SwiftUI
-            // Position above basket panel (.popUpMenu + 1), so use +2
-            panel.level = NSWindow.Level(Int(NSWindow.Level.popUpMenu.rawValue) + 2)
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            panel.isMovableByWindowBackground = true
+            panel.isOpaque = false
+            panel.hasShadow = true
+            panel.isReleasedWhenClosed = false
+            panel.level = .screenSaver
             panel.hidesOnDeactivate = false
             panel.becomesKeyOnlyIfNeeded = false
-            panel.animationBehavior = .none
-            panel.isReleasedWhenClosed = false
-            
-            // Create SwiftUI hosting view
-            let hostingView = NSHostingView(rootView: dialogView)
-            hostingView.frame = NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight)
-            
-            // CRITICAL: Make hosting view layer-backed and fully transparent
-            hostingView.wantsLayer = true
-            hostingView.layer?.backgroundColor = .clear
             
             panel.contentView = hostingView
             
-            // Center on screen
-            if let screen = NSScreen.main {
-                let screenFrame = screen.frame
-                let x = (screenFrame.width - windowWidth) / 2
-                let y = (screenFrame.height - windowHeight) / 2
-                panel.setFrameOrigin(NSPoint(x: x, y: y))
-            }
-            
             self.window = panel
-            panel.makeKeyAndOrderFront(nil)
-            
-            // Make window accept key events
             NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
         }
     }
     

@@ -1,0 +1,968 @@
+//
+//  OnboardingView.swift
+//  Droppy
+//
+//  Beautiful first-time onboarding wizard for new users
+//
+
+import SwiftUI
+import AppKit
+
+// MARK: - Onboarding Page Model
+
+enum OnboardingPage: Int, CaseIterable {
+    case welcome = 0
+    case shelf
+    case basket
+    case clipboard
+    case huds
+    case alfred
+    case finish
+    
+    var title: String {
+        switch self {
+        case .welcome: return "Welcome to Droppy"
+        case .shelf: return "The Shelf"
+        case .basket: return "Floating Basket"
+        case .clipboard: return "Clipboard History"
+        case .huds: return "System HUDs"
+        case .alfred: return "Alfred Integration"
+        case .finish: return "You're All Set!"
+        }
+    }
+    
+    var subtitle: String {
+        switch self {
+        case .welcome: return "Your files, always within reach"
+        case .shelf: return "Drop files into your notch for quick access"
+        case .basket: return "A floating drop zone that follows your cursor"
+        case .clipboard: return "Never lose copied text or images again"
+        case .huds: return "Beautiful replacements for system controls"
+        case .alfred: return "Add files to Droppy from Alfred"
+        case .finish: return "Start using Droppy"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .welcome: return "sparkles"
+        case .shelf: return "tray.and.arrow.down"
+        case .basket: return "basket"
+        case .clipboard: return "doc.on.clipboard"
+        case .huds: return "slider.horizontal.3"
+        case .alfred: return "command"
+        case .finish: return "checkmark.circle.fill"
+        }
+    }
+}
+
+// MARK: - Onboarding View
+
+struct OnboardingView: View {
+    // Main feature toggles
+    @AppStorage("enableNotchShelf") private var enableShelf = true
+    @AppStorage("enableFloatingBasket") private var enableFloatingBasket = true
+    @AppStorage("enableClipboardBeta") private var enableClipboard = false
+    
+    // Shelf sub-settings
+    @AppStorage("autoShrinkShelf") private var autoShrinkShelf = true
+    @AppStorage("showOpenShelfIndicator") private var showOpenShelfIndicator = true
+    @AppStorage("showDropIndicator") private var showDropIndicator = true
+    
+    // Clipboard sub-settings
+    @AppStorage("clipboardHistoryLimit") private var clipboardHistoryLimit = 50
+    
+    // HUD settings
+    @AppStorage("enableHUDReplacement") private var enableHUDReplacement = true
+    @AppStorage("enableBatteryHUD") private var enableBatteryHUD = true
+    @AppStorage("showMediaPlayer") private var showMediaPlayer = true
+    @AppStorage("autoFadeMediaHUD") private var autoFadeMediaHUD = true
+    
+    @State private var currentPage: OnboardingPage = .welcome
+    @State private var isNextHovering = false
+    @State private var isBackHovering = false
+    @State private var showConfetti = false
+    @State private var pageTransition = false
+    
+    let onComplete: () -> Void
+    
+    var body: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                // Page Content
+                pageContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .id(currentPage) // Force view recreation for animation
+                
+                Divider()
+                    .padding(.horizontal, 20)
+                
+                // Navigation
+                HStack {
+                    // Back button
+                    if currentPage != .welcome {
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                if let prevPage = OnboardingPage(rawValue: currentPage.rawValue - 1) {
+                                    currentPage = prevPage
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text("Back")
+                            }
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(isBackHovering ? 0.15 : 0.1))
+                            .foregroundStyle(.secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { h in
+                            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                                isBackHovering = h
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Page indicators
+                    HStack(spacing: 6) {
+                        ForEach(OnboardingPage.allCases, id: \.rawValue) { page in
+                            Circle()
+                                .fill(page == currentPage ? Color.blue : Color.white.opacity(0.3))
+                                .frame(width: 8, height: 8)
+                                .scaleEffect(page == currentPage ? 1.2 : 1.0)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Next/Done button
+                    Button {
+                        if currentPage == .finish {
+                            onComplete()
+                        } else {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                if let nextPage = OnboardingPage(rawValue: currentPage.rawValue + 1) {
+                                    currentPage = nextPage
+                                    if nextPage == .finish {
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            showConfetti = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(currentPage == .finish ? "Get Started" : "Next")
+                            Image(systemName: currentPage == .finish ? "arrow.right.circle.fill" : "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            (currentPage == .finish ? Color.green : Color.blue)
+                                .opacity(isNextHovering ? 1.0 : 0.85)
+                        )
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { h in
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                            isNextHovering = h
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            
+            // Confetti overlay
+            if showConfetti {
+                OnboardingConfettiView()
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(width: 680, height: 600)
+        .background(Color.black)
+        .clipped()
+    }
+    
+    @ViewBuilder
+    private var pageContent: some View {
+        switch currentPage {
+        case .welcome:
+            welcomePage
+        case .shelf:
+            shelfPage
+        case .basket:
+            basketPage
+        case .clipboard:
+            clipboardPage
+        case .huds:
+            hudsPage
+        case .alfred:
+            alfredPage
+        case .finish:
+            finishPage
+        }
+    }
+    
+    // MARK: - Welcome Page
+    
+    private var welcomePage: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            // App Icon with glow
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.2))
+                    .frame(width: 120, height: 120)
+                    .blur(radius: 30)
+                
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+            }
+            
+            VStack(spacing: 8) {
+                Text("Welcome to Droppy")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Your files, always within reach")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Text("Droppy lives in your notch and gives you quick access to files, clipboard history, media controls, and more.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Spacer()
+        }
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    // MARK: - Shelf Page
+    
+    private var shelfPage: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            
+            // GIF Preview
+            OnboardingGIF(url: "https://i.postimg.cc/jqkPwkRp/Schermopname2026-01-05om22-04-43-ezgif-com-video-to-gif-converter.gif")
+                .frame(maxWidth: 450, maxHeight: 180)
+            
+            VStack(spacing: 8) {
+                Text("The Shelf")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Drop files into your notch for quick access. Hover over the notch to reveal your shelf.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 60)
+            }
+            
+            // Main Toggle
+            Toggle(isOn: $enableShelf) {
+                HStack {
+                    Image(systemName: "tray.and.arrow.down.fill")
+                        .foregroundStyle(.blue)
+                        .font(.title3)
+                    Text("Enable Shelf")
+                        .font(.headline)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 120)
+            
+            // Sub-settings (only visible if enabled)
+            if enableShelf {
+                VStack(spacing: 12) {
+                    Text("Options")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    
+                    HStack(spacing: 30) {
+                        subSettingToggle(
+                            icon: "arrow.down.left.arrow.up.right",
+                            title: "Auto-shrink",
+                            subtitle: "Collapse when mouse leaves",
+                            isOn: $autoShrinkShelf,
+                            color: .orange
+                        )
+                        
+                        subSettingToggle(
+                            icon: "text.bubble",
+                            title: "Show Indicators",
+                            subtitle: "\"Open Shelf\" & \"Drop!\"",
+                            isOn: $showOpenShelfIndicator,
+                            color: .green
+                        )
+                    }
+                }
+                .padding(.horizontal, 40)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+            
+            Text(enableShelf ? "Shelf is enabled" : "Shelf is disabled")
+                .font(.caption)
+                .foregroundStyle(enableShelf ? .green : .secondary)
+            
+            Spacer()
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enableShelf)
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    // MARK: - Basket Page
+    
+    private var basketPage: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            
+            // GIF Preview
+            OnboardingGIF(url: "https://i.postimg.cc/dtHH09fB/Schermopname2026-01-05om22-01-22-ezgif-com-video-to-gif-converter.gif")
+                .frame(maxWidth: 450, maxHeight: 180)
+            
+            VStack(spacing: 8) {
+                Text("Floating Basket")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Jiggle files to summon a floating basket that follows your cursor. Drop files anywhere to collect them.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 60)
+            }
+            
+            // Main Toggle
+            Toggle(isOn: $enableFloatingBasket) {
+                HStack {
+                    Image(systemName: "basket.fill")
+                        .foregroundStyle(.purple)
+                        .font(.title3)
+                    Text("Enable Floating Basket")
+                        .font(.headline)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 120)
+            
+            Text(enableFloatingBasket ? "Basket is enabled" : "Basket is disabled")
+                .font(.caption)
+                .foregroundStyle(enableFloatingBasket ? .green : .secondary)
+            
+            Spacer()
+        }
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    // MARK: - Clipboard Page
+    
+    private var clipboardPage: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            
+            // GIF Preview
+            OnboardingGIF(url: "https://i.postimg.cc/Kvc9c2Kr/Schermopname2026-01-06om18-05-02-ezgif-com-video-to-gif-converter.gif")
+                .frame(maxWidth: 450, maxHeight: 160)
+            
+            VStack(spacing: 8) {
+                Text("Clipboard History")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Access everything you've copied. Search, preview, and paste instantly.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 60)
+            }
+            
+            // Main Toggle
+            Toggle(isOn: $enableClipboard) {
+                HStack {
+                    Image(systemName: "doc.on.clipboard.fill")
+                        .foregroundStyle(.cyan)
+                        .font(.title3)
+                    Text("Enable Clipboard History")
+                        .font(.headline)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 120)
+            
+            if enableClipboard {
+                VStack(spacing: 16) {
+                    // History Limit Slider
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text("History Limit")
+                                .font(.subheadline.weight(.medium))
+                            Spacer()
+                            Text("\(clipboardHistoryLimit) items")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: Binding(
+                            get: { Double(clipboardHistoryLimit) },
+                            set: { clipboardHistoryLimit = Int($0) }
+                        ), in: 10...200, step: 10)
+                        .accentColor(.cyan)
+                    }
+                    .padding(.horizontal, 80)
+                    
+                    // Shortcuts Grid
+                    VStack(spacing: 8) {
+                        Text("Keyboard Shortcuts")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        
+                        HStack(spacing: 24) {
+                            shortcutBadge(keys: ["⌘", "⇧", "Space"], label: "Open")
+                            shortcutBadge(keys: ["⌘", "S"], label: "Search")
+                            shortcutBadge(keys: ["⌘", "C"], label: "Copy")
+                            shortcutBadge(keys: ["⌘", "V"], label: "Paste")
+                            shortcutBadge(keys: ["⌘", "D"], label: "Delete")
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+            
+            Text(enableClipboard ? "Clipboard history is enabled" : "Clipboard history is disabled")
+                .font(.caption)
+                .foregroundStyle(enableClipboard ? .green : .secondary)
+            
+            Spacer()
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enableClipboard)
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    private func shortcutBadge(keys: [String], label: String) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 2) {
+                ForEach(keys, id: \.self) { key in
+                    Text(key)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                        )
+                }
+            }
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+        }
+    }
+    
+    // MARK: - HUDs Page
+    
+    private var hudsPage: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.2))
+                    .frame(width: 70, height: 70)
+                    .blur(radius: 20)
+                
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.orange)
+            }
+            
+            VStack(spacing: 8) {
+                Text("System HUDs")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Beautiful replacements for macOS volume, brightness, battery warnings, and media controls.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 60)
+            }
+            
+            // Main Toggle
+            Toggle(isOn: $enableHUDReplacement) {
+                HStack {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .foregroundStyle(.orange)
+                        .font(.title3)
+                    Text("Replace System HUDs")
+                        .font(.headline)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 120)
+            
+            if enableHUDReplacement {
+                VStack(spacing: 12) {
+                    Text("HUD Options")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    
+                    // HUD toggles grid
+                    HStack(spacing: 24) {
+                        hudToggle(icon: "battery.100", title: "Battery", isOn: $enableBatteryHUD, color: .green)
+                        hudToggle(icon: "play.fill", title: "Media", isOn: $showMediaPlayer, color: .pink)
+                        hudToggle(icon: "clock", title: "Auto-fade", isOn: $autoFadeMediaHUD, color: .blue)
+                    }
+                }
+                .padding(.horizontal, 40)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+            
+            Text(enableHUDReplacement ? "Custom HUDs are enabled" : "Using system HUDs")
+                .font(.caption)
+                .foregroundStyle(enableHUDReplacement ? .green : .secondary)
+            
+            Spacer()
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enableHUDReplacement)
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    // MARK: - Helper Views
+    
+    private func subSettingToggle(icon: String, title: String, subtitle: String, isOn: Binding<Bool>, color: Color) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                isOn.wrappedValue.toggle()
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(isOn.wrappedValue ? color : .secondary)
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(isOn.wrappedValue ? .white : .secondary)
+                Text(subtitle)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(width: 140)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(isOn.wrappedValue ? 0.1 : 0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isOn.wrappedValue ? color.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+            )
+            .scaleEffect(isOn.wrappedValue ? 1.0 : 0.98)
+        }
+        .buttonStyle(OptionButtonStyle())
+    }
+    
+    private func hudToggle(icon: String, title: String, isOn: Binding<Bool>, color: Color) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                isOn.wrappedValue.toggle()
+            }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(isOn.wrappedValue ? color : .secondary)
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(isOn.wrappedValue ? .white : .secondary)
+            }
+            .frame(width: 100, height: 80)
+            .background(Color.white.opacity(isOn.wrappedValue ? 0.1 : 0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isOn.wrappedValue ? color.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+            )
+            .scaleEffect(isOn.wrappedValue ? 1.0 : 0.98)
+        }
+        .buttonStyle(OptionButtonStyle())
+    }
+    
+    // MARK: - Alfred Page
+    
+    private var alfredPage: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            
+            // Alfred Icon
+            Image("AlfredIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+            
+            VStack(spacing: 8) {
+                Text("Alfred Integration")
+                    .font(.title.bold())
+                    .foregroundStyle(.white)
+                
+                Text("Use Alfred to quickly add files to Droppy. Select files in Finder, trigger Alfred, and send them to your Shelf or Basket.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 50)
+            }
+            
+            Button {
+                if let workflowURL = Bundle.main.url(forResource: "Droppy", withExtension: "alfredworkflow") {
+                    NSWorkspace.shared.open(workflowURL)
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Install Alfred Workflow")
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.purple.opacity(0.8))
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+            }
+            .buttonStyle(OptionButtonStyle())
+            
+            Text("Requires Alfred 4+ with Powerpack")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+        }
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    // MARK: - Finish Page
+    
+    private var finishPage: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.2))
+                    .frame(width: 100, height: 100)
+                    .blur(radius: 30)
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 60))
+                    .foregroundStyle(.green)
+            }
+            
+            VStack(spacing: 8) {
+                Text("You're All Set!")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(.green)
+                
+                Text("Droppy is ready to use")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            
+            // Feature summary grid
+            VStack(spacing: 10) {
+                HStack(spacing: 16) {
+                    summaryRow(icon: "tray.and.arrow.down.fill", text: "Shelf", enabled: enableShelf)
+                    summaryRow(icon: "basket.fill", text: "Basket", enabled: enableFloatingBasket)
+                }
+                HStack(spacing: 16) {
+                    summaryRow(icon: "doc.on.clipboard.fill", text: "Clipboard", enabled: enableClipboard)
+                    summaryRow(icon: "slider.horizontal.3", text: "HUDs", enabled: enableHUDReplacement)
+                }
+            }
+            .padding(.vertical, 12)
+            
+            Text("Look for Droppy in your menu bar")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+        }
+        .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+    }
+    
+    private func summaryRow(icon: String, text: String, enabled: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundStyle(enabled ? .green : .secondary)
+                .frame(width: 24)
+            
+            Text(text)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white)
+            
+            Spacer()
+            
+            Image(systemName: enabled ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14))
+                .foregroundStyle(enabled ? .green : .secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(width: 180)
+        .background(Color.white.opacity(enabled ? 0.08 : 0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Confetti View
+
+struct OnboardingConfettiView: View {
+    @State private var particles: [OnboardingParticle] = []
+    @State private var isVisible = true
+    
+    var body: some View {
+        GeometryReader { geo in
+            if isVisible {
+                Canvas { context, size in
+                    for particle in particles {
+                        let rect = CGRect(
+                            x: particle.currentX - particle.size / 2,
+                            y: particle.currentY - particle.size * 0.75,
+                            width: particle.size,
+                            height: particle.size * 1.5
+                        )
+                        context.fill(
+                            RoundedRectangle(cornerRadius: 1).path(in: rect),
+                            with: .color(particle.color.opacity(particle.opacity))
+                        )
+                    }
+                }
+                .onAppear {
+                    createParticles(in: geo.size)
+                    startAnimation()
+                }
+            }
+        }
+    }
+    
+    private func createParticles(in size: CGSize) {
+        let colors: [Color] = [.blue, .green, .yellow, .orange, .pink, .purple, .cyan]
+        
+        for i in 0..<24 {
+            var particle = OnboardingParticle(
+                id: i,
+                x: CGFloat.random(in: 40...(size.width - 40)),
+                startY: size.height + 10,
+                endY: CGFloat.random(in: -20...size.height * 0.3),
+                color: colors[i % colors.count],
+                size: CGFloat.random(in: 5...8),
+                delay: Double(i) * 0.015
+            )
+            particle.currentX = particle.x
+            particle.currentY = particle.startY
+            particles.append(particle)
+        }
+    }
+    
+    private func startAnimation() {
+        for i in 0..<particles.count {
+            let delay = particles[i].delay
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard i < particles.count else { return }
+                withAnimation(.easeOut(duration: 1.2)) {
+                    particles[i].currentY = particles[i].endY
+                    particles[i].currentX = particles[i].x + CGFloat.random(in: -30...30)
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay + 0.9) {
+                guard i < particles.count else { return }
+                withAnimation(.easeIn(duration: 0.3)) {
+                    particles[i].opacity = 0
+                }
+            }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            isVisible = false
+        }
+    }
+}
+
+struct OnboardingParticle: Identifiable {
+    let id: Int
+    let x: CGFloat
+    let startY: CGFloat
+    let endY: CGFloat
+    let color: Color
+    let size: CGFloat
+    let delay: Double
+    var currentX: CGFloat = 0
+    var currentY: CGFloat = 0
+    var opacity: Double = 1
+}
+
+// MARK: - Window Controller
+
+final class OnboardingWindowController: NSObject {
+    static let shared = OnboardingWindowController()
+    
+    private var window: NSWindow?
+    
+    private override init() {
+        super.init()
+    }
+    
+    func show() {
+        guard window == nil else {
+            window?.makeKeyAndOrderFront(nil)
+            return
+        }
+        
+        let contentView = OnboardingView { [weak self] in
+            // Defer to next runloop to avoid releasing view while callback is in progress
+            DispatchQueue.main.async {
+                // Mark onboarding as complete first
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                self?.close()
+            }
+        }
+        
+        let hostingView = NSHostingView(rootView: contentView)
+        
+        window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 600),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window?.titlebarAppearsTransparent = true
+        window?.titleVisibility = .hidden
+        window?.backgroundColor = .black
+        window?.isMovableByWindowBackground = true
+        window?.contentView = hostingView
+        window?.center()
+        window?.level = .floating
+        
+        // Fade in
+        window?.alphaValue = 0
+        window?.makeKeyAndOrderFront(nil)
+        
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
+            window?.animator().alphaValue = 1.0
+        }
+    }
+    
+    func close() {
+        guard let panel = window else { return }
+        
+        // Capture and nil reference AFTER animation to keep window alive
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.2
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            // Now safe to release - animation is done
+            self?.window = nil
+            panel.orderOut(nil)
+        })
+    }
+}
+
+// MARK: - Compact GIF Component for Onboarding
+
+struct OnboardingGIF: View {
+    let url: String
+    
+    var body: some View {
+        AnimatedGIFView(url: url)
+            .aspectRatio(contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.3), location: 0),
+                                .init(color: .white.opacity(0.1), location: 0.5),
+                                .init(color: .black.opacity(0.2), location: 1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+    }
+}
+
+// MARK: - Option Button Style with Press Animation
+
+struct OptionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
+            .contentShape(Rectangle())
+    }
+}

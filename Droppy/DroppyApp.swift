@@ -40,17 +40,17 @@ struct DroppyApp: App {
 
 /// App delegate to manage application lifecycle and notch window
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Must be stored as property to stay alive (services won't work if deallocated)
+    private let serviceProvider = ServiceProvider()
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Set as accessory app (no dock icon)
         NSApp.setActivationPolicy(.accessory)
         
         // Register Finder Services (right-click menu integration)
-        let serviceProvider = ServiceProvider()
+        // Note: User must manually enable in System Settings > Keyboard > Keyboard Shortcuts > Services
         NSApp.servicesProvider = serviceProvider
-        // Enable Finder services by default on first launch
-        if UserDefaults.standard.object(forKey: "enableFinderServices") == nil {
-            UserDefaults.standard.set(true, forKey: "enableFinderServices")
-        }
+        NSUpdateDynamicServices()  // Refresh Services cache so menu items appear in the list
         
         // Register for URL scheme events (droppy://)
         NSAppleEventManager.shared().setEventHandler(
@@ -119,6 +119,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Start background update scheduler (checks once per day)
         UpdateChecker.shared.startBackgroundChecking()
+        
+        // Show onboarding wizard for first-time users
+        if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                OnboardingWindowController.shared.show()
+            }
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {

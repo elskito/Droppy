@@ -29,6 +29,9 @@ final class FloatingBasketWindowController: NSObject {
     /// Set once when basket appears to avoid layout recalculations
     private(set) var shouldExpandUpward: Bool = true
     
+    /// Keyboard monitor for spacebar Quick Look
+    private var keyboardMonitor: Any?
+    
     private override init() {
         super.init()
     }
@@ -189,6 +192,36 @@ final class FloatingBasketWindowController: NSObject {
         
         basketWindow = panel
         isShowingOrHiding = false
+        
+        // Start keyboard monitor for Quick Look preview
+        startKeyboardMonitor()
+    }
+    
+    /// Starts keyboard monitor for spacebar Quick Look
+    private func startKeyboardMonitor() {
+        stopKeyboardMonitor() // Clean up any existing
+        
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard self?.basketWindow?.isVisible == true,
+                  !DroppyState.shared.basketItems.isEmpty else {
+                return event
+            }
+            
+            // Spacebar triggers Quick Look
+            if event.keyCode == 49 {
+                QuickLookHelper.shared.previewSelectedBasketItems()
+                return nil // Consume the event
+            }
+            return event
+        }
+    }
+    
+    /// Stops the keyboard monitor
+    private func stopKeyboardMonitor() {
+        if let monitor = keyboardMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyboardMonitor = nil
+        }
     }
     
     /// Hides and closes the basket window with smooth animation
@@ -199,6 +232,9 @@ final class FloatingBasketWindowController: NSObject {
         
         DroppyState.shared.isBasketVisible = false
         DroppyState.shared.isBasketTargeted = false
+        
+        // Stop keyboard monitoring
+        stopKeyboardMonitor()
         
         // Smooth fade-out animation
         NSAnimationContext.runAnimationGroup({ context in
@@ -229,7 +265,16 @@ class BasketDragContainer: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         
-        var types: [NSPasteboard.PasteboardType] = [.fileURL, .URL, .string]
+        var types: [NSPasteboard.PasteboardType] = [
+            .fileURL,
+            .URL,
+            .string,
+            // Email types for Mail.app
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeMessageTransfer"),
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeAutomator"),
+            NSPasteboard.PasteboardType("com.apple.mail.message"),
+            NSPasteboard.PasteboardType(UTType.emailMessage.identifier)
+        ]
         types.append(contentsOf: NSFilePromiseReceiver.readableDraggedTypes.map { NSPasteboard.PasteboardType($0) })
         registerForDraggedTypes(types)
     }
@@ -268,7 +313,32 @@ class BasketDragContainer: NSView {
         
         let pasteboard = sender.draggingPasteboard
         
-        // Handle File Promises
+        // Handle Mail.app emails directly via AppleScript
+        let mailTypes: [NSPasteboard.PasteboardType] = [
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeMessageTransfer"),
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeAutomator")
+        ]
+        let isMailAppEmail = mailTypes.contains(where: { pasteboard.types?.contains($0) ?? false })
+        
+        if isMailAppEmail {
+            print("📧 Basket: Mail.app email detected, using AppleScript to export...")
+            
+            Task { @MainActor in
+                let dropLocation = URL(fileURLWithPath: NSTemporaryDirectory())
+                    .appendingPathComponent("DroppyDrops-\(UUID().uuidString)")
+                
+                let savedFiles = await MailHelper.shared.exportSelectedEmails(to: dropLocation)
+                
+                if !savedFiles.isEmpty {
+                    DroppyState.shared.addBasketItems(from: savedFiles)
+                } else {
+                    print("📧 Basket: No emails exported")
+                }
+            }
+            return true
+        }
+        
+        // Handle File Promises (e.g. from Outlook, Photos)
         if let promiseReceivers = pasteboard.readObjects(forClasses: [NSFilePromiseReceiver.self], options: nil) as? [NSFilePromiseReceiver],
            !promiseReceivers.isEmpty {
             

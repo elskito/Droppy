@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("showOpenShelfIndicator") private var showOpenShelfIndicator = true
     @AppStorage("showDropIndicator") private var showDropIndicator = true
     @AppStorage("hideNotchOnExternalDisplays") private var hideNotchOnExternalDisplays = false
+    @AppStorage("hideNotchFromScreenshots") private var hideNotchFromScreenshots = false
     
     // HUD and Media Player settings
     @AppStorage("enableHUDReplacement") private var enableHUDReplacement = true
@@ -33,12 +34,13 @@ struct SettingsView: View {
     @State private var hoverFeatures = false
     @State private var hoverClipboard = false
     @State private var hoverAppearance = false
-    @State private var hoverIndicators = false
+    @State private var hoverAccessibility = false
     @State private var hoverIntegrations = false
     @State private var hoverAbout = false
     @State private var isCoffeeHovering = false
     @State private var isAlfredHovering = false
-    @State private var isRaycastHovering = false
+    @State private var isFinderHovering = false
+    @State private var isIntroHovering = false
     @State private var scrollOffset: CGFloat = 0
     
     var body: some View {
@@ -48,7 +50,7 @@ struct SettingsView: View {
                     sidebarButton(title: "Features", icon: "star.fill", tag: "Features", isHovering: $hoverFeatures)
                     sidebarButton(title: "Clipboard", icon: "doc.on.clipboard", tag: "Clipboard", isHovering: $hoverClipboard)
                     sidebarButton(title: "Appearance", icon: "paintbrush.fill", tag: "Appearance", isHovering: $hoverAppearance)
-                    sidebarButton(title: "Indicators", icon: "hand.point.up.left.fill", tag: "Indicators", isHovering: $hoverIndicators)
+                    sidebarButton(title: "Accessibility", icon: "accessibility", tag: "Accessibility", isHovering: $hoverAccessibility)
                     sidebarButton(title: "Integrations", icon: "puzzlepiece.extension.fill", tag: "Integrations", isHovering: $hoverIntegrations)
                     sidebarButton(title: "About", icon: "info.circle.fill", tag: "About", isHovering: $hoverAbout)
                     
@@ -93,7 +95,7 @@ struct SettingsView: View {
                             clipboardSettings
                         } else if selectedTab == "Appearance" {
                             appearanceSettings
-                        } else if selectedTab == "Indicators" {
+                        } else if selectedTab == "Accessibility" {
                             indicatorsSettings
                         } else if selectedTab == "Integrations" {
                             integrationsSettings
@@ -401,22 +403,6 @@ struct SettingsView: View {
     
     private var integrationsSettings: some View {
         Group {
-            // MARK: Finder Services
-            Section {
-                Toggle(isOn: $enableFinderServices) {
-                    VStack(alignment: .leading) {
-                        Text("Finder Right-Click Menu")
-                        Text("Add \"Add to Droppy Shelf\" and \"Add to Droppy Basket\" to Finder's Services menu")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Text("Finder Integration")
-            } footer: {
-                Text("Right-click files → Services → Add to Droppy. No installation required!")
-            }
-            
             // MARK: Alfred Integration
             Section {
                 VStack(alignment: .leading, spacing: 12) {
@@ -476,39 +462,38 @@ struct SettingsView: View {
                 Text("Requires Alfred 4+ with Powerpack.")
             }
             
-            // MARK: Raycast Integration
+            // MARK: Finder Services
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 14) {
-                        // Raycast Icon (bundled locally for instant loading)
-                        Image("RaycastIcon")
+                        // Official macOS Finder icon
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app"))
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 44, height: 44)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Raycast Integration")
+                            Text("Finder Integration")
                                 .font(.headline)
                             
-                            Text("Select files in Finder and push them to Droppy with Raycast commands. Works with or without files selected.")
+                            Text("Right-click files in Finder and add them to Droppy via the Services menu. Supports both Shelf and Basket destinations.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             
                             Button {
-                                // Install the Raycast extension by copying to ~/.config/raycast/extensions/
-                                installRaycastExtension()
+                                FinderServicesSetupWindowController.shared.show()
                             } label: {
                                 HStack(spacing: 8) {
-                                    Text("Install in Raycast")
+                                    Text("Setup Guide")
                                         .fontWeight(.semibold)
-                                    Image(systemName: "arrow.down.circle.fill")
+                                    Image(systemName: "arrow.up.right")
                                         .font(.caption.weight(.semibold))
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
-                                .background(Color.orange.opacity(isRaycastHovering ? 1.0 : 0.8))
+                                .background(Color.blue.opacity(isFinderHovering ? 1.0 : 0.8))
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                 .overlay(
@@ -519,7 +504,7 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                             .onHover { hovering in
                                 withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                                    isRaycastHovering = hovering
+                                    isFinderHovering = hovering
                                 }
                             }
                             .padding(.top, 4)
@@ -528,9 +513,9 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 8)
             } header: {
-                Text("Raycast")
+                Text("Finder")
             } footer: {
-                Text("Installs to ~/.config/raycast/extensions/droppy")
+                Text("Requires one-time setup in System Settings.")
             }
         }
     }
@@ -629,10 +614,23 @@ struct SettingsView: View {
                 if showDropIndicator {
                     FeaturePreviewImage(url: "https://i.postimg.cc/RhL3vxcz/image.png")
                 }
+                
+                Toggle(isOn: $hideNotchFromScreenshots) {
+                    VStack(alignment: .leading) {
+                        Text("Hide from Screenshots")
+                        Text("Exclude the notch area from screenshots and screen recordings")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .onChange(of: hideNotchFromScreenshots) { _, newValue in
+                    // Apply the setting to the notch window
+                    NotchWindowController.shared.updateScreenshotVisibility()
+                }
             } header: {
-                Text("Visual Hints")
+                Text("Accessibility")
             } footer: {
-                Text("Show or hide visual hints and quick-access buttons.")
+                Text("Visual hints, quick-access buttons, and screenshot visibility.")
             }
         }
     }
@@ -641,13 +639,43 @@ struct SettingsView: View {
         Group {
             // MARK: About
             Section {
-            VStack(alignment: .leading) {
-                Text("Droppy")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("Version \(UpdateChecker.shared.currentVersion)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Droppy")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Version \(UpdateChecker.shared.currentVersion)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                Button {
+                    OnboardingWindowController.shared.show()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Introduction")
+                            .fontWeight(.semibold)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(isIntroHovering ? 1.0 : 0.8))
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                        isIntroHovering = hovering
+                    }
+                }
             }
             .padding(.vertical, 8)
             
@@ -807,40 +835,19 @@ struct SettingsView: View {
                     ))
                 }
                 
-                HStack {
-                    VStack(alignment: .leading) {
+                VStack(spacing: 10) {
+                    HStack {
                         Text("History Limit")
-                        Text("Number of items to keep in history")
-                            .font(.caption)
+                        Spacer()
+                        Text("\(clipboardHistoryLimit) items")
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
                     
-                    HStack(spacing: 0) {
-                        AutoSelectNumberField(value: $clipboardHistoryLimit, isEditing: $isHistoryLimitEditing)
-                            .frame(width: 60, height: 24)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(Color.black.opacity(0.3))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(
-                                        Color.accentColor.opacity(isHistoryLimitEditing ? 0.8 : 0),
-                                        style: StrokeStyle(
-                                            lineWidth: 1.5,
-                                            lineCap: .round,
-                                            dash: [3, 3],
-                                            dashPhase: dashPhase
-                                        )
-                                    )
-                            )
-                            .onAppear {
-                                withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
-                                    dashPhase = 6
-                                }
-                            }
-                    }
+                    Slider(value: Binding(
+                        get: { Double(clipboardHistoryLimit) },
+                        set: { clipboardHistoryLimit = Int($0) }
+                    ), in: 10...200, step: 10)
+                    .accentColor(.cyan)
                 }
                 .onChange(of: clipboardHistoryLimit) { _, _ in
                     ClipboardManager.shared.enforceHistoryLimit()
@@ -1009,79 +1016,6 @@ struct SettingsView: View {
             return FileManager.default.displayName(atPath: appURL.path)
         }
         return bundleID
-    }
-    
-    /// Installs the Raycast extension by extracting it to the correct folder
-    private func installRaycastExtension() {
-        // Get the bundled Raycast.zip extension
-        guard let bundledPath = Bundle.main.path(forResource: "Raycast", ofType: "zip") else {
-            showRaycastAlert(success: false, message: "Raycast extension not found in app bundle.")
-            return
-        }
-        
-        // Destination: ~/.config/raycast/extensions/
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let raycastExtDir = homeDir.appendingPathComponent(".config/raycast/extensions")
-        let destPath = raycastExtDir.appendingPathComponent("droppy")
-        
-        do {
-            // Create parent directories if needed
-            try FileManager.default.createDirectory(at: raycastExtDir, withIntermediateDirectories: true)
-            
-            // Remove existing installation
-            if FileManager.default.fileExists(atPath: destPath.path) {
-                try FileManager.default.removeItem(at: destPath)
-            }
-            
-            // Unzip the extension using /usr/bin/unzip
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            process.arguments = ["-o", bundledPath, "-d", raycastExtDir.path]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            process.waitUntilExit()
-            
-            guard process.terminationStatus == 0 else {
-                showRaycastAlert(success: false, message: "Failed to extract extension.")
-                return
-            }
-            
-            // Rename extracted Raycast folder to droppy
-            let extractedPath = raycastExtDir.appendingPathComponent("Raycast")
-            if FileManager.default.fileExists(atPath: extractedPath.path) {
-                try FileManager.default.moveItem(at: extractedPath, to: destPath)
-            }
-            
-            // Success - show alert and offer to open Raycast
-            showRaycastAlert(success: true, message: "Extension installed! Open Raycast and search for \"Add to Droppy\".")
-            
-        } catch {
-            showRaycastAlert(success: false, message: "Failed to install: \(error.localizedDescription)")
-        }
-    }
-    
-    private func showRaycastAlert(success: Bool, message: String) {
-        let alert = NSAlert()
-        alert.messageText = success ? "Raycast Extension Installed" : "Installation Failed"
-        alert.informativeText = message
-        alert.alertStyle = success ? .informational : .warning
-        
-        if success {
-            alert.addButton(withTitle: "Open Raycast")
-            alert.addButton(withTitle: "Done")
-        } else {
-            alert.addButton(withTitle: "OK")
-        }
-        
-        let response = alert.runModal()
-        
-        if success && response == .alertFirstButtonReturn {
-            // Open Raycast
-            if let raycastURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.raycast.macos") {
-                NSWorkspace.shared.open(raycastURL)
-            }
-        }
     }
 }
 // MARK: - Launch Handler

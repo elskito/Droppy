@@ -27,9 +27,10 @@ class AutoUpdater {
                 try launchUpdaterHelper(dmgPath: dmgURL.path)
             } catch {
                 print("AutoUpdater: Installation failed: \(error)")
-                _ = await MainActor.run {
-                    NSAlert(error: error).runModal()
-                }
+                await DroppyAlertController.shared.showError(
+                    title: "Update Failed",
+                    message: error.localizedDescription
+                )
             }
         }
     }
@@ -47,12 +48,10 @@ class AutoUpdater {
             return destinationURL
         } catch {
             print("AutoUpdater: Download failed: \(error)")
-            await MainActor.run {
-                let alert = NSAlert()
-                alert.messageText = "Update Failed"
-                alert.informativeText = "Could not download the update. Please try again later."
-                alert.runModal()
-            }
+            await DroppyAlertController.shared.showError(
+                title: "Update Failed",
+                message: "Could not download the update. Please try again later."
+            )
             return nil
         }
     }

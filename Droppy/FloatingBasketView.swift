@@ -300,7 +300,7 @@ struct FloatingBasketView: View {
                 Button {
                     closeBasket()
                 } label: {
-                    Image(systemName: "xmark")
+                    Image(systemName: "eraser.fill")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(isCloseButtonHovering ? .primary : .secondary)
                         .frame(width: 32, height: 32)
@@ -722,13 +722,15 @@ struct BasketItemView: View {
                         }
                     } catch {
                         let errorDescription = error.localizedDescription
+                        let itemName = item.name
                         DispatchQueue.main.async {
                             print("Failed to move file: \(errorDescription)")
-                            let alert = NSAlert()
-                            alert.messageText = "Move Failed"
-                            alert.informativeText = "Could not move \(item.name): \(errorDescription)"
-                            alert.alertStyle = .warning
-                            alert.runModal()
+                            Task {
+                                await DroppyAlertController.shared.showError(
+                                    title: "Move Failed",
+                                    message: "Could not move \(itemName): \(errorDescription)"
+                                )
+                            }
                         }
                     }
                 }

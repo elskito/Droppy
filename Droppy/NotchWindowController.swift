@@ -28,6 +28,9 @@ final class NotchWindowController: NSObject, ObservableObject {
     /// Monitor for mouse movement when window is active
     private var localMonitor: Any?
     
+    /// Monitor for keyboard events (spacebar for Quick Look)
+    private var keyboardMonitor: Any?
+    
     /// Shared instance
     static let shared = NotchWindowController()
     
@@ -94,7 +97,17 @@ final class NotchWindowController: NSObject, ObservableObject {
         window.orderFrontRegardless()
         
         self.notchWindow = window
+        
+        // Apply screenshot visibility setting
+        updateScreenshotVisibility()
+        
         startMonitors()
+    }
+    
+    /// Updates the window's visibility in screenshots based on user preference
+    func updateScreenshotVisibility() {
+        let hideFromScreenshots = UserDefaults.standard.bool(forKey: "hideNotchFromScreenshots")
+        notchWindow?.sharingType = hideFromScreenshots ? .none : .readOnly
     }
     
     /// Closes the notch window
@@ -166,6 +179,18 @@ final class NotchWindowController: NSObject, ObservableObject {
             self?.handleMouseEvent(event)
             return event
         }
+        
+        // Keyboard monitor for spacebar Quick Look preview
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Only handle spacebar when shelf is expanded and has items
+            if event.keyCode == 49, // Spacebar
+               DroppyState.shared.isExpanded,
+               !DroppyState.shared.items.isEmpty {
+                QuickLookHelper.shared.previewSelectedShelfItems()
+                return nil // Consume the event
+            }
+            return event
+        }
     }
     
     private func fullscreenMonitorLoop() {
@@ -212,6 +237,11 @@ final class NotchWindowController: NSObject, ObservableObject {
         if let monitor = localMonitor {
             NSEvent.removeMonitor(monitor)
             localMonitor = nil
+        }
+        
+        if let monitor = keyboardMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyboardMonitor = nil
         }
     }
     
@@ -365,19 +395,17 @@ class NotchWindow: NSWindow {
         
         let isExpanded = state.isExpanded
         let isHovering = state.isMouseHovering
-        // Note: We no longer check isDragging here - see comment below
         let isDropTargeted = state.isDropTargeted
+        let isDraggingFiles = DragMonitor.shared.isDragging
         
         // Window should accept mouse events when:
         // - Shelf is expanded (need to interact with items)
         // - User is hovering over notch (need click to open)
-        // - Dragon is actively targeted on the notch (isDropTargeted handles this)
-        // NOTE: We don't include isDragging here because that would block the ENTIRE
-        // window area (500x200px) from receiving events by other apps (like Chrome bookmarks bar).
-        // The draggingEntered/Updated callbacks will still fire because the view is registered
-        // for drag types - we just don't block other apps from receiving events in areas
-        // where we return nil from hitTest.
-        let shouldAcceptEvents = isExpanded || isHovering || isDropTargeted
+        // - User is dragging files anywhere (need to receive NSDraggingDestination callbacks)
+        // - Drop is actively targeted on the notch
+        // IMPORTANT: When ignoresMouseEvents = true, NSDraggingDestination methods are ALSO blocked!
+        // We MUST include isDraggingFiles to ensure drag/drop events are received.
+        let shouldAcceptEvents = isExpanded || isHovering || isDropTargeted || isDraggingFiles
         
         // Only update if the value actually needs to change
         if self.ignoresMouseEvents == shouldAcceptEvents {
@@ -436,7 +464,12 @@ class NotchDragContainer: NSView {
             .URL,
             .string,
             NSPasteboard.PasteboardType(UTType.data.identifier),
-            NSPasteboard.PasteboardType(UTType.item.identifier)
+            NSPasteboard.PasteboardType(UTType.item.identifier),
+            // Email types for Mail.app
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeMessageTransfer"),
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeAutomator"),
+            NSPasteboard.PasteboardType("com.apple.mail.message"),
+            NSPasteboard.PasteboardType(UTType.emailMessage.identifier)
         ]
         
         // Add file promise types
@@ -491,7 +524,7 @@ class NotchDragContainer: NSView {
         
         // 2. Check current state
         let isExpanded = DroppyState.shared.isExpanded
-        let isDragging = DroppyState.shared.isDropTargeted // Or check drag monitor if needed
+        let isDragging = DragMonitor.shared.isDragging || DroppyState.shared.isDropTargeted
         
         // 3. Define the active interaction area
         // If expanded, the whole expanded area is interactive
@@ -520,23 +553,58 @@ class NotchDragContainer: NSView {
             if xRange.contains(localPoint.x) && yRange.contains(localPoint.y) {
                  return super.hitTest(point)
             }
+            
+            // ALSO accept drops at the notch area when expanded (user might drop before moving into shelf)
+            if isDragging {
+                guard let notchWindow = self.window as? NotchWindow else { return nil }
+                let realNotchRect = notchWindow.getNotchRect()
+                let mouseScreenPos = NSEvent.mouseLocation
+                if realNotchRect.contains(mouseScreenPos) {
+                    return super.hitTest(point)
+                }
+            }
         }
         
-        // If dragging, ONLY intercept if mouse is directly over the REAL hardware notch
-        // This prevents blocking bookmark bars and other UI elements below the notch
+        // If dragging, intercept if mouse is over notch OR over the expanded shelf area
         if isDragging {
-            // Get actual mouse position in screen coordinates
             let mouseScreenPos = NSEvent.mouseLocation
             
-            // Get the real hardware notch rect (calculated by NotchWindow)
+            // Get the real hardware notch rect
             guard let notchWindow = self.window as? NotchWindow else { return nil }
             let realNotchRect = notchWindow.getNotchRect()
             
-            // Only accept drags that are directly over the real notch
+            // Accept drags over the real notch
             if realNotchRect.contains(mouseScreenPos) {
                 return super.hitTest(point)
             }
-            // Outside the real notch - let the drag pass through to other apps
+            
+            // When expanded, also accept drags over the expanded shelf area
+            if DroppyState.shared.isExpanded {
+                guard let screen = NSScreen.main else { return nil }
+                
+                let expandedWidth: CGFloat = 450
+                let centerX = screen.frame.width / 2
+                let xMin = centerX - expandedWidth / 2
+                let xMax = centerX + expandedWidth / 2
+                
+                let rowCount = ceil(Double(DroppyState.shared.items.count) / 5.0)
+                var expandedHeight = max(1, rowCount) * 110 + 54
+                
+                let shouldShowPlayer = MusicManager.shared.isPlaying || MusicManager.shared.wasRecentlyPlaying
+                if DroppyState.shared.items.isEmpty && shouldShowPlayer && !MusicManager.shared.isPlayerIdle {
+                    expandedHeight += 100
+                }
+                
+                let yMin = screen.frame.height - expandedHeight
+                let yMax = screen.frame.height
+                
+                if mouseScreenPos.x >= xMin && mouseScreenPos.x <= xMax &&
+                   mouseScreenPos.y >= yMin && mouseScreenPos.y <= yMax {
+                    return super.hitTest(point)
+                }
+            }
+            
+            // Outside valid drop zones - let the drag pass through to other apps
             return nil
         }
         
@@ -588,27 +656,71 @@ class NotchDragContainer: NSView {
         return notchRect.contains(screenLocation)
     }
     
+    /// Helper to check if a drag is over the expanded shelf area
+    private func isDragOverExpandedShelf(_ sender: NSDraggingInfo) -> Bool {
+        guard let screen = NSScreen.main else { return false }
+        let dragLocation = sender.draggingLocation
+        
+        // Convert from window coordinates to screen coordinates
+        guard let windowFrame = self.window?.frame else { return false }
+        let screenLocation = NSPoint(x: windowFrame.origin.x + dragLocation.x,
+                                     y: windowFrame.origin.y + dragLocation.y)
+        
+        // Calculate expanded shelf bounds (same logic as hitTest)
+        let expandedWidth: CGFloat = 450
+        let centerX = screen.frame.width / 2
+        let xMin = centerX - expandedWidth / 2
+        let xMax = centerX + expandedWidth / 2
+        
+        // Height calculation
+        let rowCount = ceil(Double(DroppyState.shared.items.count) / 5.0)
+        var expandedHeight = max(1, rowCount) * 110 + 54
+        
+        // Add extra height for media player
+        let shouldShowPlayer = MusicManager.shared.isPlaying || MusicManager.shared.wasRecentlyPlaying
+        if DroppyState.shared.items.isEmpty && shouldShowPlayer && !MusicManager.shared.isPlayerIdle {
+            expandedHeight += 100
+        }
+        
+        let yMin = screen.frame.height - expandedHeight
+        let yMax = screen.frame.height
+        
+        return screenLocation.x >= xMin && screenLocation.x <= xMax &&
+               screenLocation.y >= yMin && screenLocation.y <= yMax
+    }
+    
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        // ONLY accept drags that are directly over the real hardware notch
-        guard isDragOverNotch(sender) else {
+        let overNotch = isDragOverNotch(sender)
+        let isExpanded = DroppyState.shared.isExpanded
+        let overExpandedArea = isExpanded && isDragOverExpandedShelf(sender)
+        
+        // Accept drags over the notch OR over the expanded shelf area
+        guard overNotch || overExpandedArea else {
             return [] // Reject - let drag pass through to other apps
         }
         
-        // Highlight UI
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                DroppyState.shared.isDropTargeted = true
+        // Highlight UI when over a valid drop zone
+        let shouldBeTargeted = (overNotch && !isExpanded) || overExpandedArea
+        if shouldBeTargeted {
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    DroppyState.shared.isDropTargeted = true
+                }
             }
         }
         return .copy
     }
     
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        // Continuously check if we're still over the notch as the user drags
         let overNotch = isDragOverNotch(sender)
+        let isExpanded = DroppyState.shared.isExpanded
+        let overExpandedArea = isExpanded && isDragOverExpandedShelf(sender)
         
         DispatchQueue.main.async {
-            let shouldBeTargeted = overNotch && !DroppyState.shared.isExpanded
+            // Show highlight when:
+            // - Over notch and not expanded (collapsed state trigger)
+            // - Over expanded shelf area (expanded state drop zone)
+            let shouldBeTargeted = (overNotch && !isExpanded) || overExpandedArea
             if DroppyState.shared.isDropTargeted != shouldBeTargeted {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     DroppyState.shared.isDropTargeted = shouldBeTargeted
@@ -616,7 +728,9 @@ class NotchDragContainer: NSView {
             }
         }
         
-        return overNotch ? .copy : []
+        // Accept drops over the notch OR over the expanded shelf area
+        let canDrop = overNotch || overExpandedArea
+        return canDrop ? .copy : []
     }
     
     override func draggingExited(_ sender: NSDraggingInfo?) {
@@ -638,9 +752,12 @@ class NotchDragContainer: NSView {
     }
     
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        // Only accept drops over the real notch OR when shelf is already expanded
-        // (expanded shelf has its own larger drop area for adding more items)
-        if !DroppyState.shared.isExpanded && !isDragOverNotch(sender) {
+        let isExpanded = DroppyState.shared.isExpanded
+        let overNotch = isDragOverNotch(sender)
+        let overExpandedArea = isExpanded && isDragOverExpandedShelf(sender)
+        
+        // Accept drops when over the notch OR over the expanded shelf area
+        if !overNotch && !overExpandedArea {
             return false // Reject - let other apps handle the drop
         }
         
@@ -653,9 +770,36 @@ class NotchDragContainer: NSView {
         
         
         let pasteboard = sender.draggingPasteboard
-
         
-        // 1. Handle File Promises (e.g. from Outlook, Photos)
+        // 1. Handle Mail.app emails directly via AppleScript
+        // Mail.app's file promises are unreliable, so we use AppleScript to export the full .eml file
+        let mailTypes: [NSPasteboard.PasteboardType] = [
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeMessageTransfer"),
+            NSPasteboard.PasteboardType("com.apple.mail.PasteboardTypeAutomator")
+        ]
+        let isMailAppEmail = mailTypes.contains(where: { pasteboard.types?.contains($0) ?? false })
+        
+        if isMailAppEmail {
+            print("📧 Mail.app email detected, using AppleScript to export...")
+            
+            Task { @MainActor in
+                let dropLocation = URL(fileURLWithPath: NSTemporaryDirectory())
+                    .appendingPathComponent("DroppyDrops-\(UUID().uuidString)")
+                
+                let savedFiles = await MailHelper.shared.exportSelectedEmails(to: dropLocation)
+                
+                if !savedFiles.isEmpty {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        DroppyState.shared.addItems(from: savedFiles)
+                    }
+                } else {
+                    print("📧 No emails exported, AppleScript may need user permission")
+                }
+            }
+            return true
+        }
+
+        // 2. Handle File Promises (e.g. from Outlook, Photos, other apps)
         if let promiseReceivers = pasteboard.readObjects(forClasses: [NSFilePromiseReceiver.self], options: nil) as? [NSFilePromiseReceiver],
            !promiseReceivers.isEmpty {
             
@@ -663,12 +807,14 @@ class NotchDragContainer: NSView {
             let dropLocation = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("DroppyDrops-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: dropLocation, withIntermediateDirectories: true, attributes: nil)
             
+            // Process file promises asynchronously
             for receiver in promiseReceivers {
                 receiver.receivePromisedFiles(atDestination: dropLocation, options: [:], operationQueue: filePromiseQueue) { fileURL, error in
-                    if let error = error {
-                        print("Error receiving promised file: \(error)")
+                    guard error == nil else {
+                        print("📦 Error receiving promised file: \(error!)")
                         return
                     }
+                    print("📦 Successfully received: \(fileURL)")
                     DispatchQueue.main.async {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             DroppyState.shared.addItems(from: [fileURL])
@@ -691,17 +837,7 @@ class NotchDragContainer: NSView {
             return true
         }
         
-        // 3. Handle Web URLs
-        if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !urls.isEmpty {
-            DispatchQueue.main.async {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    DroppyState.shared.addItems(from: urls)
-                }
-            }
-            return true
-        }
-        
-        // 4. Handle plain text drops - create a .txt file
+        // 3. Handle plain text drops (including web URLs) - create a .txt file
         if let text = pasteboard.string(forType: .string), !text.isEmpty {
             // Create a temp directory for text files
             let dropLocation = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("DroppyDrops-\(UUID().uuidString)")

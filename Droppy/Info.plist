@@ -46,5 +46,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Droppy needs to communicate with Mail to export email messages when you drag them to the shelf or basket.</string>
 </dict>
 </plist>

@@ -182,21 +182,10 @@ struct DroppedItem: Identifiable, Hashable, Transferable {
             finalName = finalName + "." + currentExtension
         }
         
-        let newURL = directory.appendingPathComponent(finalName)
-        
-        print("DroppedItem.renamed: From '\(url.lastPathComponent)' to '\(finalName)'")
-        print("DroppedItem.renamed: Old URL: \(url.path)")
-        print("DroppedItem.renamed: New URL: \(newURL.path)")
+        var newURL = directory.appendingPathComponent(finalName)
         
         // Don't rename if it's the same name
         if newURL.path == url.path {
-            print("DroppedItem.renamed: Same name, no change needed")
-            return nil
-        }
-        
-        // Check if destination already exists
-        if fileManager.fileExists(atPath: newURL.path) {
-            print("DroppedItem.renamed: Cannot rename - file already exists: \(finalName)")
             return nil
         }
         
@@ -206,9 +195,27 @@ struct DroppedItem: Identifiable, Hashable, Transferable {
             return nil
         }
         
+        // If destination exists, auto-increment the filename (like Finder does)
+        if fileManager.fileExists(atPath: newURL.path) {
+            let baseName = newURL.deletingPathExtension().lastPathComponent
+            let ext = newURL.pathExtension
+            var counter = 1
+            
+            while fileManager.fileExists(atPath: newURL.path) {
+                let incrementedName = ext.isEmpty ? "\(baseName) \(counter)" : "\(baseName) \(counter).\(ext)"
+                newURL = directory.appendingPathComponent(incrementedName)
+                counter += 1
+                
+                // Safety limit to prevent infinite loop
+                if counter > 100 {
+                    print("DroppedItem.renamed: Failed - too many duplicates")
+                    return nil
+                }
+            }
+        }
+        
         do {
             try fileManager.moveItem(at: url, to: newURL)
-            print("DroppedItem.renamed: Success! Renamed to \(finalName)")
             return DroppedItem(url: newURL)
         } catch {
             print("DroppedItem.renamed: Failed to rename: \(error.localizedDescription)")
