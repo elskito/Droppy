@@ -5,10 +5,8 @@
 <h1 align="center">Droppy</h1>
 
 <p align="center">
-  <strong>The ultimate productivity tool for macOS.</strong><br>
-  <em>Notch Shelf • Floating Basket • Clipboard Manager • Media Player • Volume & Brightness HUD • Battery HUD</em><br>
-  <br>
-  🆕 <strong>v5.0:</strong> Dynamic Island mode for non-notch Macs • Revamped Settings with native SwiftUI demos • Alfred Integration
+  <strong>Your files. Everywhere. Instantly.</strong><br>
+  <em>Notch Shelf • Floating Basket • Clipboard Manager • Media Player • Custom HUDs</em>
 </p>
 
 <p align="center">
@@ -18,160 +16,50 @@
 </p>
 
 <p align="center">
-  <a href="#installation">Installation</a> •
-  <a href="#key-features">Features</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#whats-new">Changelog</a>
+  <a href="#-installation">Install</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-visual-tour">Screenshots</a> •
+  <a href="#-whats-new">Changelog</a>
 </p>
 
 ---
 
 ## What is Droppy?
 
-Droppy reimagines productivity on macOS by combining six essential tools into one seamless experience:
+**Droppy turns your Mac's notch into a powerful file shelf** — and so much more.
 
-1.  **Notch Shelf**: A sleek holding zone hidden in your webcam notch.
-2.  **🆕 Dynamic Island Mode**: Works on ANY Mac — non-notch displays get a beautiful pill-shaped interface!
-3.  **Floating Basket**: Summon a drop zone anywhere with a quick mouse jiggle.
-4.  **Clipboard Manager**: A powerful history tool with OCR, favorites, and instant search.
-5.  **Media Player**: Beautiful Now Playing embedded in the notch.
-6.  **Custom HUDs**: Gorgeous volume, brightness, and battery overlays that replace the standard system HUDs.
+Drop files into your notch. Shake your mouse to summon a floating basket. Access your entire clipboard history. Control your music. Replace the ugly system volume HUD. All in one beautifully designed app.
 
-It's the perfect bridge between your apps, spaces, and workflow.
+> **Works on ANY Mac** — non-notch displays get a gorgeous Dynamic Island-style pill interface!
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-| Feature | Description |
-|:--------|:------------|
-| **🗂️ Notch Shelf** | Drag files to the Notch — they vanish into a sleek shelf, ready when you need them. |
-| **🧺 Floating Basket** | **"Jiggle" your mouse** while dragging to summon a basket instantly at your cursor. |
-| **📋 Clipboard Manager** | A powerful clipboard history with full **keyboard navigation**, **search**, **favorites**, and **OCR text extraction**. |
-| **🎵 Media Player** | Now Playing controls right in your notch. Album art, seek slider, playback controls with buttery smooth animations. |
-| **🔊 Volume HUD** | Beautiful animated volume indicator with dynamic icons — replaces the ugly system HUD. |
-| **🔆 Brightness HUD** | Elegant brightness overlay with smooth animations. |
-| **🔮 Alfred Integration** | Select files in Finder and push them to Droppy with a quick Alfred action. |
-| **📦 Move To...** | Move files directly to saved folders (like your NAS) from the shelf. Non-blocking & fast. |
-| **📉 Smart Compression** | Right-click to compress images, PDFs, and videos. Includes **Target Size** and **Size Guard** 🛡️. |
-| **⚡️ Fast Actions** | Convert images, extract text (OCR), zip, rename — all directly in the shelf. |
-| **🖥️ Multi-Monitor** | Works on external displays. Auto-hides during fullscreen games and videos. |
+### Core Tools
 
----
+| | Feature | Description |
+|:--|:--------|:------------|
+| 🗂️ | **Notch Shelf** | Drag files to your notch — they vanish into a sleek shelf, ready when you need them |
+| 🧺 | **Floating Basket** | Jiggle your mouse while dragging to summon a basket anywhere on screen |
+| 📋 | **Clipboard Manager** | Full history with search, favorites, OCR text extraction, and drag-out support |
+| 🎵 | **Media Player** | Now Playing controls in your notch with album art and seek slider |
+| 🔊 | **Custom HUDs** | Beautiful volume, brightness, and battery overlays that replace system HUDs |
+| 🔮 | **Alfred Integration** | Push files to Droppy from Alfred with a quick action |
 
-## 🕹️ Usage
+### Power Features
 
-### 1. Stash Files 📥
-- **Notch Shelf**: Drag any file to the black area around your webcam. It snaps in.
-- **Floating Basket**: While dragging, **shake your mouse left-right**. A basket appears instantly.
-
-### 2. Quick Actions 🪄
-Right-click any item to:
-- **Move To...** — Send to saved favorites or NAS folders
-- **Compress** — Auto or specify a target size
-- **Convert** — e.g., HEIC → JPEG
-- **Extract Text** — OCR to copy text from images
-- **Share** or **Reveal in Finder**
-
-### 3. Drop Files 📤
-Drag files out of the shelf and drop into any app — email, Discord, Photoshop, Finder.  
-**Poof** — the file moves and vanishes from the shelf.
-
-### 4. Clipboard Manager 📋
-| Action | How |
-|:-------|:----|
-| **Open** | `Cmd + Shift + Space` (customizable) |
-| **Navigate** | Arrow keys to browse entries |
-| **Paste** | `Enter` to paste instantly |
-| **Search** | `Cmd + F` or click the search icon |
-| **Favorite** | Click ⭐ — favorites float to the top |
-
-### 📥 Smarter Links
-- **Rich Interactive Previews**: Every URL now shows a detailed snippet with page titles, descriptions, and favicons.
-- **Click to Open**: Click any link preview to jump straight to your browser. The clipboard closes automatically for a seamless workflow.
-- **Direct Image Previews**: Links directly to images (`.png`, `.jpg`, `.avif`, etc.) display the actual image directly in your history.
-- **Smart Detection**: Accurate plain-text link detection (even without `http://`) via `NSDataDetector`.
-
-> **Works everywhere** — even in password fields and Terminal, thanks to low-level hotkey support.
+| | Feature | Description |
+|:--|:--------|:------------|
+| 📦 | **Move To...** | Send files directly to saved folder locations (like your NAS) |
+| 📉 | **Smart Compression** | Compress images, PDFs, and videos with auto or target size options |
+| ⚡ | **Fast Actions** | Convert images, extract text (OCR), create ZIPs, rename — all from the shelf |
+| 🖥️ | **Multi-Monitor** | Works on external displays with smart fullscreen detection |
+| 🏝️ | **Dynamic Island** | Non-notch Macs get a beautiful floating pill interface |
 
 ---
 
-## 🎨 Visual Tour
-
-### The Notch Shelf
-*Perfect for MacBook users. Utilizes the empty space around your webcam.*
-<p align="center">
-  <img src="https://i.postimg.cc/jqkPwkRp/Schermopname2026-01-05om22-04-43-ezgif-com-video-to-gif-converter.gif" alt="Notch Shelf Preview" width="100%">
-</p>
-
-### The Floating Basket
-*Summoned anywhere with a quick jiggle. The perfect temporary holding zone.*
-<p align="center">
-  <img src="https://i.postimg.cc/dtHH09fB/Schermopname2026-01-05om22-01-22-ezgif-com-video-to-gif-converter.gif" alt="Floating Basket Preview" width="100%">
-</p>
-
-### The Clipboard Manager
-*Your history, beautifully organized. Search, Edit, and Drag & Drop.*
-<p align="center">
-  <img src="https://i.postimg.cc/Kvc9c2Kr/Schermopname2026-01-06om18-05-02-ezgif-com-video-to-gif-converter.gif" alt="Clipboard Manager Preview" width="100%">
-</p>
-
-### 🆕 Media Player
-*Full Now Playing controls embedded right in your notch. Buttery smooth animations.*
-<p align="center">
-  <img src="https://i.postimg.cc/SKjDMGrP/Schermopname2026-01-07om15-17-29-ezgif-com-video-to-gif-converter.gif" alt="Media Player Preview" width="100%">
-</p>
-
-### 🆕 Volume & Brightness HUD
-*Beautiful overlays that replace the ugly system HUDs. Animated icons and smooth transitions.*
-<p align="center">
-  <img src="https://i.postimg.cc/qqQ3wPMV/Schermopname2026-01-07om15-20-48-ezgif-com-video-to-gif-converter.gif" alt="HUD Preview" width="100%">
-</p>
-
-### 🆕 Battery Charging HUD
-*Elegant charging indicator that appears when you plug in or reach low battery.*
-<p align="center">
-  <img src="https://i.postimg.cc/Fznd6bvv/Schermopname2026-01-07om22-36-08-ezgif-com-video-to-gif-converter.gif" alt="Battery HUD Preview" width="100%">
-</p>
-
----
-
-## 🛠️ Power User Tips
-
-### 📉 Smart Compression
-- **Auto**: Uses HEVC for videos (1080p) and balanced settings for images
-- **Target Size**: Need under 2MB? Right-click → Compress → **Target Size...**
-- **Size Guard**: If compression would make the file larger, Droppy keeps the original and shows a Green Shield 🛡️
-
-### 📝 Drag-and-Drop OCR
-1. Drag an image into Droppy
-2. Hold **Shift** while dragging it out
-3. Drop into a text editor — **it's text!**
-
----
-
-## 🔮 Alfred Integration
-
-Use Droppy directly from Alfred! Select files anywhere and push them to your Shelf or Basket with a quick action.
-
-### Installation
-1. Open **Droppy Settings** → **About**
-2. Click **"Install in Alfred"**
-3. Alfred will prompt to import the workflow
-
-### Usage
-1. Select files in Finder
-2. Activate Alfred (`⌘ + Space`)
-3. Type "Actions" or use your file action hotkey
-4. Choose:
-   - **Add to Droppy Shelf** → Sends to the notch shelf
-   - **Add to Droppy Basket** → Sends to the floating basket
-
-> **Requires** Alfred 4+ with Powerpack
-
----
-
-## 📥 Installation
+## 📦 Installation
 
 ### Homebrew (Recommended)
 ```bash
@@ -181,63 +69,135 @@ brew install --cask iordv/tap/droppy
 ### Manual Download
 1. Download [**Droppy.dmg**](https://github.com/iordv/Droppy/releases/latest)
 2. Drag to Applications
-3. **Right-click → Open** on first launch
+3. Right-click → **Open** on first launch
 
-> **Quarantine Issue?** If macOS says the app is damaged:
-> ```bash
-> xattr -d com.apple.quarantine /Applications/Droppy.app
-> ```
+> **Quarantine Issue?** Run: `xattr -d com.apple.quarantine /Applications/Droppy.app`
+
+---
+
+## 🕹️ How to Use
+
+### Stash Files
+- **Notch**: Drag any file to the black area around your webcam
+- **Basket**: While dragging, **shake your mouse left-right** — a basket appears at your cursor
+
+### Quick Actions
+Right-click any item in the shelf to:
+- **Move To...** — Send to saved locations
+- **Compress** — Auto or specify a target size
+- **Convert** — e.g., HEIC → JPEG
+- **Extract Text** — OCR to copy text from images
+- **Share** or **Reveal in Finder**
+
+### Drop Files
+Drag files out of the shelf and drop into any app. The file moves and vanishes from the shelf.
+
+### Clipboard Manager
+
+| Action | Shortcut |
+|:-------|:---------|
+| Open | `⌘ + Shift + Space` |
+| Navigate | `↑` `↓` Arrow keys |
+| Paste | `Enter` |
+| Search | `⌘ + F` |
+| Favorite | Click ⭐ |
+
+> Works everywhere — even in password fields and Terminal.
+
+---
+
+## 🎨 Visual Tour
+
+### The Notch Shelf
+*Your files, hidden in plain sight.*
+<p align="center">
+  <img src="https://i.postimg.cc/jqkPwkRp/Schermopname2026-01-05om22-04-43-ezgif-com-video-to-gif-converter.gif" alt="Notch Shelf" width="100%">
+</p>
+
+### The Floating Basket
+*Summoned anywhere with a quick jiggle.*
+<p align="center">
+  <img src="https://i.postimg.cc/dtHH09fB/Schermopname2026-01-05om22-01-22-ezgif-com-video-to-gif-converter.gif" alt="Floating Basket" width="100%">
+</p>
+
+### Clipboard Manager
+*Your history, beautifully organized.*
+<p align="center">
+  <img src="https://i.postimg.cc/Kvc9c2Kr/Schermopname2026-01-06om18-05-02-ezgif-com-video-to-gif-converter.gif" alt="Clipboard Manager" width="100%">
+</p>
+
+### Media Player
+*Now Playing, right in your notch.*
+<p align="center">
+  <img src="https://i.postimg.cc/SKjDMGrP/Schermopname2026-01-07om15-17-29-ezgif-com-video-to-gif-converter.gif" alt="Media Player" width="100%">
+</p>
+
+### Volume & Brightness HUD
+*Beautiful replacements for the system HUDs.*
+<p align="center">
+  <img src="https://i.postimg.cc/qqQ3wPMV/Schermopname2026-01-07om15-20-48-ezgif-com-video-to-gif-converter.gif" alt="Volume HUD" width="100%">
+</p>
+
+### Battery HUD
+*Elegant charging indicator.*
+<p align="center">
+  <img src="https://i.postimg.cc/Fznd6bvv/Schermopname2026-01-07om22-36-08-ezgif-com-video-to-gif-converter.gif" alt="Battery HUD" width="100%">
+</p>
+
+---
+
+## 🔮 Alfred Integration
+
+Push files from Finder to Droppy using Alfred!
+
+1. Open **Droppy Settings** → **About** → **Install in Alfred**
+2. Select files in Finder → Activate Alfred → Type "Actions"
+3. Choose **Add to Droppy Shelf** or **Add to Droppy Basket**
+
+> Requires Alfred 4+ with Powerpack
+
+---
+
+## 🛠️ Pro Tips
+
+### Smart Compression
+- **Auto**: Balanced settings for most files
+- **Target Size**: Need under 2MB? Right-click → Compress → **Target Size...**
+- **Size Guard** 🛡️: If compression would make the file larger, Droppy keeps the original
+
+### Drag-and-Drop OCR
+1. Drag an image into Droppy
+2. Hold **Shift** while dragging it out
+3. Drop into a text editor — **it's text!**
+
+### Auto-Hide Basket
+Enable in Settings → Basket → **Auto-Hide**. The basket slides to the screen edge when not in use and peeks out on hover.
 
 ---
 
 ## 🆕 What's New
 <!-- CHANGELOG_START -->
-# Droppy v5.3 - Basket Peek & Reliability Update
+### v5.3 — Basket Peek & Reliability
 
-## ✨ New Features
+**New:**
+- 🧺 **Auto-Hide Basket** — Slides to screen edge when not in use with 3D peek animation
+- Choose Left, Right, or Bottom edge
 
-### Auto-Hide Basket with Peek
-- **Basket Auto-Hide**: The floating basket can now automatically slide to the edge of the screen when not in use
-- **Peek Reveal**: Basket peeks out when you move your cursor to the edge, with a smooth 3D Stage Manager-style tilt animation
-- **Configurable Edge**: Choose to hide the basket on the Left, Right, or Bottom edge of your screen
-- **Settings Integration**: New Auto-Hide toggle and edge picker in both Settings and Onboarding wizard
+**Fixed:**
+- Ghost file bug when using "Keep Both" on duplicate filenames
+- Clipboard panel 2-click issue after media player interaction
+- Improved notch click detection reliability
 
-## 🐛 Bug Fixes
-
-### Ghost File Fix
-- **Fixed**: Dragging files from the shelf to folders with duplicate names (choosing "Keep Both") no longer leaves ghost items
-- Files that no longer exist on disk are automatically cleaned up when the shelf or basket becomes visible
-
-### Clipboard Panel 2-Click Bug
-- **Fixed**: After using media player controls, the clipboard panel now responds to single clicks immediately
-- Changed to use `ClipboardPanel` with proper focus handling (`canBecomeKey`, `canBecomeMain`)
-
-### Notch Detection Improvements
-- **Improved**: Click detection zone expanded for more reliable single-click shelf opening
-- ±10px horizontal expansion around the notch/island area
-- Upward expansion to absolute screen top (Fitt's Law compliance)
-- Bottom edge remains precise - no false triggers on content below the notch
-
-## 💅 UI Improvements
-
-### Onboarding Wizard Polish
-- **Consistent Layouts**: All pages now use unified spacing (`VStack(spacing: 16)`)
-- **Removed Status Text**: "X is enabled/disabled" text removed - toggle state is now self-evident
-- **Fully Clickable Buttons**: All option buttons (`contentShape(Rectangle())`) are now clickable on their entire area
-- **Compact Auto-Hide Settings**: Inline toggle and edge picker for cleaner basket page layout
-- **Fixed Edge Picker**: Resolved vertical "E d g e" text rendering issue
-
-## 🔧 Technical Improvements
-
-- Added `validateItems()` and `validateBasketItems()` methods for automatic ghost file cleanup
-- Improved window focus handling with `becomesKeyOnlyIfNeeded = false`
-- Enhanced click monitoring with expanded hit zones for reliability
+**Polished:**
+- Onboarding wizard redesigned with consistent layouts
+- All buttons now fully clickable
 <!-- CHANGELOG_END -->
 
 ---
 
 ## ❤️ Support
-If you enjoy using Droppy, consider buying me a coffee to support development!
+
+If Droppy saves you time, consider buying me a coffee!
 
 <p align="center">
   <a href="https://buymeacoffee.com/droppy">
@@ -260,6 +220,7 @@ If you enjoy using Droppy, consider buying me a coffee to support development!
 ---
 
 ## License
-MIT License. Free and Open Source forever.
+
+MIT License — Free and Open Source forever.
 
 Made with ❤️ by [Jordy Spruit](https://github.com/iordv)
