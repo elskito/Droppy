@@ -134,6 +134,23 @@ struct DroppedItemView: View {
                 Label("Reveal in Finder", systemImage: "folder")
             }
             
+            // Remove Background - only show for image files
+            if item.isImage {
+                Button {
+                    Task {
+                        do {
+                            let outputURL = try await item.removeBackground()
+                            // Reveal the new file in Finder
+                            NSWorkspace.shared.selectFile(outputURL.path, inFileViewerRootedAtPath: outputURL.deletingLastPathComponent().path)
+                        } catch {
+                            print("Background removal failed: \(error.localizedDescription)")
+                        }
+                    }
+                } label: {
+                    Label("Remove Background", systemImage: "person.crop.rectangle.badge.minus")
+                }
+            }
+            
             Divider()
             
             // Share submenu - positions correctly relative to context menu

@@ -147,6 +147,19 @@ struct DroppedItem: Identifiable, Hashable, Transferable {
         NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
     }
     
+    /// Returns true if this item is an image file
+    var isImage: Bool {
+        guard let fileType = fileType else { return false }
+        return fileType.conforms(to: .image)
+    }
+    
+    /// Removes the background from this image and returns a new DroppedItem
+    /// - Returns: URL of the new image with transparent background
+    @MainActor
+    func removeBackground() async throws -> URL {
+        return try await BackgroundRemovalManager.shared.removeBackground(from: url)
+    }
+    
     /// Saves the file directly to the user's Downloads folder
     /// Returns the URL of the saved file if successful
     @MainActor

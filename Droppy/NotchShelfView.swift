@@ -1562,6 +1562,22 @@ struct NotchItemView: View {
                 }
             }
             
+            // Remove Background - only for images
+            if item.isImage {
+                Button {
+                    Task {
+                        do {
+                            let outputURL = try await item.removeBackground()
+                            NSWorkspace.shared.selectFile(outputURL.path, inFileViewerRootedAtPath: outputURL.deletingLastPathComponent().path)
+                        } catch {
+                            print("Background removal failed: \(error.localizedDescription)")
+                        }
+                    }
+                } label: {
+                    Label("Remove Background", systemImage: "person.crop.rectangle.badge.minus")
+                }
+            }
+            
             // Create ZIP option
             Divider()
             
