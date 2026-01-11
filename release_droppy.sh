@@ -196,42 +196,53 @@ else
     warning "DroppyInstaller source not found"
 fi
 
-# Packaging ZIP (no DMG window - installer launches directly)
-info "Packaging ZIP"
+# Packaging DMG (classic drag-to-Applications)
+info "Packaging DMG"
 APP_PATH="$APP_BUILD_PATH/Build/Products/Release/Droppy.app"
-ZIP_NAME="Droppy-$VERSION.zip"
-rm -f Droppy*.zip Droppy*.dmg
+DMG_NAME="Droppy-$VERSION.dmg"
+DMG_BACKGROUND="$MAIN_REPO/assets/dmg/background.png"
+rm -f Droppy*.zip Droppy*.dmg rw.*.dmg
 
-# Create temp folder structure
-mkdir -p zip_root/.payload
-cp -R "$APP_PATH" "zip_root/.payload/"
+# Create temp folder with app + Applications symlink
+mkdir -p dmg_root
+cp -R "$APP_PATH" dmg_root/
 
-if [ -d "$INSTALLER_APP" ]; then
-    cp -R "$INSTALLER_APP" "zip_root/Install Droppy.app"
-    
-    # Remove quarantine from all apps before zipping
-    xattr -rd com.apple.quarantine "zip_root/Install Droppy.app" 2>/dev/null || true
-    xattr -rd com.apple.quarantine "zip_root/.payload/Droppy.app" 2>/dev/null || true
-    
-    # Create ZIP with installer + hidden payload
-    cd zip_root
-    zip -r -q "../$ZIP_NAME" "Install Droppy.app" ".payload"
-    cd ..
-    success "$ZIP_NAME created (native installer)"
+# Add Applications symlink for drag-to-install
+ln -s /Applications dmg_root/Applications
+
+# Create DMG
+if [ -f "$DMG_BACKGROUND" ] && command -v create-dmg &> /dev/null; then
+    # Use create-dmg for pretty background
+    if create-dmg \
+        --volname "Droppy" \
+        --background "$DMG_BACKGROUND" \
+        --window-pos 200 120 \
+        --window-size 660 480 \
+        --icon-size 128 \
+        --icon "Droppy.app" 180 200 \
+        --hide-extension "Droppy.app" \
+        --app-drop-link 480 200 \
+        --no-internet-enable \
+        "$DMG_NAME" \
+        "dmg_root" 2>/dev/null; then
+        success "$DMG_NAME created"
+    else
+        # Fallback to basic DMG
+        warning "create-dmg failed, using basic DMG"
+        rm -f "$DMG_NAME" rw.*.dmg 2>/dev/null
+        hdiutil create -volname Droppy -srcfolder dmg_root -ov -format UDZO "$DMG_NAME" -quiet || error "DMG creation failed"
+        success "$DMG_NAME created (basic)"
+    fi
 else
-    # Fallback: just Droppy.app
-    warning "DroppyInstaller not found, packaging just Droppy.app"
-    xattr -rd com.apple.quarantine "zip_root/.payload/Droppy.app" 2>/dev/null || true
-    cd zip_root/.payload
-    zip -r -q "../../$ZIP_NAME" "Droppy.app"
-    cd ../..
-    success "$ZIP_NAME created (app only)"
+    # Basic DMG without custom background
+    hdiutil create -volname Droppy -srcfolder dmg_root -ov -format UDZO "$DMG_NAME" -quiet || error "DMG creation failed"
+    success "$DMG_NAME created (basic)"
 fi
-rm -rf zip_root
+rm -rf dmg_root
 
 # Checksum
 info "Generating Integrity Checksum"
-HASH=$(shasum -a 256 "$ZIP_NAME" | awk '{print $1}')
+HASH=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
 step "SHA256: ${DIM}$HASH${RESET}"
 
 # Generate Cask
@@ -239,13 +250,12 @@ CASK_CONTENT="cask \"droppy\" do
   version \"$VERSION\"
   sha256 \"$HASH\"
 
-  url \"https://github.com/iordv/Droppy/releases/download/v$VERSION/$ZIP_NAME\"
+  url \"https://github.com/iordv/Droppy/releases/download/v$VERSION/$DMG_NAME\"
   name \"Droppy\"
   desc \"Drag and drop file shelf for macOS\"
   homepage \"https://github.com/iordv/Droppy\"
 
-  # The ZIP contains an installer app - Homebrew extracts and uses .payload/Droppy.app
-  app \".payload/Droppy.app\"
+  app \"Droppy.app\"
 
   postflight do
     system_command \"/usr/bin/xattr\",
@@ -286,7 +296,7 @@ if [ "$3" == "-y" ] || [ "$3" == "--yes" ]; then
 else
     echo -e "\n${BOLD}Review Pending Changes:${RESET}"
     echo -e "   • Version: ${GREEN}$VERSION${RESET}"
-    echo -e "   • Binary:  ${CYAN}$ZIP_NAME${RESET}"
+    echo -e "   • Binary:  ${CYAN}$DMG_NAME${RESET}"
     echo -e "   • Hash:    ${DIM}${HASH:0:8}...${RESET}"
     read -p "❓ Publish release now? [y/N] " -n 1 -r
     echo
@@ -298,7 +308,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     step "Pushing Main Repo..."
     git pull origin main --quiet
     git rm --ignore-unmatch Droppy*.dmg Droppy*.zip --quiet 2>/dev/null || true
-    git add "$ZIP_NAME"
+    git add "$DMG_NAME"
     git add .
     git commit -m "Release v$VERSION" --quiet
     git tag "v$VERSION"
@@ -318,7 +328,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # GitHub Release
     info "Creating GitHub Release"
     cd "$MAIN_REPO"
-    gh release create "v$VERSION" "$ZIP_NAME" --title "v$VERSION" --notes-file "$NOTES_FILE"
+    gh release create "v$VERSION" "$DMG_NAME" --title "v$VERSION" --notes-file "$NOTES_FILE"
     
     echo -e "\n${GREEN}✨ RELEASE COMPLETE! ✨${RESET}"
     echo -e "Users can now update with: ${CMD}brew upgrade droppy${RESET}\n"
