@@ -305,14 +305,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 ---
 
-## 📦 Installation
+## 🍺 Installation
 
 **Recommended: Install via Homebrew** (easiest, auto-updates)
 ```bash
 brew install --cask iordv/tap/droppy
 ```
 
-**Manual Install:** Download the DMG above, drag Droppy to Applications, then run:
+**Manual Install:** Download the DMG below, drag Droppy to Applications, then run:
 ```bash
 xattr -rd com.apple.quarantine /Applications/Droppy.app
 ```
