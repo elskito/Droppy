@@ -57,7 +57,7 @@ enum ExtensionType: String, CaseIterable, Identifiable {
     var categoryColor: Color {
         switch self {
         case .aiBackgroundRemoval: return .pink
-        case .alfred: return .purple
+        case .alfred: return .blue
         case .finder, .finderServices: return .blue
         case .spotify: return .green
         case .elementCapture: return .blue
@@ -159,7 +159,7 @@ enum ExtensionType: String, CaseIterable, Identifiable {
                 case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fill)
                 case .failure:
-                    Image(systemName: "command.circle.fill").font(.system(size: 32)).foregroundStyle(.purple)
+                    Image(systemName: "command.circle.fill").font(.system(size: 32)).foregroundStyle(.blue)
                 default:
                     RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(white: 0.2))
                 }

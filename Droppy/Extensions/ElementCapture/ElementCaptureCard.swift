@@ -113,7 +113,7 @@ struct ElementCaptureCard: View {
             }
         }
         .frame(minHeight: 160)
-        .extensionCardStyle(accentColor: .orange)
+        .extensionCardStyle(accentColor: .blue)
         .contentShape(Rectangle())
         .onTapGesture {
             showInfoSheet = true

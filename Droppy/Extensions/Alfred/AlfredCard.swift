@@ -27,7 +27,7 @@ struct AlfredExtensionCard: View {
                     case .failure:
                         Image(systemName: "command.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(.blue)
                     default:
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color(white: 0.2))
@@ -101,7 +101,7 @@ struct AlfredExtensionCard: View {
             }
         }
         .frame(minHeight: 160)
-        .extensionCardStyle(accentColor: .purple)
+        .extensionCardStyle(accentColor: .blue)
         .contentShape(Rectangle())
         .onTapGesture {
             showInfoSheet = true
