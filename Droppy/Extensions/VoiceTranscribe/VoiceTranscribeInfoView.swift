@@ -431,7 +431,7 @@ struct VoiceTranscribeInfoView: View {
 
 // Helper for disabled button
 extension View {
-    func disabled(case state: RecordingState, is targetState: RecordingState) -> some View {
+    func disabled(case state: VoiceRecordingState, is targetState: VoiceRecordingState) -> some View {
         self.disabled({
             if case targetState = state { return true }
             return false

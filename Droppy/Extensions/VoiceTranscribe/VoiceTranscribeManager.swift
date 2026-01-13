@@ -43,12 +43,23 @@ enum WhisperModel: String, CaseIterable, Identifiable {
 
 // MARK: - Recording State
 
-enum RecordingState {
+enum VoiceRecordingState: Equatable {
     case idle
     case recording
     case processing
     case complete
     case error(String)
+    
+    static func == (lhs: VoiceRecordingState, rhs: VoiceRecordingState) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle), (.recording, .recording), (.processing, .processing), (.complete, .complete):
+            return true
+        case (.error(let a), .error(let b)):
+            return a == b
+        default:
+            return false
+        }
+    }
 }
 
 // MARK: - Voice Transcribe Manager
@@ -59,7 +70,7 @@ final class VoiceTranscribeManager: ObservableObject {
     
     // MARK: - Published Properties
     
-    @Published var state: RecordingState = .idle
+    @Published var state: VoiceRecordingState = .idle
     @Published var selectedModel: WhisperModel = .small
     @Published var isModelDownloaded: Bool = false
     @Published var downloadProgress: Double = 0
@@ -227,16 +238,18 @@ final class VoiceTranscribeManager: ObservableObject {
             
             // Update duration timer
             recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-                self?.recordingDuration += 0.1
+                Task { @MainActor in
+                    self?.recordingDuration += 0.1
+                }
             }
             
             // Update audio level timer
             levelTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-                self?.audioRecorder?.updateMeters()
-                let db = self?.audioRecorder?.averagePower(forChannel: 0) ?? -160
-                // Normalize dB to 0-1 range (-60 to 0 dB)
-                let normalized = max(0, min(1, (db + 60) / 60))
-                DispatchQueue.main.async {
+                Task { @MainActor in
+                    self?.audioRecorder?.updateMeters()
+                    let db = self?.audioRecorder?.averagePower(forChannel: 0) ?? -160
+                    // Normalize dB to 0-1 range (-60 to 0 dB)
+                    let normalized = max(0, min(1, (db + 60) / 60))
                     self?.audioLevel = Float(normalized)
                 }
             }
