@@ -526,11 +526,21 @@ struct AudioVisualizerBars: View {
 /// Small Spotify logo badge for album art overlay
 struct SpotifyBadge: View {
     var body: some View {
-        Image("SpotifyIcon")
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 20, height: 20)
-            .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+        AsyncImage(url: URL(string: "https://iordv.github.io/Droppy/assets/icons/spotify.png")) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            default:
+                Image(systemName: "music.note.list")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.green)
+            }
+        }
+        .frame(width: 20, height: 20)
+        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
     }
 }
 

@@ -154,15 +154,18 @@ enum ExtensionType: String, CaseIterable, Identifiable {
         case .aiBackgroundRemoval:
             AIExtensionIcon(size: 64)
         case .alfred:
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(white: 0.15))
-                Image("AlfredIcon")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(4)
+            AsyncImage(url: URL(string: "https://iordv.github.io/Droppy/assets/icons/alfred.png")) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                case .failure:
+                    Image(systemName: "command.circle.fill").font(.system(size: 32)).foregroundStyle(.purple)
+                default:
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(white: 0.2))
+                }
             }
             .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         case .finder, .finderServices:
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -174,15 +177,18 @@ enum ExtensionType: String, CaseIterable, Identifiable {
             }
             .frame(width: 64, height: 64)
         case .spotify:
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(white: 0.15))
-                Image("SpotifyIcon")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(4)
+            AsyncImage(url: URL(string: "https://iordv.github.io/Droppy/assets/icons/spotify.png")) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                case .failure:
+                    Image(systemName: "music.note.list").font(.system(size: 32)).foregroundStyle(.green)
+                default:
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(white: 0.2))
+                }
             }
             .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         case .elementCapture:
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -193,14 +199,18 @@ enum ExtensionType: String, CaseIterable, Identifiable {
             }
             .frame(width: 64, height: 64)
         case .windowSnap:
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(white: 0.15))
-                Image(systemName: "rectangle.split.2x2")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundStyle(.cyan)
+            AsyncImage(url: URL(string: "https://iordv.github.io/Droppy/assets/icons/window-snap.jpg")) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                case .failure:
+                    Image(systemName: "rectangle.split.2x2").font(.system(size: 32, weight: .medium)).foregroundStyle(.cyan)
+                default:
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(white: 0.2))
+                }
             }
             .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 }

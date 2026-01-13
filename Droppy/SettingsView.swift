@@ -2801,12 +2801,8 @@ struct AIBackgroundRemovalSettingsRow: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with icon
             HStack(alignment: .top) {
-                // AI Icon - Custom DroppyAI asset
-                Image("DroppyAI")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                // AI Icon - uses app icon with magic overlay
+                AIExtensionIcon(size: 44)
                 
                 Spacer()
                 
