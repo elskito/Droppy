@@ -1425,6 +1425,7 @@
 
         // Fetch extension install counts from Supabase
         async function fetchExtensionCounts() {
+            console.log('[Stats] Starting fetchExtensionCounts...');
             try {
                 const response = await fetch('https://anannmonpspjsnfgdglb.supabase.co/rest/v1/rpc/get_extension_counts', {
                     method: 'POST',
@@ -1435,31 +1436,40 @@
                     body: '{}'
                 });
 
+                console.log('[Stats] Response status:', response.status, response.ok);
                 if (!response.ok) return;
 
                 const counts = await response.json();
+                console.log('[Stats] Counts received:', counts);
 
                 // Convert array to object for easier lookup
                 const countMap = {};
                 counts.forEach(item => {
                     countMap[item.extension_id] = item.install_count;
                 });
+                console.log('[Stats] Count map:', countMap);
 
                 // Update each extension card with its count (matches both extension-cards AND featured-cards)
-                document.querySelectorAll('[data-extension-id]').forEach(card => {
+                const cards = document.querySelectorAll('[data-extension-id]');
+                console.log('[Stats] Found cards with data-extension-id:', cards.length);
+                cards.forEach(card => {
                     const extId = card.dataset.extensionId;
                     const count = countMap[extId] || 0;
                     const valueEl = card.querySelector('.count-value');
+                    console.log('[Stats] Card:', extId, 'count:', count, 'valueEl found:', !!valueEl);
                     if (valueEl) {
                         valueEl.textContent = count;
                     }
                 });
 
                 // Also update modal stats
-                document.querySelectorAll('.modal-stats[data-extension]').forEach(el => {
+                const modalStats = document.querySelectorAll('.modal-stats[data-extension]');
+                console.log('[Stats] Found modal-stats elements:', modalStats.length);
+                modalStats.forEach(el => {
                     const extId = el.dataset.extension;
                     const count = countMap[extId] || 0;
                     const countEl = el.querySelector('.modal-count');
+                    console.log('[Stats] Modal:', extId, 'count:', count, 'countEl found:', !!countEl);
                     if (countEl) {
                         countEl.textContent = count;
                     }
