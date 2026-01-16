@@ -294,7 +294,11 @@ struct NotchShelfView: View {
         // No header row anymore - auto-collapse handles hiding
         let rowCount = (Double(state.items.count) / 5.0).rounded(.up)
         let baseHeight = max(1, rowCount) * 110 // 110 per row, no header
-        return baseHeight
+        
+        // In notch mode, add extra height to compensate for top padding that clears physical notch
+        // Island mode doesn't need this as there's no physical obstruction
+        let notchCompensation: CGFloat = isDynamicIslandMode ? 0 : notchHeight
+        return baseHeight + notchCompensation
     }
     /// Helper to check if current screen is built-in (MacBook display)
     private var isBuiltInDisplay: Bool {
