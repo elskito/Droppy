@@ -19,7 +19,9 @@
 ---
 
 <p align="center">
-  <img src="https://i.postimg.cc/1tpKj1Wf/Droppy-demo-v2.gif" alt="Droppy Demo" width="100%">
+  <a href="https://i.postimg.cc/1tpKj1Wf/Droppy-demo-v2.gif">
+    <img src="https://i.postimg.cc/1tpKj1Wf/Droppy-demo-v2.gif" alt="Droppy Demo">
+  </a>
 </p>
 
 <p align="center">
@@ -40,7 +42,7 @@ Stop juggling single-purpose utilities. Droppy brings your **clipboard history**
 
 ## ✨ Clipboard Manager
 
-Full history with search, favorites, OCR text extraction, and drag-out support.
+Full history with search, favorites, OCR text extraction, and drag-out support. Use `⌘ + Shift + Space` to open (customizable in Settings).
 
 <p align="center">
   <img src="docs/assets/images/clipboard-manager.png" alt="Clipboard Manager" width="70%">
@@ -50,7 +52,7 @@ Full history with search, favorites, OCR text extraction, and drag-out support.
 
 ## 🎵 Media Controls
 
-Album art, playback controls, and a seek slider—right in your notch.
+Album art, playback controls, and a seek slider—right in your notch. With the Audio Visualizer enabled, see a live frequency spectrum dancing to your music.
 
 <p align="center">
   <img src="docs/assets/images/media-hud.png" alt="Media Controls" width="70%">
@@ -74,39 +76,39 @@ Record and transcribe speech to text with 100% on-device AI. Your voice never le
 |:---|:---|
 | **File Shelf & Basket** | Drag files to the notch. Jiggle your mouse to summon a floating basket. |
 | **Clipboard Manager** | Full history, search, favorites, OCR, drag-out |
-| **Native HUDs** | Volume, brightness, battery, caps lock, unlock |
-| **Media Controls** | Album art, seek slider, playback controls |
-| **Window Snapping** | Snap to edges/corners with keyboard shortcuts |
-| **Quick Actions** | Right-click to compress, convert, extract text, share |
+| **Native HUDs** | Volume, brightness, battery, caps lock, unlock, AirPods |
+| **Media Controls** | Album art, seek slider, playback controls, audio visualizer |
+| **Quick Actions** | Right-click to compress, convert formats, extract text, share |
 | **Multi-Monitor** | Works on external displays with smart fullscreen detection |
 | **Transparency Mode** | Optional glass effect for all windows |
+| **Powerful Extensions** | Window snapping, voice transcription, AI background removal, and more—see below |
 
 ---
 
-## 🧩 Extensions
+## 🧩 All Extensions
 
+<p align="center">
 Droppy's built-in Extension Store adds powerful features on demand. Everything's free.
+</p>
 
 <p align="center">
   <img src="docs/assets/images/extension-store-new.png" alt="Extension Store" width="80%">
 </p>
 
-**Featured:**
+<div align="center">
 
 | | |
-|:---|:---|
-| <img src="https://iordv.github.io/Droppy/assets/icons/voice-transcribe.jpg" height="24"> **Voice Transcribe** | On-device speech-to-text using WhisperKit AI |
-| <img src="https://iordv.github.io/Droppy/assets/icons/ai-bg.jpg" height="24"> **AI Background Removal** | Remove backgrounds locally using ML |
-| <img src="https://iordv.github.io/Droppy/assets/icons/video-target-size.png" height="24"> **Video Target Size** | Compress videos to exact file sizes with FFmpeg |
-| <img src="https://iordv.github.io/Droppy/assets/icons/window-snap.jpg" height="24"> **Window Snap** | Snap windows with keyboard shortcuts |
-| <img src="https://iordv.github.io/Droppy/assets/icons/spotify.png" height="24"> **Spotify Integration** | Control Spotify playback from your notch |
-| <img src="https://iordv.github.io/Droppy/assets/icons/element-capture.jpg" height="24"> **Element Capture** | Screenshot any UI element |
-| <img src="https://iordv.github.io/Droppy/assets/icons/alfred.png" height="24"> **Alfred Workflow** | Add files to Droppy from Alfred |
-| <img src="https://iordv.github.io/Droppy/assets/icons/finder.png" height="24"> **Finder Services** | Right-click in Finder to send files to Droppy |
+|:---:|:---:|
+| <img src="https://iordv.github.io/Droppy/assets/icons/voice-transcribe.jpg" height="28"> **Voice Transcribe**<br>On-device speech-to-text using WhisperKit AI | <img src="https://iordv.github.io/Droppy/assets/icons/ai-bg.jpg" height="28"> **AI Background Removal**<br>Remove backgrounds locally using ML |
+| <img src="https://iordv.github.io/Droppy/assets/icons/video-target-size.png" height="28"> **Video Target Size**<br>Compress videos to exact file sizes with FFmpeg | <img src="https://iordv.github.io/Droppy/assets/icons/window-snap.jpg" height="28"> **Window Snap**<br>Snap windows with keyboard shortcuts |
+| <img src="https://iordv.github.io/Droppy/assets/icons/spotify.png" height="28"> **Spotify Integration**<br>Control Spotify playback from your notch | <img src="https://iordv.github.io/Droppy/assets/icons/element-capture.jpg" height="28"> **Element Capture**<br>Screenshot any UI element |
+| <img src="https://iordv.github.io/Droppy/assets/icons/alfred.png" height="28"> **Alfred Workflow**<br>Add files to Droppy from Alfred | <img src="https://iordv.github.io/Droppy/assets/icons/finder.png" height="28"> **Finder Services**<br>Right-click in Finder to send files |
+
+</div>
 
 <p align="center">
   <a href="https://iordv.github.io/Droppy/extensions.html">
-    <img src="https://img.shields.io/badge/Browse_All_Extensions-blueviolet?style=for-the-badge" alt="Extension Store">
+    <img src="https://img.shields.io/badge/Browse_Extension_Store-blueviolet?style=for-the-badge" alt="Extension Store">
   </a>
 </p>
 
@@ -126,22 +128,15 @@ brew install --cask iordv/tap/droppy
 
 ---
 
-## Keyboard Shortcuts
+## Permissions
 
-| Action | Shortcut |
-|:---|:---|
-| Open Clipboard | `⌘ + Shift + Space` |
-| Navigate items | `↑` / `↓` |
-| Paste selected | `Enter` |
-| Close | `Escape` |
+Droppy requires a few permissions to work properly. All processing happens locally—no data ever leaves your Mac.
 
-**Window Snapping** (with extension):
-
-| Action | Shortcut |
-|:---|:---|
-| Snap left/right | `⌃ + ⌥ + ←/→` |
-| Snap top/bottom | `⌃ + ⌥ + ↑/↓` |
-| Maximize | `⌃ + ⌥ + Enter` |
+| Permission | Required | What it's used for |
+|:---|:---:|:---|
+| **Accessibility** | ✅ | Global keyboard shortcuts, drag detection, media key interception |
+| **Screen Recording** | Optional | Element Capture extension, Audio Visualizer (to capture system audio) |
+| **Microphone** | Optional | Voice Transcribe extension (speech-to-text recording) |
 
 ---
 
@@ -149,7 +144,6 @@ brew install --cask iordv/tap/droppy
 
 - **macOS** 14.0 (Sonoma) or later
 - **Architecture**: Apple Silicon (M1–M4) and Intel
-- **Permissions**: Accessibility (required), Screen Recording (optional)
 
 ---
 
@@ -157,17 +151,70 @@ brew install --cask iordv/tap/droppy
 
 <details>
 <summary><strong>Is Droppy really free?</strong></summary>
-Yes! Free forever with no ads, subscriptions, or paywalls.
+Yes! Free forever with no ads, subscriptions, or paywalls. All extensions are included at no cost.
+</details>
+
+<details>
+<summary><strong>"Droppy is damaged and can't be opened" — how do I fix this?</strong></summary>
+
+This is macOS Gatekeeper blocking unsigned apps. Run this command in Terminal:
+```bash
+xattr -rd com.apple.quarantine /Applications/Droppy.app
+```
+Or if you downloaded the DMG directly:
+```bash
+xattr -rd com.apple.quarantine ~/Downloads/Droppy-*.dmg
+```
+Using Homebrew (`brew install --cask iordv/tap/droppy`) avoids this issue entirely.
 </details>
 
 <details>
 <summary><strong>Does it work on Macs without a notch?</strong></summary>
-Absolutely. Droppy displays a Dynamic Island-style pill at the top of your screen.
+Absolutely. Droppy displays a Dynamic Island-style pill at the top of your screen with all the same features.
 </details>
 
 <details>
 <summary><strong>Is my data private?</strong></summary>
-100%. All processing happens locally—clipboard history, voice transcription, and background removal never leave your Mac.
+100%. All processing happens locally—clipboard history, voice transcription, background removal, and audio visualization never leave your Mac.
+</details>
+
+<details>
+<summary><strong>Why does Droppy need Accessibility permissions?</strong></summary>
+Accessibility allows Droppy to detect when you're dragging files (to show the basket), register global keyboard shortcuts, and intercept media keys for custom HUDs. Droppy never collects or transmits any data.
+</details>
+
+<details>
+<summary><strong>Why does Droppy need Screen Recording permission?</strong></summary>
+Screen Recording is only needed for the Element Capture extension and the Audio Visualizer feature. Element Capture screenshots UI elements, and the Audio Visualizer needs to capture system audio output. Both are optional features.
+</details>
+
+<details>
+<summary><strong>Can I use Droppy on multiple monitors?</strong></summary>
+Yes! Droppy supports multi-monitor setups with smart fullscreen detection. The shelf and HUDs appear on whichever display has your cursor.
+</details>
+
+<details>
+<summary><strong>How do I change the keyboard shortcuts?</strong></summary>
+Go to Settings (click the gear icon) → Shortcuts. You can customize the shortcut for opening the clipboard and other actions.
+</details>
+
+<details>
+<summary><strong>Does Droppy work with external keyboards?</strong></summary>
+Yes. Keyboard shortcuts and media keys work with any keyboard, including external and Bluetooth keyboards.
+</details>
+
+<details>
+<summary><strong>How do I uninstall Droppy?</strong></summary>
+Drag Droppy from Applications to Trash. To remove all data, also delete:
+- `~/Library/Application Support/Droppy`
+- `~/Library/Preferences/iordv.Droppy.plist`
+
+Or if you used Homebrew: `brew uninstall droppy`
+</details>
+
+<details>
+<summary><strong>Is Droppy open-source?</strong></summary>
+Yes! The source code is available under GPL-3.0 with Commons Clause (free for personal use, not for resale).
 </details>
 
 ---
