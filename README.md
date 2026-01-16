@@ -20,7 +20,6 @@
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/9e22f125-c4ca-4fa4-836c-9804f36662ef" alt="Droppy Demo" width="100%">
-
 </p>
 
 <p align="center">
@@ -33,9 +32,11 @@
 
 ## What is Droppy?
 
-Stop juggling single-purpose utilities. Droppy brings your **clipboard history**, **file shelf**, **screenshot tools**, and **system HUDs** together in one native interface—all living inside your notch.
+Droppy transforms your MacBook notch into a **productivity powerhouse**. Drop files into it, drag them out anywhere. Access your full **clipboard history** with search and favorites. Control your **music** with album art and a seek slider. See beautiful **system HUDs** for volume, brightness, and more—all seamlessly integrated into your notch.
 
-**No notch?** Droppy adds a Dynamic Island-style pill to any Mac.
+**No notch?** Droppy adds a sleek Dynamic Island-style pill to any Mac.
+
+**All-in-one.** Replace multiple single-purpose utilities with one native, free, open-source app built entirely in Swift.
 
 ---
 
