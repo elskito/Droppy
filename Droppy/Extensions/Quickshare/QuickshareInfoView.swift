@@ -248,16 +248,12 @@ struct QuickshareInfoView: View {
                 .background(Color.white.opacity(0.03))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
-                // File List - clean card
+                // File List - no card, just entries
                 VStack(spacing: 0) {
                     ForEach(manager.items) { item in
                         itemRow(for: item)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
                     }
                 }
-                .background(Color.white.opacity(0.03))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
     }
