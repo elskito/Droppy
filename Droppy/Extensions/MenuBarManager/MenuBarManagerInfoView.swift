@@ -41,6 +41,9 @@ struct MenuBarManagerInfoView: View {
                     // Usage instructions (when enabled)
                     if manager.isEnabled {
                         usageSection
+                        
+                        // Settings section
+                        settingsSection
                     }
                 }
                 .padding(.horizontal, 24)
@@ -237,6 +240,54 @@ struct MenuBarManagerInfoView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(AdaptiveColors.buttonBackgroundAuto.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Settings")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            
+            // Hover to reveal toggle
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Hover to reveal")
+                        .font(.callout)
+                    Text("Show icons when hovering in menu bar area")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Toggle("", isOn: $manager.hoverToRevealEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+            
+            Divider()
+            
+            // Droppy Bar toggle
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Droppy Bar")
+                        .font(.callout)
+                    Text("Extra bar below menu bar for overflow icons")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Toggle("", isOn: $manager.droppyBarEnabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)

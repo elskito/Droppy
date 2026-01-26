@@ -36,9 +36,21 @@ final class MenuBarManager: ObservableObject {
         }
     }
     
+    /// Whether the Droppy Bar is enabled
+    @Published var droppyBarEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(droppyBarEnabled, forKey: droppyBarEnabledKey)
+            if droppyBarEnabled {
+                showDroppyBar()
+            } else {
+                hideDroppyBar()
+            }
+        }
+    }
+    
     // MARK: - Status Items
     
-    /// The visible toggle button - always shows chevron, click to toggle
+    /// The visible toggle button - always shows dot, click to toggle
     private var toggleItem: NSStatusItem?
     
     /// The invisible divider that expands to push items off-screen
@@ -47,6 +59,14 @@ final class MenuBarManager: ObservableObject {
     /// Autosave names for position persistence
     private let toggleAutosaveName = "DroppyMenuBarToggle"
     private let dividerAutosaveName = "DroppyMenuBarDivider"
+    
+    // MARK: - Droppy Bar
+    
+    /// The floating Droppy Bar panel
+    private var droppyBarPanel: DroppyBarPanel?
+    
+    /// Item store for Droppy Bar
+    private let droppyBarItemStore = DroppyBarItemStore()
     
     // MARK: - Hover Monitoring
     
@@ -86,6 +106,7 @@ final class MenuBarManager: ObservableObject {
     private let enabledKey = "menuBarManagerEnabled"
     private let expandedKey = "menuBarManagerExpanded"
     private let hoverToRevealKey = "menuBarManagerHoverToReveal"
+    private let droppyBarEnabledKey = "droppyBarEnabled"
     
     // MARK: - Initialization
     
@@ -100,8 +121,16 @@ final class MenuBarManager: ObservableObject {
             hoverToRevealEnabled = true
         }
         
+        // Load Droppy Bar preference (don't trigger didSet during init)
+        let savedDroppyBarEnabled = UserDefaults.standard.bool(forKey: droppyBarEnabledKey)
+        
         if UserDefaults.standard.bool(forKey: enabledKey) {
             enable()
+        }
+        
+        // Show Droppy Bar after setup if it was enabled
+        if savedDroppyBarEnabled {
+            droppyBarEnabled = true
         }
     }
     
@@ -451,6 +480,37 @@ final class MenuBarManager: ObservableObject {
     
     @objc private func disableFromMenu() {
         disable()
+    }
+    
+    // MARK: - Droppy Bar Methods
+    
+    /// Show the Droppy Bar panel
+    private func showDroppyBar() {
+        if droppyBarPanel == nil {
+            droppyBarPanel = DroppyBarPanel()
+        }
+        
+        // Find the screen containing the mouse cursor
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main
+        
+        droppyBarPanel?.show(on: screen)
+        print("[MenuBarManager] Droppy Bar shown")
+    }
+    
+    /// Hide the Droppy Bar panel
+    private func hideDroppyBar() {
+        droppyBarPanel?.orderOut(nil)
+        print("[MenuBarManager] Droppy Bar hidden")
+    }
+    
+    /// Toggle Droppy Bar visibility
+    func toggleDroppyBar() {
+        if droppyBarPanel?.isVisible == true {
+            hideDroppyBar()
+        } else {
+            showDroppyBar()
+        }
     }
     
     // MARK: - Diagnostics
