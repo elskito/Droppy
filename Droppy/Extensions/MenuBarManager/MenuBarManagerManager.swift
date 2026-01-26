@@ -362,11 +362,6 @@ final class MenuBarManager: ObservableObject {
             print("[MenuBarManager] ⚠️ WARNING: Divider button is nil - expansion may not work!")
         }
         
-        // Create the Droppy Bar toggle (shows ellipsis) - only if Droppy Bar is enabled
-        if droppyBarEnabled {
-            createDroppyBarToggle()
-        }
-        
         updateToggleIcon()
         
         print("[MenuBarManager] Created status items")
