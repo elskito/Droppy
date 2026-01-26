@@ -248,8 +248,8 @@ struct QuickshareInfoView: View {
                 .background(Color.white.opacity(0.03))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
-                // File List - no card, just entries
-                VStack(spacing: 0) {
+                // File List - spacing 8 to match clipboard
+                VStack(spacing: 8) {
                     ForEach(manager.items) { item in
                         itemRow(for: item)
                     }
