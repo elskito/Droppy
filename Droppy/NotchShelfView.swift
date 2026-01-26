@@ -183,15 +183,15 @@ struct NotchShelfView: View {
     }
     
     /// Whether the Dynamic Island should use transparent glass effect
-    /// DISABLED: Dynamic Island now always uses solid black, same as notch mode
+    /// Uses the main "Transparent Background" setting
     private var shouldUseDynamicIslandTransparent: Bool {
-        false  // Always solid black to match notch appearance
+        isDynamicIslandMode && useTransparentBackground
     }
     
     /// Whether the external display notch should use transparent glass effect
-    /// DISABLED: External notch now always uses solid black, same as built-in notch
+    /// Uses the main "Transparent Background" setting
     private var shouldUseExternalNotchTransparent: Bool {
-        false  // Always solid black to match notch appearance
+        isExternalDisplay && useTransparentBackground
     }
     
     /// Whether the HUD should show a title in the center
