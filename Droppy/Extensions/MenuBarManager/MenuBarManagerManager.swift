@@ -251,14 +251,18 @@ final class MenuBarManager: ObservableObject {
         } else {
             // Mouse left the menu bar area - schedule collapse with delay for stability
             if isHoverExpanded && isExpanded && collapseTimer == nil {
+                // Capture values for use in timer closure (avoids Swift 6 Sendable issues)
+                let screenMaxY = screen.frame.maxY
+                let thresholdX = hoverThresholdX
+                
                 collapseTimer = Timer.scheduledTimer(withTimeInterval: collapseDelay, repeats: false) { [weak self] _ in
                     Task { @MainActor in
-                        guard let self = self else { return }
+                        guard let self else { return }
                         
                         // Double-check mouse is still outside before collapsing
                         let currentLocation = NSEvent.mouseLocation
-                        let stillInMenuBar = currentLocation.y >= (screen.frame.maxY - menuBarHeight)
-                        let stillInIconArea = currentLocation.x >= self.hoverThresholdX
+                        let stillInMenuBar = currentLocation.y >= (screenMaxY - menuBarHeight)
+                        let stillInIconArea = currentLocation.x >= thresholdX
                         
                         if !stillInMenuBar || !stillInIconArea {
                             self.isHoverExpanded = false
@@ -332,17 +336,15 @@ final class MenuBarManager: ObservableObject {
     private func updateToggleIcon() {
         guard let button = toggleItem?.button else { return }
         
-        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 8, weight: .regular)
         
         if isExpanded {
-            // Items visible (expanded) - show chevron pointing right (icons expanded outward)
-            // Issue #83: User expects ">" when expanded
-            button.image = NSImage(systemSymbolName: "chevron.compact.right", accessibilityDescription: "Hide menu bar icons")?
+            // Items visible (expanded) - show filled dot
+            button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "Hide menu bar icons")?
                 .withSymbolConfiguration(config)
         } else {
-            // Items hidden (collapsed) - show chevron pointing left (click to expand)
-            // Issue #83: User expects "<" when collapsed, indicating "click to expand"
-            button.image = NSImage(systemSymbolName: "chevron.compact.left", accessibilityDescription: "Show menu bar icons")?
+            // Items hidden (collapsed) - show empty dot
+            button.image = NSImage(systemSymbolName: "circle", accessibilityDescription: "Show menu bar icons")?
                 .withSymbolConfiguration(config)
         }
     }
