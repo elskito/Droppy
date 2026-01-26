@@ -65,8 +65,8 @@ final class MenuBarManager: ObservableObject {
     /// Standard length for toggle (shows chevron)
     private let toggleLength: CGFloat = NSStatusItem.variableLength
     
-    /// Standard length for divider (thin, almost invisible)
-    private let dividerStandardLength: CGFloat = 1
+    /// Standard length for divider (shows icon)
+    private let dividerStandardLength: CGFloat = NSStatusItem.variableLength
     
     /// Expanded length to push items off-screen
     private let dividerExpandedLength: CGFloat = 10_000
@@ -221,21 +221,31 @@ final class MenuBarManager: ObservableObject {
             button.target = self
             button.action = #selector(toggleClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            print("[MenuBarManager] Toggle button configured with click action")
+            print("[MenuBarManager] Toggle button configured - Preferred Position: 0")
+            // Try to force position 0
+            StatusItemDefaults.setPreferredPosition(0, for: toggleAutosaveName)
         } else {
             print("[MenuBarManager] ⚠️ WARNING: Toggle button is nil - clicks will not work!")
         }
         
         // Create the divider (expands to hide items)
-        // This should be positioned to the LEFT of the toggle
+        // This should be positioned to the LEFT of the toggle (Position 1)
         dividerItem = NSStatusBar.system.statusItem(withLength: dividerStandardLength)
         dividerItem?.autosaveName = dividerAutosaveName
         
         if let button = dividerItem?.button {
-            // Make divider nearly invisible - just a thin separator
-            button.title = ""
-            button.image = nil
-            print("[MenuBarManager] Divider configured")
+            // Make divider visible so users know where to drag items
+            // Using a distinct "separator" style icon
+            let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .light)
+            button.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Hiding Divider")?
+                .withSymbolConfiguration(config)
+            button.imagePosition = .imageOnly
+            
+            // Add a tooltip to explain what this is
+            button.toolTip = "Drag items to the LEFT of this divider to hide them from the main bar."
+            
+            print("[MenuBarManager] Divider configured - Preferred Position: 1")
+            StatusItemDefaults.setPreferredPosition(1, for: dividerAutosaveName)
         } else {
             print("[MenuBarManager] ⚠️ WARNING: Divider button is nil - expansion may not work!")
         }
@@ -282,14 +292,23 @@ final class MenuBarManager: ObservableObject {
     }
     
     private func applyExpansionState() {
-        guard let dividerItem = dividerItem else { return }
+        guard let dividerItem = dividerItem, let button = dividerItem.button else { return }
+        
+        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .light)
         
         if isExpanded {
-            // Show hidden items - divider at minimal length
+            // Show hidden items - divider at standard length
             dividerItem.length = dividerStandardLength
+            // Show the "Hider" icon so users know where the boundary is
+            button.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Hiding Divider")?
+                .withSymbolConfiguration(config)
+            button.isEnabled = true
         } else {
             // Hide items - expand divider to push items left off-screen
             dividerItem.length = dividerExpandedLength
+            // Clear icon so it's just empty space
+            button.image = nil
+            button.isEnabled = false
         }
         
         updateToggleIcon()
