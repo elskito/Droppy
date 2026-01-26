@@ -169,6 +169,7 @@ struct StackedItemView: View {
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(width: 56, height: 56)
+                .padding(.top, 6) // Make room for count badge above - matching BasketItemContent X button spacing
                 
                 // Count label like "[4] Files" - matching Collapse text style
                 Text(countLabel)
@@ -177,8 +178,8 @@ struct StackedItemView: View {
                     .lineLimit(1)
                     .frame(width: 60)
             }
-            .padding(2)
-            .frame(width: 64, height: 80)
+            .padding(.vertical, 2)
+            .frame(width: 64, height: 80, alignment: .top) // Align to top like BasketItemContent
             .contentShape(Rectangle())
             // Drop target visual feedback - scale up and blue glow when files dragged over
             .scaleEffect(isDropTargeted ? 1.08 : 1.0)
@@ -449,6 +450,7 @@ struct StackCollapseButton: View {
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(width: 56, height: 56)
+                .padding(.top, 6) // Match StackedItemView spacing
                 
                 // "Collapse" text label
                 Text("Collapse")
@@ -457,8 +459,8 @@ struct StackCollapseButton: View {
                     .lineLimit(1)
                     .frame(width: 60)
             }
-            .padding(2)
-            .frame(width: 64, height: 80)
+            .padding(.vertical, 2)
+            .frame(width: 64, height: 80, alignment: .top) // Align to top like BasketItemContent
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
