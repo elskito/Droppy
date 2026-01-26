@@ -33,7 +33,7 @@ class MenuBarCoverPanel: NSPanel {
         
         // Critical: Position ABOVE menu bar items (status window level + 2)
         self.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 2)
-        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresHidden, .fullScreenAuxiliary]
+        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -122,9 +122,11 @@ class MenuBarCoverPanel: NSPanel {
     func startAutoUpdate() {
         updateTimer?.invalidate()
         updateTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, !self.coveredOwnerNames.isEmpty else { return }
-                self.updateCover(forOwnerNames: self.coveredOwnerNames)
+            guard let self else { return }
+            let ownerNames = self.coveredOwnerNames
+            guard !ownerNames.isEmpty else { return }
+            Task { @MainActor [weak self] in
+                self?.updateCover(forOwnerNames: ownerNames)
             }
         }
         print("[MenuBarCoverPanel] Auto-update started")
