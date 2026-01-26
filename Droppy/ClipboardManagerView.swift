@@ -1216,6 +1216,7 @@ struct ClipboardItemRow: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity)  // Ensure consistent width for all rows
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
