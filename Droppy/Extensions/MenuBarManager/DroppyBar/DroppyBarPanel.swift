@@ -2,7 +2,7 @@
 //  DroppyBarPanel.swift
 //  Droppy
 //
-//  A beautiful floating panel that appears below the menu bar to display overflow icons.
+//  A beautiful floating panel using native Droppy liquid glass styling.
 //
 
 import Cocoa
@@ -43,7 +43,7 @@ final class DroppyBarPanel: NSPanel {
         titlebarAppearsTransparent = true
         isMovableByWindowBackground = false
         backgroundColor = .clear
-        hasShadow = true
+        hasShadow = false  // We use SwiftUI shadows instead
         
         // Floating behavior
         level = .statusBar + 1
@@ -66,9 +66,12 @@ final class DroppyBarPanel: NSPanel {
     
     // MARK: - Positioning
     
-    /// Show the panel on the specified screen
+    /// Show the panel on the specified screen (or screen with mouse)
     func show(on screen: NSScreen? = nil) {
-        let targetScreen = screen ?? NSScreen.main ?? NSScreen.screens.first
+        // Find the screen with the mouse cursor if not specified
+        let mouseLocation = NSEvent.mouseLocation
+        let targetScreen = screen ?? NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main ?? NSScreen.screens.first
+        
         guard let targetScreen = targetScreen else { return }
         
         updatePosition(for: targetScreen)
@@ -94,31 +97,20 @@ final class DroppyBarPanel: NSPanel {
 
 // MARK: - DroppyBarContentView
 
-/// SwiftUI content view for the Droppy Bar - premium glassmorphism design
+/// SwiftUI content view for the Droppy Bar - using native Droppy liquid glass styling
 struct DroppyBarContentView: View {
+    @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
     @StateObject private var scanner = MenuBarItemScanner()
     @State private var hoveredItemID: Int?
     @State private var isHoveringRefresh = false
     
     var body: some View {
-        HStack(spacing: 2) {
-            // Left gradient accent
-            RoundedRectangle(cornerRadius: 2)
-                .fill(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 3)
-                .padding(.vertical, 8)
-            
+        HStack(spacing: 4) {
             // Menu bar items
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
+                HStack(spacing: 4) {
                     if scanner.menuBarItems.isEmpty && !scanner.isScanning {
-                        Text("No items")
+                        Text("No items found")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
@@ -140,66 +132,27 @@ struct DroppyBarContentView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 8)
             }
             
             Spacer(minLength: 4)
             
-            // Separator
-            Rectangle()
-                .fill(.white.opacity(0.1))
-                .frame(width: 1)
-                .padding(.vertical, 10)
-            
             // Refresh button
             Button(action: performScan) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(isHoveringRefresh ? .primary : .secondary)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle()
-                            .fill(.white.opacity(isHoveringRefresh ? 0.1 : 0))
-                    )
+                    .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
             .onHover { isHoveringRefresh = $0 }
             .help("Refresh menu bar icons")
-            .padding(.trailing, 4)
+            .padding(.trailing, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            ZStack {
-                // Dark glassmorphism background
-                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-                
-                // Subtle gradient overlay
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.05),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.2),
-                            Color.white.opacity(0.05)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.5
-                )
-        )
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+        .padding(.vertical, 4)
+        // Use native Droppy liquid glass styling
+        .liquidGlass(radius: 12, depth: 0.8, isConcave: false)
         .onAppear(perform: performScan)
     }
     
@@ -214,7 +167,7 @@ struct DroppyBarContentView: View {
 
 // MARK: - DroppyBarIconButton
 
-/// A beautiful button that displays a menu bar item icon
+/// A button that displays a menu bar item icon
 struct DroppyBarIconButton: View {
     let item: MenuBarItemScanner.ScannedMenuItem
     let isHovered: Bool
@@ -228,31 +181,21 @@ struct DroppyBarIconButton: View {
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 18, height: 18)
+                        .frame(width: 16, height: 16)
                 } else {
-                    // Fallback: stylized letter
+                    // Fallback: app initial
                     Text(String(item.ownerName.prefix(1)).uppercased())
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(width: 18, height: 18)
-                        .background(
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.blue, .purple],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .frame(width: 16, height: 16)
                 }
             }
-            .frame(width: 28, height: 28)
+            .frame(width: 26, height: 26)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(.white.opacity(isHovered ? 0.15 : 0))
             )
-            .scaleEffect(isHovered ? 1.05 : 1.0)
+            .scaleEffect(isHovered ? 1.08 : 1.0)
         }
         .buttonStyle(.plain)
         .help(item.ownerName)
@@ -264,26 +207,5 @@ struct DroppyBarIconButton: View {
             app.activate()
             print("[DroppyBar] Activated: \(item.ownerName)")
         }
-    }
-}
-
-// MARK: - VisualEffectBlur
-
-/// NSVisualEffectView wrapper for SwiftUI
-struct VisualEffectBlur: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
     }
 }
