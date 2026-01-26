@@ -66,9 +66,11 @@ struct DroppyBarConfigView: View {
                         .foregroundStyle(.orange)
                     Text("No menu bar items found")
                         .font(.callout)
-                    Text("Make sure screen recording is enabled")
+                    Text("Screen recording: \(CGPreflightScreenCaptureAccess() ? "Authorized" : "Denied")")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("Check Console.app for [MenuBarItem] logs")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

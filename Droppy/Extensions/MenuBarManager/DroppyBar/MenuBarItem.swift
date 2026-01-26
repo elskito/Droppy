@@ -112,22 +112,26 @@ struct MenuBarItem: Identifiable, Equatable, Hashable {
             let ownerName = windowInfo[kCGWindowOwnerName as String] as? String ?? "Unknown"
             let layer = windowInfo[kCGWindowLayer as String] as? Int ?? -1
             
-            // Menu bar items are:
-            // 1. At Y=0 (top of screen in Quartz coordinates)
-            // 2. Have height ~24 pixels (menu bar height)
-            // 3. Have positive width
-            let isAtTop = y >= 0 && y < 5  // Menu bar is at Y=0
-            let isMenuBarHeight = height >= 20 && height <= 30
-            let hasWidth = width > 5
+            // Broad filter: anything in the top 40 pixels that looks like a menu handling window
+            // Menu bar is usually height 24, but some items might be overlays
+            let isAtTop = y >= 0 && y < 40
+            let isReasonableHeight = height > 0 && height < 100 // Allow taller popovers initially
+            let isReasonableWidth = width > 0
             
-            guard isAtTop && isMenuBarHeight && hasWidth else {
+            guard isAtTop && isReasonableHeight && isReasonableWidth else {
                 continue
             }
             
-            // Skip known system windows
+            // Skip known system windows that are definitely not icons
             if ownerName == "Window Server" || 
                ownerName == "Dock" ||
-               ownerName == "Droppy" {
+               ownerName == "Droppy" ||
+               ownerName == "Wallpaper" {
+                continue
+            }
+            
+            // Skip full screen windows (likely not menu items)
+            if let screenWidth = NSScreen.main?.frame.width, width >= screenWidth {
                 continue
             }
             
@@ -135,7 +139,7 @@ struct MenuBarItem: Identifiable, Equatable, Hashable {
                 continue
             }
             
-            print("[MenuBarItem] Found: \(ownerName) at x=\(Int(x)) (layer \(layer))")
+            print("[MenuBarItem] Found candidate: \(ownerName) at x=\(Int(x)) y=\(Int(y)) w=\(Int(width)) h=\(Int(height)) (layer \(layer))")
             items.append(item)
         }
         
