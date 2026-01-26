@@ -146,8 +146,8 @@ struct MenuBarManagerInfoView: View {
             
             VStack(alignment: .leading, spacing: 8) {
                 featureRow(icon: "menubar.rectangle", text: "Hide/show menu bar icons")
-                featureRow(icon: "chevron.compact.right", text: "Click divider to expand/collapse")
-                featureRow(icon: "hand.draw", text: "Hold ⌘ + drag icons to far left to hide")
+                featureRow(icon: "circle.fill", text: "Click dot to expand/collapse hidden icons")
+                featureRow(icon: "hand.draw", text: "Hold ⌘ + drag icons to left of dot to hide")
                 featureRow(icon: "arrow.left.arrow.right", text: "Rearrange by holding ⌘ and dragging")
             }
             
@@ -186,7 +186,7 @@ struct MenuBarManagerInfoView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
             
-            Text("A divider will appear in your menu bar. Click it to show/hide icons to its left.")
+            Text("A dot indicator will appear in your menu bar. Click it to show/hide icons to its left.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -223,16 +223,16 @@ struct MenuBarManagerInfoView: View {
             }
             
             VStack(alignment: .leading, spacing: 8) {
-                instructionRow(step: "1", text: "Click the chevron ( › ) to expand and show all icons")
-                instructionRow(step: "2", text: "Hold ⌘ and drag icons ALL THE WAY to the far left edge")
-                instructionRow(step: "3", text: "Release — icons left of the chevron are now hidden")
-                instructionRow(step: "4", text: "Click the chevron anytime to show/hide them")
+                instructionRow(step: "1", text: "Click the dot (●) to expand and show all icons")
+                instructionRow(step: "2", text: "Hold ⌘ and drag icons to the LEFT of the dot")
+                instructionRow(step: "3", text: "Release — icons left of the dot are now hidden")
+                instructionRow(step: "4", text: "Click the dot anytime to show/hide them")
             }
             
             HStack(spacing: 8) {
                 Image(systemName: "info.circle")
                     .foregroundStyle(.blue)
-                Text("Right-click the chevron for more options")
+                Text("Right-click the dot for more options")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

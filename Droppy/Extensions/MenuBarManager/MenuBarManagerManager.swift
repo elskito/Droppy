@@ -191,17 +191,15 @@ final class MenuBarManager: ObservableObject {
     private func updateToggleIcon() {
         guard let button = toggleItem?.button else { return }
         
-        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .medium)
         
         if isExpanded {
-            // Items visible (expanded) - show chevron pointing right (icons expanded outward)
-            // Issue #83: User expects ">" when expanded
-            button.image = NSImage(systemSymbolName: "chevron.compact.right", accessibilityDescription: "Hide menu bar icons")?
+            // Items visible (expanded) - show filled circle indicating icons are visible
+            button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "Hide menu bar icons")?
                 .withSymbolConfiguration(config)
         } else {
-            // Items hidden (collapsed) - show chevron pointing left (click to expand)
-            // Issue #83: User expects "<" when collapsed, indicating "click to expand"
-            button.image = NSImage(systemSymbolName: "chevron.compact.left", accessibilityDescription: "Show menu bar icons")?
+            // Items hidden (collapsed) - show empty circle indicating icons are hidden
+            button.image = NSImage(systemSymbolName: "circle", accessibilityDescription: "Show menu bar icons")?
                 .withSymbolConfiguration(config)
         }
     }
@@ -282,7 +280,7 @@ final class MenuBarManager: ObservableObject {
         DroppyAlertController.shared.showSimple(
             style: .info,
             title: "How to Use Menu Bar Manager",
-            message: "1. Hold ⌘ (Command) and drag menu bar icons\n2. Move icons to the LEFT of the chevron to hide them\n3. Click the chevron to show/hide those icons\n\nIcons to the right of the chevron stay visible."
+            message: "1. Hold ⌘ (Command) and drag menu bar icons\n2. Move icons to the LEFT of the dot (●) to hide them\n3. Click the dot to show/hide those icons\n\nFilled dot = icons visible, empty dot = icons hidden."
         )
     }
     
