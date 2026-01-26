@@ -836,6 +836,8 @@ struct FloatingBasketView: View {
             .padding(.top, 24)
             .padding(.bottom, 18)
         }
+        // CRITICAL: Constrain list view to fullGridWidth to prevent items from expanding beyond basket
+        .frame(width: fullGridWidth)
         // Note: Drop destination handled at container level (mainBasketContainer)
     }
     
@@ -854,12 +856,16 @@ struct FloatingBasketView: View {
             powerFoldersToMove = state.basketPowerFolders.filter { state.selectedBasketItems.contains($0.id) }
         }
         
+        // Collect items that will be moved (to remove after adding)
+        var movedItems: [DroppedItem] = []
+        var movedFolders: [DroppedItem] = []
+        
         // Transfer power folders to shelf (distinct, never grouped)
         for folder in powerFoldersToMove {
             // Avoid duplicates
             guard !state.shelfPowerFolders.contains(where: { $0.url == folder.url }) else { continue }
             state.shelfPowerFolders.append(folder)
-            state.basketPowerFolders.removeAll { $0.id == folder.id }
+            movedFolders.append(folder)
         }
         
         // Transfer items to shelf
@@ -869,6 +875,15 @@ struct FloatingBasketView: View {
             // Avoid duplicates
             guard !existingShelfURLs.contains(item.url) else { continue }
             state.shelfItems.append(item)
+            movedItems.append(item)
+        }
+        
+        // Remove moved items from basket AFTER adding them all to shelf
+        // This prevents disrupting the iteration with @Published array updates
+        for folder in movedFolders {
+            state.basketPowerFolders.removeAll { $0.id == folder.id }
+        }
+        for item in movedItems {
             state.removeBasketItemForTransfer(item)
         }
         

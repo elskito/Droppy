@@ -43,6 +43,58 @@ struct InlineHUDView: View {
         value > 0
     }
     
+    /// Whether volume is muted (for red color override)
+    private var isMuted: Bool {
+        type == .volume && value <= 0
+    }
+    
+    /// PREMIUM: Fill color based on HUD type (matching HUDSlider)
+    private var fillColor: Color {
+        if isMuted {
+            return Color(red: 0.85, green: 0.25, blue: 0.25)  // Subtle red for muted
+        }
+        switch type {
+        case .brightness:
+            return Color(red: 1.0, green: 0.85, blue: 0.0)  // Bright yellow
+        case .volume:
+            return Color(red: 0.2, green: 0.9, blue: 0.4)   // Bright green
+        case .battery:
+            return Color(red: 0.2, green: 0.9, blue: 0.4)   // Bright green (same as volume)
+        case .capsLock, .focus:
+            return type.accentColor
+        }
+    }
+    
+    /// PREMIUM: Track color (darker, faded version)
+    private var trackColor: Color {
+        if isMuted {
+            return Color(red: 0.25, green: 0.1, blue: 0.1)  // Dark muted red
+        }
+        switch type {
+        case .brightness:
+            return Color(red: 0.35, green: 0.3, blue: 0.05)  // Dark faded yellow
+        case .volume, .battery:
+            return Color(red: 0.08, green: 0.25, blue: 0.12)  // Dark faded green
+        case .capsLock, .focus:
+            return Color.white.opacity(0.1)
+        }
+    }
+    
+    /// PREMIUM: Icon color (matching slider fill)
+    private var iconColor: Color {
+        if isMuted {
+            return Color(red: 0.85, green: 0.25, blue: 0.25)
+        }
+        switch type {
+        case .brightness:
+            return Color(red: 1.0, green: 0.85, blue: 0.0)
+        case .volume:
+            return Color(red: 0.2, green: 0.9, blue: 0.4)
+        default:
+            return type.accentColor
+        }
+    }
+    
     var body: some View {
         // Equal spacing: Icon (32px) | 10px | Slider | 10px | Text (32px)
         HStack(spacing: 10) {
@@ -59,18 +111,23 @@ struct InlineHUDView: View {
                     Image(systemName: type.icon(for: value))
                         .symbolEffect(.bounce, value: value)
                         .contentTransition(.symbolEffect(.replace.byLayer))
-                case .volume, .brightness:
-                    // No bounce - just smooth icon transition (bounce on slider causes jitter)
+                case .volume:
+                    // Volume: White icon (slider is colored)
                     Image(systemName: type.icon(for: value))
+                        .foregroundStyle(.white)
+                        .contentTransition(.symbolEffect(.replace.byLayer))
+                case .brightness:
+                    // Brightness: Yellow icon
+                    Image(systemName: type.icon(for: value))
+                        .foregroundStyle(Color(red: 1.0, green: 0.85, blue: 0.0))
                         .contentTransition(.symbolEffect(.replace.byLayer))
                 }
             }
             .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(type.accentColor)
             .frame(width: 32, alignment: .trailing) // Same width as text for symmetry
             .animation(DroppyAnimation.notchState, value: type.icon(for: value))
             
-            // Slider (visual only) - matches HUDSlider premium style
+            // Slider (visual only) - PREMIUM: New colored slider with smooth mute transition
             if type.showsSlider {
                 GeometryReader { geo in
                     let width = geo.size.width
@@ -79,10 +136,11 @@ struct InlineHUDView: View {
                     let trackHeight: CGFloat = 4
                     
                     ZStack(alignment: .leading) {
-                        // Track background (simple, no mask/blur)
+                        // Track background - PREMIUM colored track
                         Capsule()
-                            .fill(Color.white.opacity(0.1))
+                            .fill(trackColor)
                             .frame(height: trackHeight)
+                            .animation(.easeInOut(duration: 0.25), value: isMuted)
                         
                         // PREMIUM: Gradient fill with glow
                         if progress > 0 {
@@ -90,8 +148,8 @@ struct InlineHUDView: View {
                                 .fill(
                                     LinearGradient(
                                         colors: [
-                                            type.accentColor,
-                                            type.accentColor.opacity(0.85)
+                                            fillColor,
+                                            fillColor.opacity(0.85)
                                         ],
                                         startPoint: .top,
                                         endPoint: .bottom
@@ -111,9 +169,10 @@ struct InlineHUDView: View {
                                         )
                                 )
                                 // PREMIUM BLOOM: Multi-layer glow
-                                .shadow(color: type.accentColor.opacity(0.3), radius: 1)
-                                .shadow(color: type.accentColor.opacity(0.15 + (progress * 0.15)), radius: 3)
-                                .shadow(color: type.accentColor.opacity(0.1 + (progress * 0.1)), radius: 5 + (progress * 3))
+                                .shadow(color: fillColor.opacity(0.3), radius: 1)
+                                .shadow(color: fillColor.opacity(0.15 + (progress * 0.15)), radius: 3)
+                                .shadow(color: fillColor.opacity(0.1 + (progress * 0.1)), radius: 5 + (progress * 3))
+                                .animation(.easeInOut(duration: 0.25), value: isMuted)
                         }
                     }
                     .frame(height: trackHeight)
@@ -123,15 +182,15 @@ struct InlineHUDView: View {
                 .frame(height: 28)
             }
             
-            // Value text - MUST stay on one line
-            Text(type.displayText(for: value))
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
+            // PREMIUM: Animated percentage text with rolling number effect
+            Text("\(Int(max(0, min(1, value)) * 100))")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.85))
                 .monospacedDigit()
                 .lineLimit(1)
-                .frame(width: 32, alignment: .leading) // Same width as icon for symmetry
-                .contentTransition(.numericText(value: value))
-                .animation(DroppyAnimation.notchState, value: value)
+                .frame(width: 32, alignment: .leading)
+                .contentTransition(.numericText(value: Double(Int(value * 100))))
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: Int(value * 100))
         }
         // Match width of center controls
         .frame(width: type.showsSlider ? 160 : 80)

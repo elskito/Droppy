@@ -67,9 +67,10 @@ struct NotchHUDView: View {
                     // Icon scales from 0.85x (0%) to 1.15x (100%) for premium feel
                     let iconScale = 0.85 + (value * 0.30)
                     
+                    // Volume: White icon | Brightness: Yellow icon
                     Image(systemName: hudType.icon(for: value))
                         .font(.system(size: iconSize, weight: .semibold))
-                        .foregroundStyle(isMuted ? .red : (hudType == .brightness ? .yellow : .white))
+                        .foregroundStyle(hudType == .brightness ? Color(red: 1.0, green: 0.85, blue: 0.0) : .white)
                         .contentTransition(.symbolEffect(.replace.byLayer))
                         .scaleEffect(iconScale)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 20), value: value)
@@ -78,7 +79,8 @@ struct NotchHUDView: View {
                     // Right side: Slider takes remaining width
                     HUDSlider(
                         value: $value,
-                        accentColor: isMuted ? .red : (hudType == .brightness ? .yellow : .white),
+                        hudType: hudType,
+                        isMuted: isMuted,
                         isActive: isActive,
                         onChange: onValueChange
                     )
@@ -94,18 +96,19 @@ struct NotchHUDView: View {
                 
                 HStack(spacing: 0) {
                     // Left wing: Icon + Label
-                    HStack(spacing: 10) {
+                    HStack(spacing: 12) {  // Matches slider-to-percentage spacing
                         // Icon with BUTTERY SMOOTH SCALING
                         // Icon scales from 0.85x (0%) to 1.15x (100%) for premium feel
                         let iconScale = 0.85 + (value * 0.30)
                         
+                        // Volume: White icon | Brightness: Yellow icon
                         Image(systemName: hudType.icon(for: value))
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(isMuted ? .red : (hudType == .brightness ? .yellow : .white))
+                            .foregroundStyle(hudType == .brightness ? Color(red: 1.0, green: 0.85, blue: 0.0) : .white)
                             .contentTransition(.symbolEffect(.replace.byLayer))
                             .scaleEffect(iconScale)
                             .animation(.interpolatingSpring(stiffness: 300, damping: 20), value: value)
-                            .frame(width: 30, height: iconSize, alignment: .leading)  // Wider for speaker.wave icons
+                            .fixedSize()  // Natural width - no extra padding
                         
                         Text(hudType == .brightness ? "Brightness" : "Volume")
                             .font(.system(size: 15, weight: .semibold))
@@ -126,7 +129,8 @@ struct NotchHUDView: View {
                     HStack {
                         HUDSlider(
                             value: $value,
-                            accentColor: isMuted ? .red : (hudType == .brightness ? .yellow : .white),
+                            hudType: hudType,
+                            isMuted: isMuted,
                             isActive: isActive,
                             onChange: onValueChange
                         )

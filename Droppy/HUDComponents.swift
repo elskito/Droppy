@@ -6,16 +6,79 @@ import Combine
 
 struct HUDSlider: View {
     @Binding var value: CGFloat
-    var accentColor: Color = .white
+    var hudType: HUDContentType = .volume  // PREMIUM: Determines green/yellow coloring
+    var accentColor: Color = .white  // Kept for backwards compatibility, overridden by hudType
+    var isMuted: Bool = false  // PREMIUM: When true, uses red color for muted volume
     var isActive: Bool = false
     var onChange: ((CGFloat) -> Void)?
     
     @State private var isDragging = false
+    @State private var displayedMuted = false  // PREMIUM: Delayed mute state for drain-then-color effect
     
     /// Whether slider should be expanded (dragging OR externally active)
     private var isExpanded: Bool { isDragging || isActive }
     
+    /// PREMIUM: Fill color based on HUD type (red override when muted - uses displayedMuted for delayed transition)
+    private var fillColor: Color {
+        if displayedMuted {
+            return Color(red: 0.85, green: 0.25, blue: 0.25)  // Subtle red for muted
+        }
+        switch hudType {
+        case .brightness:
+            return Color(red: 1.0, green: 0.85, blue: 0.0)  // Bright yellow
+        case .volume, .backlight, .mute:
+            return Color(red: 0.2, green: 0.9, blue: 0.4)   // Bright green
+        }
+    }
+    
+    /// PREMIUM: Track (empty side) color based on HUD type - darker, faded version
+    private var trackColor: Color {
+        if displayedMuted {
+            return Color(red: 0.25, green: 0.1, blue: 0.1)  // Dark muted red
+        }
+        switch hudType {
+        case .brightness:
+            return Color(red: 0.35, green: 0.3, blue: 0.05)  // Dark faded yellow
+        case .volume, .backlight, .mute:
+            return Color(red: 0.08, green: 0.25, blue: 0.12)  // Dark faded green
+        }
+    }
+    
     var body: some View {
+        HStack(spacing: 12) {  // Matches icon-to-slider spacing in HUDOverlayView
+            // Slider portion
+            sliderTrack
+            
+            // PREMIUM: Animated percentage text with natural width
+            AnimatedPercentageText(value: value)
+                .fixedSize()  // Natural width - no extra padding
+        }
+        .frame(height: 20)
+        // PREMIUM: Smooth width animation when text changes size (e.g. 9→10, 99→100)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: Int(value * 100))
+        // PREMIUM: Delayed mute color transition - bar drains first, then color changes
+        .onChange(of: isMuted) { _, newMuted in
+            if newMuted {
+                // When muting: delay color change so bar drains to 0 first (green -> empty -> red)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        displayedMuted = true
+                    }
+                }
+            } else {
+                // When unmuting: immediately show green (red -> green instantly, then bar fills)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    displayedMuted = false
+                }
+            }
+        }
+        .onAppear {
+            // Sync initial state
+            displayedMuted = isMuted
+        }
+    }
+    
+    private var sliderTrack: some View {
         GeometryReader { geo in
             let width = geo.size.width
             let progress = max(0, min(1, value))
@@ -23,10 +86,12 @@ struct HUDSlider: View {
             let trackHeight: CGFloat = isExpanded ? 5 : 4
             
             ZStack(alignment: .leading) {
-                // Track background (simple, no mask/blur)
+                // Track background - PREMIUM colored track (not just white/gray)
                 Capsule()
-                    .fill(Color.white.opacity(0.1))
+                    .fill(trackColor)
                     .frame(height: trackHeight)
+                    // PREMIUM: Smooth color transition for mute state
+                    .animation(.easeInOut(duration: 0.25), value: isMuted)
                 
                 // PREMIUM: Gradient fill with glow
                 if progress > 0 {
@@ -34,8 +99,8 @@ struct HUDSlider: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    accentColor,
-                                    accentColor.opacity(0.85)
+                                    fillColor,
+                                    fillColor.opacity(0.85)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -55,10 +120,12 @@ struct HUDSlider: View {
                                 )
                         )
                         // PREMIUM BLOOM: Multi-layer glow
-                        .shadow(color: accentColor.opacity(0.3), radius: 1)
-                        .shadow(color: accentColor.opacity(0.15 + (progress * 0.15)), radius: 3)
-                        .shadow(color: accentColor.opacity(0.1 + (progress * 0.1)), radius: 5 + (progress * 3))
+                        .shadow(color: fillColor.opacity(0.3), radius: 1)
+                        .shadow(color: fillColor.opacity(0.15 + (progress * 0.15)), radius: 3)
+                        .shadow(color: fillColor.opacity(0.1 + (progress * 0.1)), radius: 5 + (progress * 3))
+                        // PREMIUM: Smooth animation for both progress AND mute color transition
                         .animation(.interpolatingSpring(stiffness: 350, damping: 28), value: progress)
+                        .animation(.easeInOut(duration: 0.25), value: isMuted)
                 }
             }
             .frame(height: trackHeight)
@@ -86,7 +153,26 @@ struct HUDSlider: View {
                     }
             )
         }
-        .frame(height: 20)
+    }
+}
+
+/// PREMIUM: Animated percentage text with rolling number effect
+private struct AnimatedPercentageText: View {
+    let value: CGFloat
+    
+    /// Current percentage value (0-100)
+    private var percentage: Int {
+        Int(max(0, min(1, value)) * 100)
+    }
+    
+    var body: some View {
+        // PREMIUM: Rolling number animation effect
+        Text("\(percentage)")
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white.opacity(0.85))
+            .monospacedDigit()
+            .contentTransition(.numericText(value: Double(percentage)))
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: percentage)
     }
 }
 
