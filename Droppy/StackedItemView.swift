@@ -142,7 +142,7 @@ struct StackedItemView: View {
                         .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
                     
-                    // Count badge (top-right)
+                    // Count badge (top-right, inside the container)
                     if stack.count > 1 {
                         Text("\(stack.count)")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -154,7 +154,7 @@ struct StackedItemView: View {
                                     .fill(Color.blue)
                                     .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                             )
-                            .offset(x: 22, y: -22)
+                            .offset(x: 18, y: -18)
                     }
                 }
                 .frame(width: 56, height: 56)
