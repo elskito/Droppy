@@ -389,19 +389,13 @@ struct FloatingBasketView: View {
     @ViewBuilder
     private func quickActionExplanation(for action: QuickActionType) -> some View {
         ZStack {
-            // Centered text - explicit vertical AND horizontal centering
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Text(action.description)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                }
-                Spacer()
-            }
+            // Centered text - use frame alignment for proper centering
+            Text(action.description)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             
             // X button overlay in top-left
             VStack {
