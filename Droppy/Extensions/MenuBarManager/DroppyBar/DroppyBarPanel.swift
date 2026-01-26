@@ -116,9 +116,10 @@ final class DroppyBarPanel: NSPanel {
         guard autoHideEnabled else { return }
         
         cancelHideTimer()
-        hideTimer = Timer.scheduledTimer(withTimeInterval: hideDelay, repeats: false) { [weak self] _ in
+        hideTimer = Timer.scheduledTimer(withTimeInterval: hideDelay, repeats: false) { [weak self] timer in
+            guard let panel = self else { return }
             Task { @MainActor in
-                self?.orderOut(nil)
+                panel.orderOut(nil)
                 print("[DroppyBar] Auto-hidden")
             }
         }

@@ -287,23 +287,22 @@ final class MenuBarManager: ObservableObject {
                 let screenMaxY = screen.frame.maxY
                 let thresholdX = hoverThresholdX
                 
-                collapseTimer = Timer.scheduledTimer(withTimeInterval: collapseDelay, repeats: false) { [weak self] _ in
+                collapseTimer = Timer.scheduledTimer(withTimeInterval: collapseDelay, repeats: false) { [weak self] timer in
+                    guard let manager = self else { return }
                     Task { @MainActor in
-                        guard let self else { return }
-                        
                         // Double-check mouse is still outside before collapsing
                         let currentLocation = NSEvent.mouseLocation
                         let stillInMenuBar = currentLocation.y >= (screenMaxY - menuBarHeight)
                         let stillInIconArea = currentLocation.x >= thresholdX
                         
                         if !stillInMenuBar || !stillInIconArea {
-                            self.isHoverExpanded = false
-                            let savedState = UserDefaults.standard.bool(forKey: self.expandedKey)
-                            self.isExpanded = savedState
-                            self.applyExpansionState()
+                            manager.isHoverExpanded = false
+                            let savedState = UserDefaults.standard.bool(forKey: manager.expandedKey)
+                            manager.isExpanded = savedState
+                            manager.applyExpansionState()
                             print("[MenuBarManager] Hover collapse triggered (after delay)")
                         }
-                        self.collapseTimer = nil
+                        manager.collapseTimer = nil
                     }
                 }
             }
