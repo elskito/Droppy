@@ -1389,10 +1389,13 @@ struct StackCollapseListRow: View {
             onCollapse()
         }) {
             HStack(spacing: 12) {
-                // Collapse icon in circle
+                // Collapse icon in glass circle
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.15))
+                        .fill(.ultraThinMaterial)
+                    
+                    Circle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
                     
                     Image(systemName: "arrow.down.right.and.arrow.up.left")
                         .font(.system(size: 14, weight: .medium))
@@ -1422,11 +1425,15 @@ struct StackCollapseListRow: View {
             .padding(.vertical, 8)
             .background(
                 Capsule()
-                    .fill(Color.white.opacity(isHovering ? 0.18 : 0.12))
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(isHovering ? 0.15 : 0.08), lineWidth: 1)
             )
             .scaleEffect(isHovering ? 1.02 : 1.0)
         }
-        .buttonStyle(DroppyPillButtonStyle())
+        .buttonStyle(.plain)
         .onHover { hovering in
             isHovering = hovering
         }

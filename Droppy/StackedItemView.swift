@@ -384,40 +384,13 @@ struct StackedItemView: View {
 
 /// Premium collapse button that looks identical to stacked cards
 /// Features converging card animation on hover to indicate "collapse back to stack"
+/// Clean collapse button matching regular basket item styling
+/// Features glass background and proper icon sizing
 struct StackCollapseButton: View {
     let itemCount: Int
     let onCollapse: () -> Void
     
     @State private var isHovering = false
-    @State private var peekProgress: CGFloat = 1.0  // Start peeked (spread), collapse on hover
-    
-    // Card dimensions - matching StackedItemView exactly
-    private let cardWidth: CGFloat = 48
-    private let cardHeight: CGFloat = 48
-    private let cardCornerRadius: CGFloat = 10
-    
-    // Stacking formulas (matching StackedItemView)
-    private func cardOffset(for index: Int) -> CGFloat {
-        CGFloat(index) * 4
-    }
-    
-    private func cardRotation(for index: Int, total: Int) -> Double {
-        Double(index - total / 2) * 2.0
-    }
-    
-    private func cardScale(for index: Int) -> CGFloat {
-        1.0 - CGFloat(index) * 0.03
-    }
-    
-    // Hover converge: cards come together (opposite of peek)
-    private func convergedOffset(for index: Int) -> CGFloat {
-        cardOffset(for: index) * (1.0 - peekProgress) + (CGFloat(index) * 7 * peekProgress)
-    }
-    
-    private func convergedRotation(for index: Int, total: Int) -> Double {
-        cardRotation(for: index, total: total) * (1.0 - peekProgress) + 
-            (Double(index - total / 2) * 3.0 * Double(peekProgress))
-    }
     
     var body: some View {
         Button(action: {
@@ -425,16 +398,24 @@ struct StackCollapseButton: View {
             onCollapse()
         }) {
             VStack(spacing: 6) {
-                // 56x56 container for stacked cards
+                // 56x56 icon container matching regular items
                 ZStack {
-                    // Render 3 stacked cards (back to front)
-                    ForEach((0..<3).reversed(), id: \.self) { index in
-                        collapseCard(at: index, total: 3)
-                    }
+                    // Glass background matching basket style
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    
+                    // Subtle border
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(isHovering ? 0.2 : 0.1), lineWidth: 1)
+                    
+                    // Collapse icon
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(width: 56, height: 56)
                 
-                // "Collapse" text label like regular items
+                // "Collapse" text label
                 Text("Collapse")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.7))
@@ -445,57 +426,15 @@ struct StackCollapseButton: View {
             .frame(width: 64, height: 80)
             .contentShape(Rectangle())
         }
-        .buttonStyle(DroppyCardButtonStyle())
-        .scaleEffect(isHovering ? 1.04 : 1.0)
-        .animation(ItemStack.peekAnimation, value: isHovering)
-        .animation(ItemStack.peekAnimation, value: peekProgress)
+        .buttonStyle(.plain)
+        .scaleEffect(isHovering ? 1.05 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovering)
         .onHover { hovering in
             isHovering = hovering
             if hovering {
                 HapticFeedback.pop()
-                // Converge cards on hover
-                peekProgress = 0.0
-            } else {
-                // Spread cards when not hovering
-                peekProgress = 1.0
             }
         }
-    }
-    
-    // Card matching StackedItemView stackedCard exactly
-    private func collapseCard(at index: Int, total: Int) -> some View {
-        ZStack {
-            // Collapse icon only on front card
-            if index == 0 {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-        }
-        .frame(width: cardWidth, height: cardHeight)
-        // NATIVE: No container background - just icon
-        .overlay(
-            // Gradient border (matching StackedItemView)
-            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.25), .white.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.5
-                )
-        )
-        .shadow(
-            color: .black.opacity(0.2 - Double(index) * 0.03),
-            radius: 8 - CGFloat(index) * 1.5,
-            x: 0,
-            y: 4 + CGFloat(index)
-        )
-        .scaleEffect(cardScale(for: index))
-        .offset(x: convergedOffset(for: index) * 0.4, y: -convergedOffset(for: index))
-        .rotationEffect(.degrees(convergedRotation(for: index, total: total)))
-        .zIndex(Double(total - index))
     }
 }
 
