@@ -90,19 +90,27 @@ class LockScreenManager: ObservableObject {
     }
     
     @objc private func handleScreenSleep() {
-        // Just update internal state - don't trigger HUD for lock
-        // (the lock animation wouldn't be visible on the lock screen anyway)
+        // Update internal state IMMEDIATELY - the notch is visible on lock screen via SkyLight
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            // Prevent duplicate triggers
+            guard self.isUnlocked else { return }
             self.isUnlocked = false
-            // Don't update lastEvent or lastChangeAt - this prevents the HUD from showing
+            self.lastEvent = .locked
+            self.lastChangeAt = Date()
+            
+            // Show lock screen media panel (it renders ON the lock screen)
+            LockScreenMediaPanelManager.shared.showPanel()
         }
     }
     
     @objc private func handleScreenWake() {
-        // Delay the unlock HUD slightly so it appears AFTER the screen is fully visible
-        // This ensures the user sees the smooth animation instead of missing it
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        // Hide lock screen media panel (user is unlocking)
+        LockScreenMediaPanelManager.shared.hidePanel()
+        
+        // Trigger unlock HUD IMMEDIATELY - the notch is visible on lock screen via SkyLight
+        // The user will see the unlock animation on the lock screen before it transitions
+        DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             // Prevent duplicate triggers
             guard !self.isUnlocked else { return }

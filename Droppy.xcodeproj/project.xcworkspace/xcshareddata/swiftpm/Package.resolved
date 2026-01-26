@@ -1,6 +1,15 @@
 {
-  "originHash" : "d56d92ac42136c2e192fef664f0d912916e419a53062581402dd335d56d20145",
+  "originHash" : "21183c864357b4d5916995790d08343cae337e64f860785401bb195600468c39",
   "pins" : [
+    {
+      "identity" : "skylightwindow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Lakr233/SkyLightWindow.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "4a7e8628c85e6b2ec429b57657a556a2171a4864"
+      }
+    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",

@@ -878,14 +878,44 @@ struct NotchShelfView: View {
         
         // Start timer to auto-shrink shelf
         let workItem = DispatchWorkItem { [self] in
+            // DEBUG: Log auto-shrink timer firing
+            print("⏳ AUTO-SHRINK TIMER FIRED: isExpandedOnThisScreen=\(isExpandedOnThisScreen), isHoveringExpandedContent=\(isHoveringExpandedContent), isHoveringOnThisScreen=\(isHoveringOnThisScreen), isDropTargeted=\(state.isDropTargeted)")
+            
+            // SKYLIGHT FIX: After lock/unlock with SkyLight-delegated windows, SwiftUI's .onHover
+            // handlers stop working correctly. Use GEOMETRIC mouse position check as fallback.
+            // Check if mouse is actually in the expanded shelf zone using NSEvent.mouseLocation
+            var isMouseInExpandedZone = false
+            if let screen = targetScreen {
+                let mouseLocation = NSEvent.mouseLocation
+                let expandedHeight = DroppyState.expandedShelfHeight(for: screen)
+                // Match the expanded zone calculation from NotchWindow.handleGlobalMouseEvent
+                let expandedZone = CGRect(
+                    x: screen.frame.midX - (expandedWidth / 2) - 20,
+                    y: screen.frame.maxY - expandedHeight - 20,
+                    width: expandedWidth + 40,
+                    height: expandedHeight + 40
+                )
+                isMouseInExpandedZone = expandedZone.contains(mouseLocation)
+                print("⏳ GEOMETRIC CHECK: mouse=\(mouseLocation), zone=\(expandedZone), isInZone=\(isMouseInExpandedZone)")
+            }
+            
             // Only shrink if still expanded and not hovering over the content
-            // Check both local hover state AND screen-specific mouse hover
-            guard isExpandedOnThisScreen && !isHoveringExpandedContent && !isHoveringOnThisScreen && !state.isDropTargeted else { return }
+            // Check BOTH SwiftUI hover state AND geometric fallback
+            let isHoveringAnyMethod = isHoveringExpandedContent || isHoveringOnThisScreen || isMouseInExpandedZone
+            guard isExpandedOnThisScreen && !isHoveringAnyMethod && !state.isDropTargeted else {
+                print("⏳ AUTO-SHRINK SKIPPED: conditions not met (isHoveringAnyMethod=\(isHoveringAnyMethod))")
+                return
+            }
             
             // CRITICAL: Don't auto-shrink if a context menu is open
-            let hasActiveMenu = NSApp.windows.contains { $0.level.rawValue >= NSWindow.Level.popUpMenu.rawValue }
+            // SKYLIGHT FIX: Also check isVisible - stale window references after lock/unlock
+            // remain at popup level but are not visible
+            let hasActiveMenu = NSApp.windows.contains { 
+                $0.level.rawValue >= NSWindow.Level.popUpMenu.rawValue && $0.isVisible 
+            }
             guard !hasActiveMenu else { return }
             
+            print("⏳ AUTO-SHRINK COLLAPSING SHELF!")
             withAnimation(DroppyAnimation.listChange) {
                 state.expandedDisplayID = nil  // Collapse shelf on all screens
                 state.hoveringDisplayID = nil  // Reset hover state to go directly to regular notch

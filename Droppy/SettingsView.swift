@@ -37,6 +37,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceKey.enableAirPodsHUD) private var enableAirPodsHUD = PreferenceDefault.enableAirPodsHUD
     @AppStorage(AppPreferenceKey.enableLockScreenHUD) private var enableLockScreenHUD = PreferenceDefault.enableLockScreenHUD
     @AppStorage(AppPreferenceKey.enableDNDHUD) private var enableDNDHUD = PreferenceDefault.enableDNDHUD
+    @AppStorage(AppPreferenceKey.enableLockScreenMediaWidget) private var enableLockScreenMediaWidget = PreferenceDefault.enableLockScreenMediaWidget
     @AppStorage(AppPreferenceKey.showMediaPlayer) private var showMediaPlayer = PreferenceDefault.showMediaPlayer
     @AppStorage(AppPreferenceKey.autoFadeMediaHUD) private var autoFadeMediaHUD = PreferenceDefault.autoFadeMediaHUD
     @AppStorage(AppPreferenceKey.debounceMediaChanges) private var debounceMediaChanges = PreferenceDefault.debounceMediaChanges
@@ -1104,6 +1105,62 @@ struct SettingsView: View {
                 }
             } header: {
                 Text("Screen State")
+            }
+            
+            // MARK: Lock Screen Media Widget
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "music.note.tv")
+                        .font(.system(size: 24))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.purple, .blue],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                    
+                    Toggle(isOn: $enableLockScreenMediaWidget) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text("Lock Screen Media")
+                                Text("new")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.blue))
+                            }
+                            Text("Show notch & music controls on the lock screen")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .onChange(of: enableLockScreenMediaWidget) { _, newValue in
+                    if newValue {
+                        // Initialize the manager when enabled
+                        LockScreenMediaPanelManager.shared.configure(musicManager: MusicManager.shared)
+                        // Delegate the notch window to SkyLight for lock screen visibility
+                        NotchWindowController.shared.delegateToLockScreen()
+                    }
+                }
+                
+                // Note about private API
+                if enableLockScreenMediaWidget {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.blue)
+                            .font(.system(size: 14))
+                        Text("Uses advanced system APIs for lock screen access")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.leading, 52)
+                }
+            } header: {
+                Text("Lock Screen")
             }
         }
     }

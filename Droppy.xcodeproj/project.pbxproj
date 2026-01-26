@@ -10,6 +10,7 @@
 		BA001A022F11D6E10041AAAA /* mediaremote-adapter.pl in Resources */ = {isa = PBXBuildFile; fileRef = BA001A052F11D6E10041AAAA /* mediaremote-adapter.pl */; };
 		BA001A032F11D6E10041AAAA /* MediaRemoteAdapter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA001A062F11D6E10041AAAA /* MediaRemoteAdapter.framework */; };
 		BA001A042F11D6E10041AAAA /* MediaRemoteAdapter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BA001A062F11D6E10041AAAA /* MediaRemoteAdapter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BA7E8C002F1E00000041LOCK /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = BA7E8C012F1E00000041LOCK /* SkyLightWindow */; };
 		BAA56D992F16F4D90041C83B /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = BAA56D982F16F4D90041C83B /* WhisperKit */; };
 		BAA56D9B2F16F4D90041C83B /* whisperkit-cli in Frameworks */ = {isa = PBXBuildFile; productRef = BAA56D9A2F16F4D90041C83B /* whisperkit-cli */; };
 		BAD854462F1D5550000B5751 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = BAD854452F1D5550000B5751 /* SwiftTerm */; };
@@ -52,6 +53,7 @@
 				BA001A032F11D6E10041AAAA /* MediaRemoteAdapter.framework in Frameworks */,
 				BAD854462F1D5550000B5751 /* SwiftTerm in Frameworks */,
 				BAA56D9B2F16F4D90041C83B /* whisperkit-cli in Frameworks */,
+				BA7E8C002F1E00000041LOCK /* SkyLightWindow in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,6 +110,7 @@
 				BAA56D982F16F4D90041C83B /* WhisperKit */,
 				BAA56D9A2F16F4D90041C83B /* whisperkit-cli */,
 				BAD854452F1D5550000B5751 /* SwiftTerm */,
+				BA7E8C012F1E00000041LOCK /* SkyLightWindow */,
 			);
 			productName = Droppy;
 			productReference = BAC4596C2F07C2D10041BC3E /* Droppy.app */;
@@ -140,6 +143,7 @@
 			packageReferences = (
 				BAA56D972F16F4D90041C83B /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				BAD854442F1D5550000B5751 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				BA7E8C022F1E00000041LOCK /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BAC4596D2F07C2D10041BC3E /* Products */;
@@ -417,6 +421,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		BA7E8C022F1E00000041LOCK /* XCRemoteSwiftPackageReference "SkyLightWindow" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Lakr233/SkyLightWindow.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		BAA56D972F16F4D90041C83B /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
@@ -436,6 +448,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		BA7E8C012F1E00000041LOCK /* SkyLightWindow */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA7E8C022F1E00000041LOCK /* XCRemoteSwiftPackageReference "SkyLightWindow" */;
+			productName = SkyLightWindow;
+		};
 		BAA56D982F16F4D90041C83B /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BAA56D972F16F4D90041C83B /* XCRemoteSwiftPackageReference "WhisperKit" */;

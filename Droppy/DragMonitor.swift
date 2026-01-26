@@ -76,6 +76,24 @@ final class DragMonitor: ObservableObject {
         directionChanges.removeAll()
         lastDragDirection = .zero
     }
+    
+    /// Force reset ALL drag state (called after screen unlock when state may be corrupted)
+    /// After SkyLight delegation, the drag polling state can get stuck, blocking hover detection
+    func forceReset() {
+        print("🧹 DragMonitor.forceReset() called - clearing stuck drag state")
+        dragActive = false
+        isDragging = false
+        dragLocation = .zero
+        dragStartChangeCount = 0
+        dragEndNotified = true
+        resetJiggle()
+        
+        // SKYLIGHT DEBUG: Enable verbose logging for a few seconds after unlock
+        DragMonitor.unlockTime = Date()
+    }
+    
+    /// Timestamp of last unlock - used to trigger verbose logging in NotchWindow.handleGlobalMouseEvent
+    static var unlockTime: Date = .distantPast
 
     private func checkForActiveDrag() {
         autoreleasepool {
@@ -83,6 +101,13 @@ final class DragMonitor: ObservableObject {
             // repeated access during HID event system contention
             let mouseIsDown = NSEvent.pressedMouseButtons & 1 != 0
             let currentMouseLocation = NSEvent.mouseLocation
+            
+            // DEBUG: Log state periodically to trace stuck isDragging after SkyLight unlock
+            struct DragDebugCounter { static var lastLog = Date.distantPast }
+            if Date().timeIntervalSince(DragDebugCounter.lastLog) > 2.0 {
+                print("🐉 DragMonitor.checkForActiveDrag: isDragging=\(isDragging), dragActive=\(dragActive), mouseIsDown=\(mouseIsDown)")
+                DragDebugCounter.lastLog = Date()
+            }
             
             // Optimization: If mouse is not down and we are not tracking a drag, 
             // return early to avoid unnecessary NSPasteboard allocation/release (which caused crashes)

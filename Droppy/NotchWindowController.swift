@@ -10,11 +10,16 @@ import SwiftUI
 import Combine
 import UniformTypeIdentifiers
 import Observation
+import SkyLightWindow
 
 /// Manages the transparent overlay window positioned at the MacBook notch
 final class NotchWindowController: NSObject, ObservableObject {
     /// Dictionary of notch windows keyed by display ID (supports multi-monitor)
     private var notchWindows: [CGDirectDisplayID: NotchWindow] = [:]
+    
+    /// Flag to prevent SkyLight delegation during window recreation after unlock
+    /// When true, createWindowForScreen skips SkyLight delegation even if setting is enabled
+    private var isRecreatingWindowsAfterUnlock = false
     
     /// Backwards-compatible accessor for the primary notch window
     /// Returns the built-in screen window, or the first available window
@@ -130,8 +135,12 @@ final class NotchWindowController: NSObject, ObservableObject {
     
     /// Checks if a context menu is currently open (prevents shelf closure during menu interactions)
     func hasActiveContextMenu() -> Bool {
-        // Check for any window at popup menu level (101) or higher
-        return NSApp.windows.contains { $0.level.rawValue >= NSWindow.Level.popUpMenu.rawValue }
+        // Check for any VISIBLE window at popup menu level (101) or higher
+        // SKYLIGHT FIX: Also check isVisible - after SkyLight lock/unlock, stale window 
+        // references can remain in NSApp.windows at popup level but are not actually visible
+        return NSApp.windows.contains { window in
+            window.level.rawValue >= NSWindow.Level.popUpMenu.rawValue && window.isVisible
+        }
     }
     
     /// Sets up and shows the notch overlay window(s)
@@ -230,6 +239,22 @@ final class NotchWindowController: NSObject, ObservableObject {
         
         // Store in dictionary
         notchWindows[displayID] = window
+        
+        // Delegate to SkyLight for lock screen visibility (built-in display only)
+        // This makes the notch visible on BOTH lock screen and desktop
+        // SKIP delegation if we're recreating windows after unlock (to fix the zombie window issue)
+        if screen.isBuiltIn && !isRecreatingWindowsAfterUnlock {
+            let enableLockScreenNotch = UserDefaults.standard.preference(
+                AppPreferenceKey.enableLockScreenMediaWidget,
+                default: PreferenceDefault.enableLockScreenMediaWidget
+            )
+            if enableLockScreenNotch {
+                SkyLightOperator.shared.delegateWindow(window)
+                print("NotchWindowController: ✅ Built-in notch window delegated to SkyLight for lock screen visibility")
+            }
+        } else if isRecreatingWindowsAfterUnlock && screen.isBuiltIn {
+            print("NotchWindowController: ⏭️ Skipping SkyLight delegation (window recreation after unlock)")
+        }
     }
     /// Updates the window's visibility in screenshots based on user preference
     func updateScreenshotVisibility() {
@@ -237,6 +262,24 @@ final class NotchWindowController: NSObject, ObservableObject {
         for window in notchWindows.values {
             window.sharingType = hideFromScreenshots ? .none : .readOnly
         }
+    }
+    
+    /// Delegates the built-in display's notch window to SkyLight space for lock screen visibility
+    /// Call this when the lock screen media widget setting is enabled
+    /// Once delegated, the window is visible on BOTH lock screen and desktop
+    func delegateToLockScreen() {
+        guard let builtInScreen = NSScreen.builtInWithNotch else {
+            print("NotchWindowController: ⚠️ No built-in screen found for lock screen delegation")
+            return
+        }
+        
+        guard let window = notchWindows[builtInScreen.displayID] else {
+            print("NotchWindowController: ⚠️ No notch window for built-in display")
+            return
+        }
+        
+        SkyLightOperator.shared.delegateWindow(window)
+        print("NotchWindowController: ✅ Delegated notch window to SkyLight for lock screen visibility")
     }
     
     /// Closes all notch windows
@@ -462,8 +505,15 @@ final class NotchWindowController: NSObject, ObservableObject {
         
         // Global monitor catches mouse movement when Droppy is not frontmost
         globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
+            // DEBUG: Log every 60 events to verify monitor is receiving events after unlock
+            struct DebugCounter { static var count = 0 }
+            DebugCounter.count += 1
+            if DebugCounter.count % 60 == 0 {
+                print("🐭 NotchWindowController: globalMouseMonitor received \(DebugCounter.count) events")
+            }
             self?.handleMouseEvent(event)
         }
+        print("✅ NotchWindowController: globalMouseMonitor created: \(globalMouseMonitor != nil)")
         
         // GLOBAL CLICK MONITOR (v5.3) - Ultra-reliable single-click shelf opening
         // This catches clicks even when Droppy isn't focused, enabling instant shelf opening
@@ -1119,6 +1169,22 @@ final class NotchWindowController: NSObject, ObservableObject {
         }
         systemObservers.append(wakeObserver)
         
+        // Session became active (screen unlocked) - CRITICAL for event monitors
+        // After unlock, NSEvent monitors may stop receiving events
+        let unlockObserver = workspace.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("🔓 NotchWindowController: Screen unlocked - force re-registering monitors")
+            // DELAYED RESET: Wait 1.0s to ensure window server has fully transitioned
+            // from lock screen mode and the window is ready for interaction
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self?.forceReregisterMonitors()
+            }
+        }
+        systemObservers.append(unlockObserver)
+        
         // Display configuration change (plug/unplug monitors)
         let displayObserver = center.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -1144,6 +1210,98 @@ final class NotchWindowController: NSObject, ObservableObject {
             self?.checkFullscreenState()
         }
         systemObservers.append(spaceObserver)
+        
+        // Screen lock detection - re-delegate windows to SkyLight for lock screen visibility
+        // This is needed because we destroy and recreate windows on unlock to fix the zombie issue
+        // The fresh windows need to be re-delegated before they're shown on the lock screen
+        let lockObserver = workspace.addObserver(
+            forName: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // Check if lock screen setting is enabled
+            let lockScreenEnabled = UserDefaults.standard.preference(
+                AppPreferenceKey.enableLockScreenMediaWidget,
+                default: PreferenceDefault.enableLockScreenMediaWidget
+            )
+            if lockScreenEnabled {
+                print("🔒 NotchWindowController: Screen locking - re-delegating to SkyLight")
+                self?.delegateToLockScreen()
+            }
+        }
+        systemObservers.append(lockObserver)
+    }
+    
+    /// Forces re-registration of all event monitors
+    /// Called after screen unlock when monitors may have become stale
+    /// 
+    /// CRITICAL FIX (v7.x): SkyLight delegation permanently compromises window event handling.
+    /// The only reliable fix is to destroy the delegated windows and create fresh ones.
+    /// Fresh windows are NOT delegated to SkyLight (desktop-only). They will be re-delegated
+    /// on the next lock event if the lock screen setting is enabled.
+    private func forceReregisterMonitors() {
+        print("🔄 NotchWindowController: Force re-registering monitors via WINDOW RECREATION")
+        
+        // 1. Stop all monitors first
+        stopMonitors()
+        
+        // 2. Check if we have SkyLight-delegated windows (built-in display only)
+        // If the lock screen setting is enabled, the built-in window was delegated to SkyLight
+        // and is now "zombified" for desktop interaction. We must recreate it.
+        let lockScreenEnabled = UserDefaults.standard.preference(
+            AppPreferenceKey.enableLockScreenMediaWidget,
+            default: PreferenceDefault.enableLockScreenMediaWidget
+        )
+        
+        if lockScreenEnabled {
+            // WINDOW RECREATION: Destroy and rebuild all windows
+            // This is the only way to "undelegaDe" from SkyLight
+            print("🔥 NotchWindowController: Destroying SkyLight-delegated windows...")
+            
+            // Close and remove all existing windows
+            for window in notchWindows.values {
+                window.isValid = false
+                window.close()
+            }
+            notchWindows.removeAll()
+            
+            // Temporarily disable lock screen delegation during recreation
+            // We set a flag that createWindowForScreen will check
+            isRecreatingWindowsAfterUnlock = true
+            
+            // Recreate windows (repositionNotchWindow calls createWindowForScreen)
+            repositionNotchWindow()
+            
+            // Clear the flag
+            isRecreatingWindowsAfterUnlock = false
+            
+            print("✅ NotchWindowController: Fresh windows created (not delegated to SkyLight)")
+        } else {
+            // Lock screen not enabled, just reset window state normally
+            for window in notchWindows.values {
+                window.level = .init(Int(CGShieldingWindowLevel()) + 2)
+                window.ignoresMouseEvents = true
+                window.ignoresMouseEvents = false
+                window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+                window.updateMouseEventHandling()
+            }
+        }
+        
+        // 3. Restart monitors with fresh/reset windows
+        startMonitors()
+        
+        // 4. Validate final state
+        for window in notchWindows.values {
+            window.updateMouseEventHandling()
+        }
+        
+        // 5. Fallback retry if global monitor failed
+        if globalMouseMonitor == nil {
+            print("⚠️ NotchWindowController: Global monitor failed to start! Retrying...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.startMonitors()
+            }
+        }
     }
     
     /// Removes all system observers
@@ -1322,6 +1480,9 @@ final class NotchWindowController: NSObject, ObservableObject {
     /// Start timer to auto-expand shelf if hovering persists
     /// - Parameter displayID: The display to expand when timer fires (optional for backwards compat)
     func startAutoExpandTimer(for displayID: CGDirectDisplayID? = nil) {
+        // DEBUG: Log when timer is started
+        print("🟢 startAutoExpandTimer CALLED for displayID: \(displayID?.description ?? "nil")")
+        
         // CRITICAL: Use object() ?? true to match @AppStorage default for new users
         guard (UserDefaults.standard.object(forKey: "autoExpandShelf") as? Bool) ?? true else { return }
         
@@ -1330,6 +1491,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         // Use configurable delay (0.5-2.0 seconds, default 1.0s)
         let delay = UserDefaults.standard.double(forKey: "autoExpandDelay")
         let actualDelay = delay > 0 ? delay : 1.0  // Fallback to 1.0s if not set
+        print("🟢 AUTO-EXPAND TIMER STARTED with delay: \(actualDelay)s for displayID: \(displayID?.description ?? "nil")")
         autoExpandTimer = Timer.scheduledTimer(withTimeInterval: actualDelay, repeats: false) { [weak self] _ in
             guard self != nil else { return }
             
@@ -1337,27 +1499,61 @@ final class NotchWindowController: NSObject, ObservableObject {
             // CRITICAL: Use object() ?? true to match @AppStorage default
             guard (UserDefaults.standard.object(forKey: "autoExpandShelf") as? Bool) ?? true else { return }
             
-            // Only expand if still hovering and not already expanded
-            if DroppyState.shared.isMouseHovering && !DroppyState.shared.isExpanded {
+            // SKYLIGHT FIX: Recheck actual mouse geometry at timer fire time
+            // After SkyLight lock/unlock, the isHovering state can become stale/incorrect.
+            // Instead of trusting the state, we directly check if mouse is over the notch zone.
+            let currentMouse = NSEvent.mouseLocation
+            let isExpanded = DroppyState.shared.isExpanded
+            
+            // Find the target screen and check if mouse is in notch zone
+            var isMouseOverNotchZone = false
+            if let targetDisplayID = displayID,
+               let screen = NSScreen.screens.first(where: { $0.displayID == targetDisplayID }) {
+                // Calculate notch zone for this screen (generous zone for reliability)
+                let notchWidth: CGFloat = 220  // Approximate notch width
+                let centerX = screen.frame.origin.x + screen.frame.width / 2
+                let notchRect = NSRect(
+                    x: centerX - notchWidth / 2 - 30,  // 30px expansion on each side
+                    y: screen.frame.maxY - 50,         // Top 50px of screen
+                    width: notchWidth + 60,
+                    height: 50
+                )
+                isMouseOverNotchZone = notchRect.contains(currentMouse)
+            }
+            
+            // Also check DroppyState as backup
+            let stateHovering = DroppyState.shared.isMouseHovering
+            let shouldExpand = (isMouseOverNotchZone || stateHovering) && !isExpanded
+            
+            print("⏰ AUTO-EXPAND TIMER FIRED: stateHovering=\(stateHovering), geometryHovering=\(isMouseOverNotchZone), isExpanded=\(isExpanded), shouldExpand=\(shouldExpand), displayID=\(displayID?.description ?? "nil")")
+            
+            // Expand if EITHER state or geometry says we're hovering
+            if shouldExpand {
                 DispatchQueue.main.async {
                     withAnimation(DroppyAnimation.transition) {
                         if let displayID = displayID {
                             // Expand on the specific screen
+                            print("📤 EXPANDING SHELF for displayID: \(displayID)")
                             DroppyState.shared.expandShelf(for: displayID)
                         } else {
                             // Fallback: Find screen containing mouse and expand that
-                            let mouseLocation = NSEvent.mouseLocation
-                            if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
+                            if let screen = NSScreen.screens.first(where: { $0.frame.contains(currentMouse) }) {
+                                print("📤 EXPANDING SHELF for fallback displayID: \(screen.displayID)")
                                 DroppyState.shared.expandShelf(for: screen.displayID)
                             }
                         }
                     }
                 }
+            } else {
+                print("⏰ AUTO-EXPAND SKIPPED: stateHovering=\(stateHovering), geometryHovering=\(isMouseOverNotchZone), isExpanded=\(isExpanded)")
             }
         }
     }
     
     func cancelAutoExpandTimer() {
+        if autoExpandTimer != nil {
+            print("🔴 cancelAutoExpandTimer CALLED (timer was active)")
+        }
         autoExpandTimer?.invalidate()
         autoExpandTimer = nil
     }
@@ -1671,6 +1867,14 @@ class NotchWindow: NSPanel {
     }
     
     func handleGlobalMouseEvent(_ event: NSEvent) {
+        // DEBUG: Log to verify this function is being called after unlock
+        struct DebugCounter { static var count = 0; static var lastLog = Date.distantPast }
+        DebugCounter.count += 1
+        if Date().timeIntervalSince(DebugCounter.lastLog) > 2.0 { // Log every 2 seconds max
+            print("🎯 NotchWindow.handleGlobalMouseEvent called \(DebugCounter.count)x, notchRect: \(notchRect)")
+            DebugCounter.lastLog = Date()
+        }
+        
         // CRITICAL: Skip all hover tracking when a context menu is open
         // This prevents view re-renders that would dismiss submenus (Share, Compress, etc.)
         if NotchWindowController.shared.hasActiveContextMenu() {
@@ -1706,11 +1910,30 @@ class NotchWindow: NSPanel {
         // MULTI-MONITOR SUPPORT: Verify mouse is on this window's screen
         // This is now a simple validation since events are already routed to correct window
         guard let targetScreen = notchScreen, targetScreen.frame.contains(mouseLocation) else {
+            // DEBUG: Log when guard fails - UNCONDITIONAL for 5 seconds after unlock!
+            let timeSinceUnlock = Date().timeIntervalSince(DragMonitor.unlockTime)
+            let isVerbose = timeSinceUnlock < 5.0 && timeSinceUnlock > 0
+            
+            struct GuardDebugCounter { static var count = 0; static var lastLog = Date.distantPast }
+            GuardDebugCounter.count += 1
+            
+            if isVerbose || Date().timeIntervalSince(GuardDebugCounter.lastLog) > 2.0 {
+                print("⚠️ GUARD FAILED (\(GuardDebugCounter.count)x, verbose=\(isVerbose)): notchScreen=\(notchScreen != nil ? "\(notchScreen!.displayID)" : "nil"), mouseLocation=\(mouseLocation), frame=\(notchScreen.map { String(describing: $0.frame) } ?? "nil")")
+                GuardDebugCounter.lastLog = Date()
+            }
             return
         }
 
         // PRECISE HOVER DETECTION (v5.2)
         // Different logic for NOTCH vs DYNAMIC ISLAND modes
+        
+        // DEBUG: Log that we passed the guard (unconditional, throttled)
+        struct PastGuardDebugCounter { static var count = 0; static var lastLog = Date.distantPast }
+        PastGuardDebugCounter.count += 1
+        if Date().timeIntervalSince(PastGuardDebugCounter.lastLog) > 2.0 {
+            print("✅ PAST GUARD: displayID=\(targetScreen.displayID), mouse=\(mouseLocation), screenFrame=\(targetScreen.frame)")
+            PastGuardDebugCounter.lastLog = Date()
+        }
 
         let isOverExactNotch = notchRect.contains(mouseLocation)
         var isOverExpandedZone: Bool
@@ -1787,8 +2010,38 @@ class NotchWindow: NSPanel {
 
         let isOverNotch = currentlyHovering ? isOverExactOrEdge : isOverExpandedZone
 
+        // DEBUG: Unconditional check for isDragging being stuck after unlock
+        struct DragDebugCounter { static var lastLog = Date.distantPast; static var count = 0 }
+        DragDebugCounter.count += 1
+        if DragMonitor.shared.isDragging && Date().timeIntervalSince(DragDebugCounter.lastLog) > 2.0 {
+            print("⚠️ DRAG STUCK: isDragging=true for \(DragDebugCounter.count) samples! mouseY=\(mouseLocation.y), screenMaxY=\(targetScreen.frame.maxY)")
+            DragDebugCounter.lastLog = Date()
+        }
+        
         // Only update if not dragging (drag monitor handles that)
         if !DragMonitor.shared.isDragging {
+            // DEBUG: Log ALL mouse positions near top 200px to catch edge cases after SkyLight
+            let screenMaxY = targetScreen.frame.maxY
+            let yThreshold = screenMaxY - 100
+            
+            // Log periodically to see if we're even getting events
+            struct AllEventDebugCounter { static var count = 0; static var lastLog = Date.distantPast }
+            AllEventDebugCounter.count += 1
+            if Date().timeIntervalSince(AllEventDebugCounter.lastLog) > 2.0 {
+                let isNearTop = mouseLocation.y > yThreshold
+                print("🔎 MOUSE Y CHECK: mouse.y=\(mouseLocation.y), screenMaxY=\(screenMaxY), threshold=\(yThreshold), nearTop=\(isNearTop), displayID=\(targetScreen.displayID)")
+                AllEventDebugCounter.lastLog = Date()
+            }
+            
+            // DEBUG: Log hover detection conditions when mouse is near top of screen
+            if mouseLocation.y > yThreshold {
+                struct DebugCounter { static var lastLog = Date.distantPast }
+                if Date().timeIntervalSince(DebugCounter.lastLog) > 1.0 {
+                    print("🔍 HOVER DEBUG: mouse=\(mouseLocation), isOverNotch=\(isOverNotch), currentlyHovering=\(currentlyHovering), isOverExpandedZone=\(isOverExpandedZone), isOverExactOrEdge=\(isOverExactOrEdge)")
+                    DebugCounter.lastLog = Date()
+                }
+            }
+            
             if isOverNotch && !currentlyHovering {
                 DispatchQueue.main.async {
                     // Validate items before showing shelf (remove ghost files)

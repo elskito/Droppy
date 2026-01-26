@@ -46,6 +46,9 @@ enum AppPreferenceKey {
     static let enableLockScreenHUD = "enableLockScreenHUD"
     static let enableDNDHUD = "enableDNDHUD"
     
+    // MARK: - Lock Screen Media Widget
+    static let enableLockScreenMediaWidget = "enableLockScreenMediaWidget"
+    
     // MARK: - Shelf Behavior
     static let autoCollapseShelf = "autoCollapseShelf"
     static let autoCollapseDelay = "autoCollapseDelay"
@@ -147,6 +150,9 @@ enum PreferenceDefault {
     static let enableAirPodsHUD = true
     static let enableLockScreenHUD = true
     static let enableDNDHUD = false  // Requires Full Disk Access
+    
+    // MARK: - Lock Screen Media Widget
+    static let enableLockScreenMediaWidget = false  // Uses private APIs, opt-in
     
     // MARK: - Shelf Behavior
     static let autoCollapseShelf = true

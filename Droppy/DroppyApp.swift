@@ -405,7 +405,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 AirPodsManager.shared.startMonitoring()
             }
             
-            // 5. Tracked Folders (monitors folders for new files)
+            // 5. Lock Screen Media Widget (shows music controls on lock screen)
+            let lockScreenMediaEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.enableLockScreenMediaWidget)
+            if lockScreenMediaEnabled {
+                print("🔒 Droppy: Initializing Lock Screen Media Widget")
+                LockScreenMediaPanelManager.shared.configure(musicManager: MusicManager.shared)
+            }
+            
+            // 6. Tracked Folders (monitors folders for new files)
             let folderObservationEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.enableTrackedFolders)
             if folderObservationEnabled {
                 print("📁 Droppy: Starting Tracked Folders Monitor")
