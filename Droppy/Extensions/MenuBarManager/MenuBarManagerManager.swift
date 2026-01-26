@@ -42,8 +42,10 @@ final class MenuBarManager: ObservableObject {
             UserDefaults.standard.set(droppyBarEnabled, forKey: droppyBarEnabledKey)
             if droppyBarEnabled {
                 showDroppyBar()
+                createDroppyBarToggle()
             } else {
                 hideDroppyBar()
+                removeDroppyBarToggle()
             }
         }
     }
@@ -56,9 +58,13 @@ final class MenuBarManager: ObservableObject {
     /// The invisible divider that expands to push items off-screen
     private var dividerItem: NSStatusItem?
     
+    /// Toggle button for Droppy Bar - shows ellipsis icon
+    private var droppyBarToggleItem: NSStatusItem?
+    
     /// Autosave names for position persistence
     private let toggleAutosaveName = "DroppyMenuBarToggle"
     private let dividerAutosaveName = "DroppyMenuBarDivider"
+    private let droppyBarToggleAutosaveName = "DroppyBarToggle"
     
     // MARK: - Droppy Bar
     
@@ -265,7 +271,8 @@ final class MenuBarManager: ObservableObject {
         let isInMenuBar = mouseLocation.y >= (screen.frame.maxY - menuBarHeight)
         
         // Check if mouse is in the right portion of the screen (where icons are)
-        let screenThresholdX = screen.frame.minX + (screen.frame.width * 0.5)
+        // Use 75% threshold - only trigger in rightmost quarter (away from notch)
+        let screenThresholdX = screen.frame.minX + (screen.frame.width * 0.75)
         let isInIconArea = mouseLocation.x >= screenThresholdX
         
         if isInMenuBar && isInIconArea {
@@ -339,9 +346,47 @@ final class MenuBarManager: ObservableObject {
             print("[MenuBarManager] ⚠️ WARNING: Divider button is nil - expansion may not work!")
         }
         
+        // Create the Droppy Bar toggle (shows ellipsis) - only if Droppy Bar is enabled
+        if droppyBarEnabled {
+            createDroppyBarToggle()
+        }
+        
         updateToggleIcon()
         
         print("[MenuBarManager] Created status items")
+    }
+    
+    private func createDroppyBarToggle() {
+        guard droppyBarToggleItem == nil else { return }
+        
+        droppyBarToggleItem = NSStatusBar.system.statusItem(withLength: toggleLength)
+        droppyBarToggleItem?.autosaveName = droppyBarToggleAutosaveName
+        
+        if let button = droppyBarToggleItem?.button {
+            button.target = self
+            button.action = #selector(droppyBarToggleClicked)
+            updateDroppyBarToggleIcon()
+            print("[MenuBarManager] Droppy Bar toggle configured")
+        }
+    }
+    
+    private func removeDroppyBarToggle() {
+        if let item = droppyBarToggleItem {
+            NSStatusBar.system.removeStatusItem(item)
+            droppyBarToggleItem = nil
+            print("[MenuBarManager] Droppy Bar toggle removed")
+        }
+    }
+    
+    private func updateDroppyBarToggleIcon() {
+        guard let button = droppyBarToggleItem?.button else { return }
+        
+        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .medium)
+        
+        // Show filled ellipsis if bar is visible, empty if hidden
+        let symbolName = droppyBarPanel?.isVisible == true ? "ellipsis.circle.fill" : "ellipsis.circle"
+        button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Toggle Droppy Bar")?
+            .withSymbolConfiguration(config)
     }
     
     private func removeStatusItems() {
@@ -406,6 +451,16 @@ final class MenuBarManager: ObservableObject {
             // Left-click: toggle expansion
             toggleExpanded()
         }
+    }
+    
+    @objc private func droppyBarToggleClicked() {
+        // Toggle the Droppy Bar visibility
+        if droppyBarPanel?.isVisible == true {
+            droppyBarPanel?.orderOut(nil)
+        } else {
+            showDroppyBar()
+        }
+        updateDroppyBarToggleIcon()
     }
     
     private func showContextMenu() {
