@@ -29,6 +29,31 @@ struct StackedItemView: View {
         state.selectedStacks.contains(stack.id)
     }
     
+    /// Count label like "4 Files" or "3 Photos" for the expand button
+    private var countLabel: String {
+        let count = stack.count
+        
+        // Determine the type label based on file types
+        let allImages = stack.items.allSatisfy { $0.fileType?.conforms(to: .image) == true }
+        let allDocuments = stack.items.allSatisfy { 
+            $0.fileType?.conforms(to: .pdf) == true || 
+            $0.fileType?.conforms(to: .text) == true ||
+            $0.fileType?.conforms(to: .presentation) == true ||
+            $0.fileType?.conforms(to: .spreadsheet) == true
+        }
+        
+        let typeLabel: String
+        if allImages {
+            typeLabel = count == 1 ? "Photo" : "Photos"
+        } else if allDocuments {
+            typeLabel = count == 1 ? "Doc" : "Docs"
+        } else {
+            typeLabel = count == 1 ? "File" : "Files"
+        }
+        
+        return "\(count) \(typeLabel)"
+    }
+    
     // MARK: - Layout Constants (matching grid slot: 64x80)
     
     // Individual card size - compact to fit 64pt grid columns
@@ -116,64 +141,43 @@ struct StackedItemView: View {
             onDragComplete: nil,
             selectionSignature: state.selectedStacks.hashValue
         ) {
-            // Stack content - Exactly matching BasketItemContent layout
-            VStack(spacing: 4) {
-                ZStack(alignment: .topTrailing) {
-                    // 56x56 icon container with count badge - matching BasketItemContent .frame(width: 56, height: 56)
-                    ZStack {
-                        // Glass background matching basket style
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        
-                        // Subtle border (stronger when selected)
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(isSelected ? 0.3 : (isHovering ? 0.2 : 0.1)), lineWidth: isSelected ? 2 : 1)
-                        
-                        // Blue selection glow
-                        if isSelected || isDropTargeted {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.blue.opacity(0.15))
-                            
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.blue, lineWidth: 2)
-                        }
-                        
-                        // Expand icon
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                    .frame(width: 48, height: 48)
-                    .frame(width: 56, height: 56)
-                    .padding(.top, 6)  // CRITICAL: Same as BasketItemContent
+            // Stack content - EXACTLY matching StackCollapseButton layout
+            VStack(spacing: 6) {
+                // 56x56 icon container matching Collapse button
+                ZStack {
+                    // Glass background matching basket style
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
                     
-                    // Count badge (top-right)
-                    if stack.count > 1 {
-                        Text("\(stack.count)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(Color.blue)
-                                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
-                            )
-                            .offset(x: 4, y: 2)  // Match BasketItemContent X button position
+                    // Subtle border (stronger when selected/hovered)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(isSelected ? 0.3 : (isHovering ? 0.2 : 0.1)), lineWidth: isSelected ? 2 : 1)
+                    
+                    // Blue selection glow
+                    if isSelected || isDropTargeted {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.blue.opacity(0.15))
+                        
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.blue, lineWidth: 2)
                     }
+                    
+                    // Expand icon
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
                 }
+                .frame(width: 56, height: 56)
                 
-                // "Expand" text label - matching .frame(width: 64)
-                Text("Expand")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .frame(width: 64)
+                // Count label like "[4] Files" - matching Collapse text style
+                Text(countLabel)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .frame(width: 60)
             }
-            .padding(.vertical, 2)  // CRITICAL: Same as BasketItemContent
+            .padding(2)
+            .frame(width: 64, height: 80)
             // Drop target visual feedback - scale up and blue glow when files dragged over
             .scaleEffect(isDropTargeted ? 1.08 : 1.0)
             .animation(DroppyAnimation.bouncy, value: isDropTargeted)
