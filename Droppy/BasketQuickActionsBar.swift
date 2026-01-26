@@ -196,18 +196,21 @@ struct QuickDropActionButton: View {
     
     private let size: CGFloat = 48
     
-    private var buttonFill: Color {
-        useTransparent ? Color.white.opacity(0.12) : Color.black
+    // Border opacity matches basket: 0.12 when transparent, 0.06 when solid
+    private var borderOpacity: Double {
+        if isTargeted { return 0.3 }
+        if isHovering { return 0.2 }
+        return useTransparent ? 0.12 : 0.06
     }
     
     var body: some View {
         Circle()
-            .fill(buttonFill)
+            .fill(useTransparent ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.black))
             .frame(width: size, height: size)
             .overlay(
-                // Simple clean border - matches basket style
+                // Border matches basket style exactly
                 Circle()
-                    .stroke(Color.white.opacity(isTargeted ? 0.3 : (isHovering ? 0.15 : 0.08)), lineWidth: 1)
+                    .stroke(Color.white.opacity(borderOpacity), lineWidth: 1)
             )
             .overlay(
                 Image(systemName: actionType.icon)
