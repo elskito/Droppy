@@ -45,6 +45,8 @@ struct LockScreenHUDView: View {
                     .frame(height: layout.notchHeight)
             } else {
                 // NOTCH MODE: Icon on left wing only
+                let iconSize = layout.iconSize
+                let symmetricPadding = layout.symmetricPadding(for: iconSize)
                 let wingWidth = layout.wingWidth(for: hudWidth)
                 
                 HStack(spacing: 0) {
@@ -53,7 +55,7 @@ struct LockScreenHUDView: View {
                         lockIconView
                         Spacer(minLength: 0)
                     }
-                    .padding(.leading, 8)
+                    .padding(.leading, symmetricPadding)
                     .frame(width: wingWidth)
                     
                     // Camera notch area (spacer)
