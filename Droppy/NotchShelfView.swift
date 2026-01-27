@@ -46,7 +46,7 @@ struct NotchShelfView: View {
     @AppStorage(AppPreferenceKey.enableShelfAirDropZone) private var enableShelfAirDropZone = PreferenceDefault.enableShelfAirDropZone
     @AppStorage(AppPreferenceKey.enableRightClickHide) private var enableRightClickHide = PreferenceDefault.enableRightClickHide
     @AppStorage(AppPreferenceKey.enableLockScreenMediaWidget) private var enableLockScreenMediaWidget = PreferenceDefault.enableLockScreenMediaWidget
-    @AppStorage(AppPreferenceKey.hideNotchMediaHUDWithLockScreen) private var hideNotchMediaHUDWithLockScreen = PreferenceDefault.hideNotchMediaHUDWithLockScreen
+
     
     // HUD State - Use @ObservedObject for singletons (they manage their own lifecycle)
     @ObservedObject private var volumeManager = VolumeManager.shared
@@ -335,12 +335,6 @@ struct NotchShelfView: View {
     private var shouldShowMediaHUD: Bool {
         // Media features require macOS 15.0+
         guard musicManager.isMediaAvailable else { return false }
-        
-        // Hide small media HUD when lock screen media widget is active
-        // This prevents double-display of media controls on the lock screen
-        if hideNotchMediaHUDWithLockScreen && enableLockScreenMediaWidget && !lockScreenManager.isUnlocked {
-            return false
-        }
         
         // FORCED MODE: Show if user swiped to show media, regardless of playback state
         // (as long as there's a track to show)
@@ -2213,7 +2207,7 @@ extension NotchShelfView {
                     if state.isDropTargeted {
                         ZStack {
                             // Layer 1: Soft inner border glow - premium edge highlight
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .strokeBorder(
                                     LinearGradient(
                                         colors: [
@@ -2226,7 +2220,7 @@ extension NotchShelfView {
                                     lineWidth: 2
                                 )
                             // Layer 2: Subtle vignette for depth
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .fill(
                                     RadialGradient(
                                         colors: [
@@ -2242,7 +2236,7 @@ extension NotchShelfView {
                         .allowsHitTesting(false)
                     } else {
                         // Subtle dashed outline when not targeted
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
                             .strokeBorder(
                                 Color.white.opacity(0.2),
                                 style: StrokeStyle(
@@ -2268,7 +2262,7 @@ extension NotchShelfView {
                     Group {
                         if state.isShelfAirDropZoneTargeted {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                RoundedRectangle(cornerRadius: 30, style: .continuous)
                                     .strokeBorder(
                                         LinearGradient(
                                             colors: [
@@ -2280,7 +2274,7 @@ extension NotchShelfView {
                                         ),
                                         lineWidth: 2
                                     )
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                RoundedRectangle(cornerRadius: 30, style: .continuous)
                                     .fill(
                                         RadialGradient(
                                             colors: [Color.clear, Color.white.opacity(0.08)],
@@ -2292,7 +2286,7 @@ extension NotchShelfView {
                             }
                             .allowsHitTesting(false)
                         } else {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            RoundedRectangle(cornerRadius: 30, style: .continuous)
                                 .strokeBorder(
                                     Color.white.opacity(0.2),
                                     style: StrokeStyle(

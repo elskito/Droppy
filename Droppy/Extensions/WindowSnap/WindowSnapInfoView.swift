@@ -151,7 +151,8 @@ struct WindowSnapInfoView: View {
                 featureRow(icon: "keyboard", text: "Configurable shortcuts")
                 featureRow(icon: "rectangle.split.2x2", text: "Halves, quarters, thirds")
                 featureRow(icon: "arrow.up.left.and.arrow.down.right", text: "Maximize and restore")
-                featureRow(icon: "display", text: "Multi-monitor support")
+                featureRow(icon: "display.2", text: "Move windows between displays")
+                featureRow(icon: "arrow.right.to.line", text: "Cycle across monitors")
             }
             
             // Screenshot

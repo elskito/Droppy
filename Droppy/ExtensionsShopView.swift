@@ -132,9 +132,11 @@ struct ExtensionsShopView: View {
                     title: "Notify me!",
                     subtitle: "Show notifications",
                     iconURL: "https://getdroppy.app/assets/icons/notification-hud.png",
-                    screenshotURL: nil,
+                    screenshotURL: "https://getdroppy.app/assets/images/notification-hud-screenshot.png",
                     accentColor: .purple,
-                    isInstalled: isNotificationHUDInstalled
+                    isInstalled: isNotificationHUDInstalled,
+                    isNew: true,
+                    isCommunity: true
                 ) {
                     NotificationHUDInfoView()
                 }
@@ -700,21 +702,18 @@ struct FeaturedExtensionCardWide<DetailView: View>: View {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
                         // Title with optional NEW badge
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Text(title)
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundStyle(.white)
                             
                             if isNew {
-                                Text("NEW")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.blue)
-                                    )
+                                Text("New")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(.cyan.opacity(0.9))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.cyan.opacity(0.15)))
                             }
                         }
                         
@@ -791,6 +790,8 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
     let screenshotURL: String?
     let accentColor: Color
     let isInstalled: Bool
+    var isNew: Bool = false
+    var isCommunity: Bool = false
     let detailView: () -> DetailView
     
     @State private var showSheet = false
@@ -854,11 +855,35 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
                     
                     Spacer()
                     
-                    // Title
-                    Text(title)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+                    // Title with optional badges
+                    HStack(spacing: 5) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        
+                        if isNew {
+                            Text("New")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.cyan.opacity(0.9))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.cyan.opacity(0.15)))
+                        }
+                        
+                        if isCommunity {
+                            HStack(spacing: 3) {
+                                Image(systemName: "person.2.fill")
+                                    .font(.system(size: 8))
+                                Text("Community")
+                                    .font(.system(size: 9, weight: .medium))
+                            }
+                            .foregroundStyle(.purple.opacity(0.9))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.purple.opacity(0.15)))
+                        }
+                    }
                     
                     // Subtitle
                     Text(subtitle)
@@ -868,8 +893,8 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
                 }
                 .padding(14)
                 
-                // NEW ribbon badge in top-left corner
-                if !category.isEmpty {
+                // Category ribbon badge in top-left corner (only for non-community categories)
+                if !category.isEmpty && category != "COMMUNITY" {
                     VStack {
                         HStack {
                             Text(category)

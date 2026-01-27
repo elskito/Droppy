@@ -41,7 +41,6 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceKey.notificationHUDInstalled) private var isNotificationHUDInstalled = PreferenceDefault.notificationHUDInstalled
     @AppStorage(AppPreferenceKey.notificationHUDEnabled) private var enableNotificationHUD = PreferenceDefault.notificationHUDEnabled
     @AppStorage(AppPreferenceKey.enableLockScreenMediaWidget) private var enableLockScreenMediaWidget = PreferenceDefault.enableLockScreenMediaWidget
-    @AppStorage(AppPreferenceKey.hideNotchMediaHUDWithLockScreen) private var hideNotchMediaHUDWithLockScreen = PreferenceDefault.hideNotchMediaHUDWithLockScreen
     @AppStorage(AppPreferenceKey.showMediaPlayer) private var showMediaPlayer = PreferenceDefault.showMediaPlayer
     @AppStorage(AppPreferenceKey.autoFadeMediaHUD) private var autoFadeMediaHUD = PreferenceDefault.autoFadeMediaHUD
     @AppStorage(AppPreferenceKey.debounceMediaChanges) private var debounceMediaChanges = PreferenceDefault.debounceMediaChanges
@@ -686,17 +685,7 @@ struct SettingsView: View {
                     }
                 }
                 
-                if enableLockScreenMediaWidget {
-                    Toggle(isOn: $hideNotchMediaHUDWithLockScreen) {
-                        VStack(alignment: .leading) {
-                            Text("Hide Small Media HUD")
-                            Text("Hide the notch/island media indicator when lock screen Now Playing is active")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.leading, 52)
-                }
+
             } header: {
                 Text("Now Playing")
             }

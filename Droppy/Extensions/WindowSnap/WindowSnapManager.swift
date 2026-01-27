@@ -32,6 +32,16 @@ enum SnapAction: String, CaseIterable, Identifiable, Codable {
     case maximize
     case center
     case restore
+    // Display movement actions
+    case moveToLeftDisplay
+    case moveToRightDisplay
+    case moveToDisplay1
+    case moveToDisplay2
+    case moveToDisplay3
+    // Display 2 specific snap positions
+    case leftHalfDisplay2
+    case rightHalfDisplay2
+    case maximizeDisplay2
     
     var id: String { rawValue }
     
@@ -51,6 +61,14 @@ enum SnapAction: String, CaseIterable, Identifiable, Codable {
         case .maximize: return "Maximize"
         case .center: return "Center"
         case .restore: return "Restore"
+        case .moveToLeftDisplay: return "Left Display"
+        case .moveToRightDisplay: return "Right Display"
+        case .moveToDisplay1: return "Display 1"
+        case .moveToDisplay2: return "Display 2"
+        case .moveToDisplay3: return "Display 3"
+        case .leftHalfDisplay2: return "Left ½ Display 2"
+        case .rightHalfDisplay2: return "Right ½ Display 2"
+        case .maximizeDisplay2: return "Max Display 2"
         }
     }
     
@@ -70,6 +88,14 @@ enum SnapAction: String, CaseIterable, Identifiable, Codable {
         case .maximize: return "arrow.up.left.and.arrow.down.right"
         case .center: return "arrow.up.and.down.and.arrow.left.and.right"
         case .restore: return "arrow.down.right.and.arrow.up.left"
+        case .moveToLeftDisplay: return "arrow.left.to.line"
+        case .moveToRightDisplay: return "arrow.right.to.line"
+        case .moveToDisplay1: return "1.circle"
+        case .moveToDisplay2: return "2.circle"
+        case .moveToDisplay3: return "3.circle"
+        case .leftHalfDisplay2: return "rectangle.lefthalf.filled"
+        case .rightHalfDisplay2: return "rectangle.righthalf.filled"
+        case .maximizeDisplay2: return "arrow.up.left.and.arrow.down.right"
         }
     }
     
@@ -94,6 +120,16 @@ enum SnapAction: String, CaseIterable, Identifiable, Codable {
         case .maximize:    return SavedShortcut(keyCode: 36, modifiers: ctrlOpt)  // Return
         case .center:      return SavedShortcut(keyCode: 8, modifiers: ctrlOpt)   // C
         case .restore:     return nil // No default
+        // Display movement: Ctrl+Opt+E (left), Ctrl+Opt+R (right), Ctrl+Opt+1/2/3
+        case .moveToLeftDisplay:  return SavedShortcut(keyCode: 14, modifiers: ctrlOpt) // E
+        case .moveToRightDisplay: return SavedShortcut(keyCode: 15, modifiers: ctrlOpt) // R
+        case .moveToDisplay1:     return SavedShortcut(keyCode: 18, modifiers: ctrlOpt) // 1
+        case .moveToDisplay2:     return SavedShortcut(keyCode: 19, modifiers: ctrlOpt) // 2
+        case .moveToDisplay3:     return SavedShortcut(keyCode: 20, modifiers: ctrlOpt) // 3
+        // Display 2 specific positions: no defaults (user configurable)
+        case .leftHalfDisplay2:   return nil
+        case .rightHalfDisplay2:  return nil
+        case .maximizeDisplay2:   return nil
         }
     }
     
@@ -152,6 +188,43 @@ enum SnapAction: String, CaseIterable, Identifiable, Codable {
             )
         case .restore:
             return CGRect(x: visibleX, y: visibleY, width: visibleW, height: visibleH)
+        // Display movement actions: center window on target screen
+        case .moveToLeftDisplay, .moveToRightDisplay, .moveToDisplay1, .moveToDisplay2, .moveToDisplay3:
+            let centerW = visibleW * 2 / 3
+            let centerH = visibleH * 2 / 3
+            return CGRect(
+                x: visibleX + (visibleW - centerW) / 2,
+                y: visibleY + (visibleH - centerH) / 2,
+                width: centerW,
+                height: centerH
+            )
+        // Display 2 specific positions (calculated relative to display 2)
+        case .leftHalfDisplay2:
+            return CGRect(x: visibleX, y: visibleY, width: visibleW / 2, height: visibleH)
+        case .rightHalfDisplay2:
+            return CGRect(x: visibleX + visibleW / 2, y: visibleY, width: visibleW / 2, height: visibleH)
+        case .maximizeDisplay2:
+            return CGRect(x: visibleX, y: visibleY, width: visibleW, height: visibleH)
+        }
+    }
+    
+    /// Whether this action moves windows between displays
+    var isDisplayMovement: Bool {
+        switch self {
+        case .moveToLeftDisplay, .moveToRightDisplay, .moveToDisplay1, .moveToDisplay2, .moveToDisplay3:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    /// Whether this action specifically targets display 2
+    var isDisplay2Specific: Bool {
+        switch self {
+        case .leftHalfDisplay2, .rightHalfDisplay2, .maximizeDisplay2:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -171,6 +244,12 @@ final class WindowSnapManager: ObservableObject {
     
     private var hotkeyMonitors: [SnapAction: Any] = [:]
     private var savedWindowFrames: [pid_t: CGRect] = [:]  // For restore functionality
+    
+    // Cycle behavior tracking (Rectangle-style repeated shortcut cycling)
+    private var lastSnapAction: SnapAction?
+    private var lastSnapTime: Date?
+    private var lastSnapScreen: NSScreen?
+    private let cycleTimeWindow: TimeInterval = 1.5  // Seconds to consider repeated press
     
     // Animation duration for smooth spring animation
     private let animationDuration: TimeInterval = 0.3
@@ -214,7 +293,7 @@ final class WindowSnapManager: ObservableObject {
         }
         
         guard let window = getFrontmostWindow(),
-              let screen = getCurrentScreen(for: window) else {
+              let currentScreen = getCurrentScreen(for: window) else {
             print("[WindowSnap] No frontmost window or screen found")
             return
         }
@@ -229,17 +308,65 @@ final class WindowSnapManager: ObservableObject {
             }
         }
         
+        // Determine target screen (handles display movement and cycling)
+        let targetScreen: NSScreen
         let targetFrame: CGRect
-        if action == .restore {
+        
+        if action.isDisplayMovement {
+            // Direct display movement actions
+            if let screen = getTargetScreen(for: action, from: currentScreen) {
+                targetScreen = screen
+                // Preserve window size and center on new screen
+                targetFrame = preservedPositionFrame(for: window, on: screen)
+            } else {
+                print("[WindowSnap] No target display found for \(action.title)")
+                return
+            }
+        } else if action.isDisplay2Specific {
+            // Snap to specific position on display 2
+            let sortedScreens = getScreensSortedByPosition()
+            guard sortedScreens.count > 1 else {
+                print("[WindowSnap] Display 2 not available (only \(sortedScreens.count) display)")
+                return
+            }
+            targetScreen = sortedScreens[1]  // Display 2 (0-indexed)
+            targetFrame = action.targetFrame(for: targetScreen)
+        } else if action == .restore {
             // Restore to saved frame or center
             let pid = getFrontmostAppPID()
             if let pid = pid, let savedFrame = savedWindowFrames[pid] {
                 targetFrame = savedFrame
+                targetScreen = currentScreen
             } else {
-                targetFrame = action.targetFrame(for: screen)
+                targetFrame = action.targetFrame(for: currentScreen)
+                targetScreen = currentScreen
             }
         } else {
-            targetFrame = action.targetFrame(for: screen)
+            // Regular snap action - check for cycle behavior
+            let now = Date()
+            if let lastAction = lastSnapAction,
+               let lastTime = lastSnapTime,
+               let lastScreen = lastSnapScreen,
+               lastAction == action,
+               now.timeIntervalSince(lastTime) < cycleTimeWindow {
+                // Cycle to next screen
+                if let nextScreen = getAdjacentScreen(from: lastScreen, direction: .right) {
+                    targetScreen = nextScreen
+                    lastSnapScreen = nextScreen
+                } else {
+                    // Wrap around to first screen
+                    targetScreen = getScreensSortedByPosition().first ?? currentScreen
+                    lastSnapScreen = targetScreen
+                }
+            } else {
+                // First press or different action
+                targetScreen = currentScreen
+                lastSnapScreen = currentScreen
+            }
+            
+            targetFrame = action.targetFrame(for: targetScreen)
+            lastSnapAction = action
+            lastSnapTime = now
         }
         
         // Show Magnet-style preview overlay, then snap
@@ -250,7 +377,7 @@ final class WindowSnapManager: ObservableObject {
             setWindowFrame(window, frame: targetFrame)
         }
         
-        print("[WindowSnap] Executed action: \(action.title)")
+        print("[WindowSnap] Executed action: \(action.title) on \(targetScreen.localizedName)")
     }
     
     /// Set shortcut for a snap action
@@ -576,6 +703,93 @@ final class WindowSnapManager: ObservableObject {
         if let sizeValue = AXValueCreate(.cgSize, &size) {
             AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
         }
+    }
+    
+    // MARK: - Multi-Display Navigation
+    
+    enum ScreenDirection {
+        case left
+        case right
+    }
+    
+    /// Get all screens sorted by their X position (left to right)
+    private func getScreensSortedByPosition() -> [NSScreen] {
+        return NSScreen.screens.sorted { $0.frame.origin.x < $1.frame.origin.x }
+    }
+    
+    /// Get adjacent screen in specified direction
+    private func getAdjacentScreen(from screen: NSScreen, direction: ScreenDirection) -> NSScreen? {
+        let sortedScreens = getScreensSortedByPosition()
+        guard let currentIndex = sortedScreens.firstIndex(of: screen) else { return nil }
+        
+        switch direction {
+        case .left:
+            guard currentIndex > 0 else { return nil }
+            return sortedScreens[currentIndex - 1]
+        case .right:
+            guard currentIndex < sortedScreens.count - 1 else { return nil }
+            return sortedScreens[currentIndex + 1]
+        }
+    }
+    
+    /// Get target screen for a display movement action
+    private func getTargetScreen(for action: SnapAction, from currentScreen: NSScreen) -> NSScreen? {
+        let sortedScreens = getScreensSortedByPosition()
+        
+        switch action {
+        case .moveToLeftDisplay:
+            return getAdjacentScreen(from: currentScreen, direction: .left)
+        case .moveToRightDisplay:
+            return getAdjacentScreen(from: currentScreen, direction: .right)
+        case .moveToDisplay1:
+            return sortedScreens.count > 0 ? sortedScreens[0] : nil
+        case .moveToDisplay2:
+            return sortedScreens.count > 1 ? sortedScreens[1] : nil
+        case .moveToDisplay3:
+            return sortedScreens.count > 2 ? sortedScreens[2] : nil
+        default:
+            return currentScreen
+        }
+    }
+    
+    /// Calculate window frame that preserves relative position when moving to new screen
+    private func preservedPositionFrame(for window: AXUIElement, on targetScreen: NSScreen) -> CGRect {
+        guard let currentFrame = getWindowFrame(window) else {
+            // Fallback: center on new screen
+            return SnapAction.center.targetFrame(for: targetScreen)
+        }
+        
+        guard let currentScreen = getCurrentScreen(for: window) else {
+            return SnapAction.center.targetFrame(for: targetScreen)
+        }
+        
+        // Convert coordinates for proper calculation
+        guard let primaryScreen = NSScreen.screens.first else {
+            return SnapAction.center.targetFrame(for: targetScreen)
+        }
+        let primaryHeight = primaryScreen.frame.height
+        
+        // Get source and target visible frames in screen coordinates
+        let sourceVisible = currentScreen.visibleFrame
+        let targetVisible = targetScreen.visibleFrame
+        
+        // Convert to screen coordinates
+        let sourceY = primaryHeight - sourceVisible.origin.y - sourceVisible.height
+        let targetY = primaryHeight - targetVisible.origin.y - targetVisible.height
+        
+        // Calculate relative position in source screen (0.0 to 1.0)
+        let relativeX = (currentFrame.origin.x - sourceVisible.origin.x) / sourceVisible.width
+        let relativeY = (currentFrame.origin.y - sourceY) / sourceVisible.height
+        let relativeW = currentFrame.width / sourceVisible.width
+        let relativeH = currentFrame.height / sourceVisible.height
+        
+        // Apply relative position to target screen
+        let newWidth = min(relativeW * targetVisible.width, targetVisible.width)
+        let newHeight = min(relativeH * targetVisible.height, targetVisible.height)
+        let newX = targetVisible.origin.x + (relativeX * targetVisible.width)
+        let newY = targetY + (relativeY * targetVisible.height)
+        
+        return CGRect(x: newX, y: newY, width: newWidth, height: newHeight)
     }
 }
 
