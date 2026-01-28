@@ -500,17 +500,59 @@
         </p>
 
         <div class="download-options">
-            <!-- Homebrew (Preferred) -->
+            <!-- Direct Download (Primary) -->
             <div class="download-card preferred">
                 <span class="preferred-badge">Recommended</span>
+                <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <img src="assets/macos-disk-icon.png" alt="DMG" style="width: 28px; height: 28px;">
+                    Direct Download
+                </h3>
+                <p>Signed & notarized by Apple. Just download, drag, and launch.</p>
+
+                <!-- Step 1: Download -->
+                <p
+                    style="font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Step 1: Download</p>
+                <a href="https://github.com/iordv/Droppy/releases/latest/download/Droppy-10.0.1.dmg"
+                    class="download-btn" id="dmg-download">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Download Droppy.dmg
+                </a>
+
+                <!-- Step 2 -->
+                <p
+                    style="font-size: 11px; color: #666; margin-top: 16px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Step 2: Open the DMG and drag to Applications</p>
+
+                <p style="font-size: 12px; color: #666; margin-top: 0; margin-bottom: 0;">
+                    <span class="droppy-version">v10.0.1</span> · Universal (Apple Silicon + Intel)
+                </p>
+
+                <!-- Signed badge -->
+                <div
+                    style="margin-top: 16px; padding: 12px 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; display: flex; align-items: center; gap: 10px;">
+                    <svg style="width: 18px; height: 18px; color: #22c55e; flex-shrink: 0;" fill="none"
+                        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span style="font-size: 12px; color: #22c55e;">Signed & Notarized <span style="color: #666;">— No
+                            quarantine warnings</span></span>
+                </div>
+            </div>
+
+            <!-- Homebrew (Secondary) -->
+            <div class="download-card">
                 <h3 style="display: flex; align-items: center; gap: 10px;">
                     <img src="https://brew.sh/assets/img/homebrew.svg" alt="Homebrew"
                         style="width: 28px; height: 28px;">
                     Homebrew
                 </h3>
-                <p>Install via Homebrew for automatic updates and easy management.</p>
+                <p>For developers who prefer package management.</p>
 
-                <!-- Step 1: Install Droppy -->
+                <!-- Install Droppy -->
                 <p
                     style="font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
                     Install Droppy</p>
@@ -525,7 +567,7 @@
                     </button>
                 </div>
 
-                <!-- Step 2: Install Homebrew (if needed) -->
+                <!-- Install Homebrew (if needed) -->
                 <p
                     style="font-size: 11px; color: #666; margin-bottom: 8px; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
                     Don't have Homebrew? Install it first</p>
@@ -539,51 +581,6 @@
                         Copy
                     </button>
                 </div>
-            </div>
-
-            <!-- Direct Download -->
-            <div class="download-card">
-                <h3 style="display: flex; align-items: center; gap: 10px;">
-                    <img src="assets/macos-disk-icon.png" alt="DMG" style="width: 28px; height: 28px;">
-                    Direct Download
-                </h3>
-                <p>Download the DMG installer directly from GitHub releases.</p>
-                <!-- Step 1: Download -->
-                <p
-                    style="font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Step 1: Download</p>
-                <a href="https://github.com/iordv/Droppy/releases/latest/download/Droppy-8.4.3.dmg" class="download-btn"
-                    id="dmg-download">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                    </svg>
-                    Download Droppy.dmg
-                </a>
-
-                <!-- Step 2: Remove quarantine -->
-                <p
-                    style="font-size: 11px; color: #666; margin-bottom: 8px; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Step 2: Run in Terminal</p>
-                <div class="homebrew-cmd" style="background: #0d0d0d;">
-                    <code id="xattr-cmd"
-                        style="font-size: 11px;">xattr -d com.apple.quarantine ~/Downloads/Droppy-9.2.0.dmg</code>
-                    <button class="copy-btn" onclick="copyCommand(this)">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path
-                                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                        </svg>
-                        Copy
-                    </button>
-                </div>
-
-                <!-- Step 3 -->
-                <p
-                    style="font-size: 11px; color: #666; margin-top: 16px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Step 3: Open the DMG and install</p>
-
-                <p style="font-size: 12px; color: #666; margin-top: 0; margin-bottom: 0;">
-                    <span class="droppy-version">v8.4.3</span> · Universal (Apple Silicon + Intel)
-                </p>
             </div>
         </div>
 

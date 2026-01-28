@@ -178,15 +178,17 @@ Droppy's built-in **Extension Store** adds powerful features on demand. Everythi
 
 ## Install
 
-### Homebrew (recommended)
+### Direct Download (recommended)
+1. Download [**Droppy.dmg**](https://github.com/iordv/Droppy/releases/latest)
+2. Open the DMG and drag Droppy to Applications
+3. Launch and enjoy!
+
+> ✅ **Signed & Notarized** — Droppy is fully signed with Apple Developer ID and notarized. No quarantine warnings, no terminal commands needed.
+
+### Homebrew
 ```bash
 brew install --cask iordv/tap/droppy
 ```
-
-### Manual Download
-1. Download [**Droppy.dmg**](https://github.com/iordv/Droppy/releases/latest)
-2. Clear quarantine: `xattr -rd com.apple.quarantine ~/Downloads/Droppy-*.dmg`
-3. Drag Droppy to Applications
 
 ---
 
@@ -217,19 +219,7 @@ Droppy requires a few permissions to work properly. All processing happens local
 Yes! Droppy is completely free forever—no ads, no subscriptions, no hidden fees, no paywalls. Every feature, including all extensions like Voice Transcribe and AI Background Removal, is included at no cost. We believe great software should be accessible to everyone.
 </details>
 
-<details>
-<summary><strong>"Droppy is damaged and can't be opened" — how do I fix this?</strong></summary>
 
-This is macOS Gatekeeper blocking apps that aren't notarized through Apple. It's a safety feature, not an actual problem with the app. To fix it, open Terminal and run:
-```bash
-xattr -rd com.apple.quarantine /Applications/Droppy.app
-```
-If you downloaded the DMG directly, run this instead:
-```bash
-xattr -rd com.apple.quarantine ~/Downloads/Droppy-*.dmg
-```
-**Pro tip:** Installing via Homebrew (`brew install --cask iordv/tap/droppy`) avoids this issue entirely and keeps Droppy automatically updated.
-</details>
 
 <details>
 <summary><strong>Does it work on Macs without a notch?</strong></summary>
