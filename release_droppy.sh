@@ -352,22 +352,22 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Append installation instructions to notes
     TEMP_NOTES=$(mktemp)
     cat "$NOTES_FILE" > "$TEMP_NOTES"
-    cat >> "$TEMP_NOTES" << 'INSTALL_FOOTER'
+    cat >> "$TEMP_NOTES" << INSTALL_FOOTER
 
 ---
 
 ## Installation
 
-<img src="https://brew.sh/assets/img/homebrew.svg" height="24"> **Recommended: Install via Homebrew** (easiest, auto-updates)
-```bash
-brew install --cask iordv/tap/droppy
-```
+<img src="https://raw.githubusercontent.com/iordv/Droppy/main/docs/assets/macos-disk-icon.png" height="24"> **Recommended: Direct Download** (signed & notarized)
 
-<img src="https://raw.githubusercontent.com/iordv/Droppy/main/docs/assets/macos-disk-icon.png" height="24"> **Manual Install:** Download the DMG below, then run this before opening:
-```bash
-xattr -rd com.apple.quarantine ~/Downloads/Droppy-*.dmg
-```
-Then open the DMG and drag Droppy to Applications.
+Download \`Droppy-$VERSION.dmg\` below, open it, and drag Droppy to Applications. That's it!
+
+> ✅ **Signed & Notarized by Apple** — No quarantine warnings, no terminal commands needed.
+
+<img src="https://brew.sh/assets/img/homebrew.svg" height="24"> **Alternative: Install via Homebrew**
+\`\`\`bash
+brew install --cask iordv/tap/droppy
+\`\`\`
 INSTALL_FOOTER
     
     gh release create "v$VERSION" "$DMG_NAME" --title "v$VERSION" --notes-file "$TEMP_NOTES"
