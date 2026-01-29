@@ -2230,6 +2230,7 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceKey.enableClipboard) private var enableClipboard = PreferenceDefault.enableClipboard
     @AppStorage(AppPreferenceKey.clipboardHistoryLimit) private var clipboardHistoryLimit = PreferenceDefault.clipboardHistoryLimit
     @AppStorage(AppPreferenceKey.clipboardAutoFocusSearch) private var autoFocusSearch = PreferenceDefault.clipboardAutoFocusSearch
+    @AppStorage(AppPreferenceKey.clipboardTagsEnabled) private var tagsEnabled = PreferenceDefault.clipboardTagsEnabled
     @State private var currentShortcut: SavedShortcut?
     @State private var showAppPicker: Bool = false
     @ObservedObject private var clipboardManager = ClipboardManager.shared
@@ -2359,6 +2360,16 @@ struct SettingsView: View {
                     VStack(alignment: .leading) {
                         Text("Skip Passwords")
                         Text("Don't record passwords from password managers")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                // Tags feature toggle
+                Toggle(isOn: $tagsEnabled) {
+                    VStack(alignment: .leading) {
+                        Text("Enable Tags")
+                        Text("Organize clipboard entries with custom colored tags")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

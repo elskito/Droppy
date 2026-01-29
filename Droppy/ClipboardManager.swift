@@ -10,6 +10,53 @@ enum ClipboardType: String, Codable {
     case color
 }
 
+// MARK: - Color Hex Extension
+
+extension Color {
+    /// Initialize Color from hex string (e.g., "#FF6B6B" or "FF6B6B")
+    init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+        
+        guard hexSanitized.count == 6 else { return nil }
+        
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+        
+        let red = Double((rgb & 0xFF0000) >> 16) / 255.0
+        let green = Double((rgb & 0x00FF00) >> 8) / 255.0
+        let blue = Double(rgb & 0x0000FF) / 255.0
+        
+        self.init(red: red, green: green, blue: blue)
+    }
+}
+
+// MARK: - Clipboard Tag
+
+struct ClipboardTag: Identifiable, Codable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var colorHex: String  // Hex color (e.g., "#FF6B6B")
+    var sortOrder: Int = 0  // For user-defined ordering in list
+    
+    // Preset colors for quick selection
+    static let presetColors: [String] = [
+        "#FF6B6B", // Red
+        "#FF9F43", // Orange
+        "#FECA57", // Yellow
+        "#1DD1A1", // Green
+        "#54A0FF", // Blue
+        "#5F27CD", // Purple
+        "#FF6FD1", // Pink
+        "#A0A0A0"  // Gray
+    ]
+    
+    /// Convert hex to SwiftUI Color
+    var color: Color {
+        Color(hex: colorHex) ?? .gray
+    }
+}
+
 struct ClipboardItem: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var type: ClipboardType
@@ -22,18 +69,19 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
     var isFlagged: Bool = false // Flag as important - appears at top with red tint
     var isConcealed: Bool = false // Password/sensitive content
     var customTitle: String? // User-defined title for easy finding
+    var tagId: UUID? // Optional tag for organization
     
     var rtfData: Data? // Rich Text Formatting data
     
     // Custom Codable for backwards compatibility
     enum CodingKeys: String, CodingKey {
-        case id, type, content, imageData, imageFilePath, rtfData, date, sourceApp, isFavorite, isFlagged, isConcealed, customTitle
+        case id, type, content, imageData, imageFilePath, rtfData, date, sourceApp, isFavorite, isFlagged, isConcealed, customTitle, tagId
     }
     
     init(id: UUID = UUID(), type: ClipboardType, content: String? = nil, imageData: Data? = nil, 
          imageFilePath: String? = nil, rtfData: Data? = nil,
          date: Date = Date(), sourceApp: String? = nil, isFavorite: Bool = false, 
-         isFlagged: Bool = false, isConcealed: Bool = false, customTitle: String? = nil) {
+         isFlagged: Bool = false, isConcealed: Bool = false, customTitle: String? = nil, tagId: UUID? = nil) {
         self.id = id
         self.type = type
         self.content = content
@@ -46,6 +94,7 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
         self.isFlagged = isFlagged
         self.isConcealed = isConcealed
         self.customTitle = customTitle
+        self.tagId = tagId
     }
     
     init(from decoder: Decoder) throws {
@@ -62,6 +111,7 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
         isFlagged = try container.decodeIfPresent(Bool.self, forKey: .isFlagged) ?? false // Default for old data
         isConcealed = try container.decodeIfPresent(Bool.self, forKey: .isConcealed) ?? false // Default for old data
         customTitle = try container.decodeIfPresent(String.self, forKey: .customTitle)
+        tagId = try container.decodeIfPresent(UUID.self, forKey: .tagId)
     }
     
     /// Get the full URL to the image file (lazy loading)
@@ -122,7 +172,8 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
         lhs.isFavorite == rhs.isFavorite &&
         lhs.isFlagged == rhs.isFlagged &&
         lhs.customTitle == rhs.customTitle &&
-        lhs.isConcealed == rhs.isConcealed
+        lhs.isConcealed == rhs.isConcealed &&
+        lhs.tagId == rhs.tagId
     }
 }
 
@@ -142,6 +193,14 @@ class ClipboardManager: ObservableObject {
     @Published var hasAccessibilityPermission: Bool = false
     @Published var showPasteFeedback: Bool = false
     @Published var isEditingContent: Bool = false  // Track if user is editing text content
+    
+    // MARK: - Tags System
+    @Published var tags: [ClipboardTag] = [] {
+        didSet {
+            guard !isLoading else { return }
+            saveTagsToDisk()
+        }
+    }
     
     /// Flag to mark next captured clipboard item as favorite (Issue #43 Copy+Favorite)
     private var favoriteNextCapture: Bool = false
@@ -217,6 +276,13 @@ class ClipboardManager: ObservableObject {
         return imagesDir
     }()
     
+    /// URL for storing clipboard tags
+    private lazy var tagsURL: URL = {
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let appSupport = paths[0].appendingPathComponent("Droppy", isDirectory: true)
+        return appSupport.appendingPathComponent("clipboard_tags.json")
+    }()
+    
     init() {
         self.lastChangeCount = NSPasteboard.general.changeCount
         
@@ -236,6 +302,7 @@ class ClipboardManager: ObservableObject {
         self.skipConcealedContent = UserDefaults.standard.bool(forKey: "skipConcealedClipboard")
         
         loadFromDisk()
+        loadTagsFromDisk()
         
         if isEnabled {
             startMonitoring()
@@ -398,6 +465,104 @@ class ClipboardManager: ObservableObject {
         print("🗑️ Deleted image file: \(relativePath)")
     }
     
+    // MARK: - Tags Persistence
+    
+    private func saveTagsToDisk() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let data = try JSONEncoder().encode(self.tags)
+                try data.write(to: self.tagsURL, options: .atomic)
+            } catch {
+                print("❌ Failed to save clipboard tags: \(error)")
+            }
+        }
+    }
+    
+    private func loadTagsFromDisk() {
+        guard FileManager.default.fileExists(atPath: tagsURL.path) else { return }
+        do {
+            let data = try Data(contentsOf: tagsURL)
+            let decoded = try JSONDecoder().decode([ClipboardTag].self, from: data)
+            self.tags = decoded.sorted { $0.sortOrder < $1.sortOrder }
+            print("📋 Loaded \(decoded.count) clipboard tags from disk")
+        } catch {
+            print("⚠️ Failed to load clipboard tags: \(error)")
+        }
+    }
+    
+    // MARK: - Tag CRUD Operations
+    
+    /// Add a new tag
+    func addTag(name: String, colorHex: String) -> ClipboardTag {
+        let tag = ClipboardTag(
+            name: name,
+            colorHex: colorHex,
+            sortOrder: tags.count
+        )
+        tags.append(tag)
+        return tag
+    }
+    
+    /// Update an existing tag
+    func updateTag(_ tag: ClipboardTag, name: String? = nil, colorHex: String? = nil) {
+        guard let index = tags.firstIndex(where: { $0.id == tag.id }) else { return }
+        if let name = name {
+            tags[index].name = name
+        }
+        if let colorHex = colorHex {
+            tags[index].colorHex = colorHex
+        }
+        objectWillChange.send()
+    }
+    
+    /// Delete a tag and remove it from all items
+    func deleteTag(_ tag: ClipboardTag) {
+        // Remove tag from all items that have it
+        for index in history.indices where history[index].tagId == tag.id {
+            history[index].tagId = nil
+        }
+        // Remove the tag itself
+        tags.removeAll { $0.id == tag.id }
+        // Reindex sort orders
+        for i in tags.indices {
+            tags[i].sortOrder = i
+        }
+    }
+    
+    /// Get tag by ID
+    func getTag(by id: UUID?) -> ClipboardTag? {
+        guard let id = id else { return nil }
+        return tags.first { $0.id == id }
+    }
+    
+    /// Assign a tag to a clipboard item
+    func assignTag(_ tag: ClipboardTag, to item: ClipboardItem) {
+        guard let index = history.firstIndex(where: { $0.id == item.id }) else { return }
+        history[index].tagId = tag.id
+        objectWillChange.send()
+    }
+    
+    /// Remove tag from a clipboard item
+    func removeTagFromItem(_ item: ClipboardItem) {
+        guard let index = history.firstIndex(where: { $0.id == item.id }) else { return }
+        history[index].tagId = nil
+        objectWillChange.send()
+    }
+    
+    /// Reorder tags (move tag at fromIndex to toIndex)
+    func reorderTags(from fromIndex: Int, to toIndex: Int) {
+        guard fromIndex != toIndex,
+              fromIndex >= 0 && fromIndex < tags.count,
+              toIndex >= 0 && toIndex < tags.count else { return }
+        let tag = tags.remove(at: fromIndex)
+        tags.insert(tag, at: toIndex)
+        // Update sort orders
+        for i in tags.indices {
+            tags[i].sortOrder = i
+        }
+    }
+    
     func startMonitoring() {
         guard !isMonitoring else { return }
         isMonitoring = true
@@ -434,25 +599,27 @@ class ClipboardManager: ObservableObject {
     }
     
     func enforceHistoryLimit() {
-        // Separate flagged, favorites, and regular items
+        // Protected items: flagged, favorites, AND tagged items - these never get auto-deleted
         let flagged = history.filter { $0.isFlagged }
         let favorites = history.filter { $0.isFavorite && !$0.isFlagged }
-        let regular = history.filter { !$0.isFavorite && !$0.isFlagged }
+        let tagged = history.filter { $0.tagId != nil && !$0.isFavorite && !$0.isFlagged }
+        let regular = history.filter { !$0.isFavorite && !$0.isFlagged && $0.tagId == nil }
         
         // Calculate how many regular items we can keep
-        let protectedCount = flagged.count + favorites.count
+        let protectedCount = flagged.count + favorites.count + tagged.count
         let regularLimit = max(0, historyLimit - protectedCount)
         let limitedRegular = Array(regular.prefix(regularLimit))
         
         // Identify items being removed and cleanup their image files
-        let keptIds = Set(flagged.map { $0.id } + favorites.map { $0.id } + limitedRegular.map { $0.id })
+        let keptIds = Set(flagged.map { $0.id } + favorites.map { $0.id } + tagged.map { $0.id } + limitedRegular.map { $0.id })
         for item in history where !keptIds.contains(item.id) {
             deleteImageFile(for: item)
         }
         
-        // Rebuild history: flagged first, then favorites, then regular (all sorted by date)
+        // Rebuild history: flagged first, then favorites, then tagged, then regular (all sorted by date)
         history = flagged.sorted { $0.date > $1.date } + 
                   favorites.sorted { $0.date > $1.date } + 
+                  tagged.sorted { $0.date > $1.date } +
                   limitedRegular
     }
 

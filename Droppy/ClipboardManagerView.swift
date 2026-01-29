@@ -22,6 +22,7 @@ struct ClipboardManagerView: View {
     @ObservedObject var manager = ClipboardManager.shared
     @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
     @AppStorage(AppPreferenceKey.clipboardAutoFocusSearch) private var autoFocusSearch = PreferenceDefault.clipboardAutoFocusSearch
+    @AppStorage(AppPreferenceKey.clipboardTagsEnabled) private var tagsEnabled = PreferenceDefault.clipboardTagsEnabled
     @State private var selectedItems: Set<UUID> = []
     @State private var isResetHovering = false
     @State private var scrollProxy: ScrollViewProxy?
@@ -40,6 +41,11 @@ struct ClipboardManagerView: View {
     
     // Range selection anchor for Shift+Click
     @State private var lastClickedItemId: UUID?
+    
+    // Tag Filter State
+    @State private var selectedTagFilter: UUID? = nil  // nil = show all
+    @State private var isTagPopoverVisible = false
+    @State private var showTagManagement = false
     
     // Cached sorted/filtered history (updated only when needed)
     @State private var cachedSortedHistory: [ClipboardItem] = []
@@ -68,13 +74,19 @@ struct ClipboardManagerView: View {
     private func updateSortedHistory() {
         let historySnapshot = manager.history
         let searchSnapshot = searchText
+        let tagFilterSnapshot = selectedTagFilter
         
-        // Filter if search is active
-        let filtered: [ClipboardItem]
-        if searchSnapshot.isEmpty {
-            filtered = historySnapshot
+        // Apply tag filter first
+        var filtered: [ClipboardItem]
+        if let tagId = tagFilterSnapshot {
+            filtered = historySnapshot.filter { $0.tagId == tagId }
         } else {
-            filtered = historySnapshot.filter { item in
+            filtered = historySnapshot
+        }
+        
+        // Then apply search filter
+        if !searchSnapshot.isEmpty {
+            filtered = filtered.filter { item in
                 // PERFORMANCE: Limit content search to first 10K chars for large text
                 let contentPreview = String((item.content ?? "").prefix(10000))
                 return item.title.localizedCaseInsensitiveContains(searchSnapshot) ||
@@ -109,6 +121,9 @@ struct ClipboardManagerView: View {
             .onChange(of: searchText) { _, _ in
                 updateSortedHistory()
             }
+            .onChange(of: selectedTagFilter) { _, _ in
+                updateSortedHistory()
+            }
             // ENFORCE PENDING SELECTION: After sortedHistory changes, apply pending selection
             .onChange(of: cachedSortedHistory) { _, _ in
                 if let pendingId = pendingSelectionId {
@@ -135,7 +150,35 @@ struct ClipboardManagerView: View {
                     .frame(minWidth: 400)
                     .background(Color.clear)
                     .toolbar {
-                        // Search button in sidebar, left of collapse button
+                        // Tags filter button (only if tags enabled)
+                        if tagsEnabled {
+                            ToolbarItem(placement: .automatic) {
+                                Button {
+                                    isTagPopoverVisible.toggle()
+                                } label: {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(systemName: "tag")
+                                        // Show dot when filter active
+                                        if selectedTagFilter != nil {
+                                            Circle()
+                                                .fill(manager.getTag(by: selectedTagFilter)?.color ?? .blue)
+                                                .frame(width: 6, height: 6)
+                                                .offset(x: 2, y: -2)
+                                        }
+                                    }
+                                }
+                                .popover(isPresented: $isTagPopoverVisible, arrowEdge: .bottom) {
+                                    TagFilterPopover(
+                                        selectedTagFilter: $selectedTagFilter,
+                                        showTagManagement: $showTagManagement,
+                                        manager: manager
+                                    )
+                                }
+                                .help("Filter by Tag")
+                            }
+                        }
+                        
+                        // Search button in sidebar
                         ToolbarItem(placement: .automatic) {
                             Button {
                                 withAnimation(DroppyAnimation.state) {
@@ -153,6 +196,9 @@ struct ClipboardManagerView: View {
                             .keyboardShortcut("f", modifiers: .command)
                             .help("Search (⌘F)")
                         }
+                    }
+                    .sheet(isPresented: $showTagManagement) {
+                        TagManagementSheet(manager: manager)
                     }
             } detail: {
                 // Detail view with preview pane
@@ -690,6 +736,45 @@ struct ClipboardManagerView: View {
                                         } label: {
                                             Label(item.isFlagged ? "Remove Flag" : "Flag as Important", systemImage: item.isFlagged ? "flag.slash" : "flag.fill")
                                         }
+                                        
+                                        // Tag submenu (only if tags enabled)
+                                        if tagsEnabled {
+                                            Menu {
+                                                // Show all available tags
+                                                ForEach(manager.tags) { tag in
+                                                    Button {
+                                                        manager.assignTag(tag, to: item)
+                                                    } label: {
+                                                        HStack {
+                                                            Circle()
+                                                                .fill(tag.color)
+                                                                .frame(width: 8, height: 8)
+                                                            Text(tag.name)
+                                                            if item.tagId == tag.id {
+                                                                Image(systemName: "checkmark")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if !manager.tags.isEmpty && item.tagId != nil {
+                                                    Divider()
+                                                    Button(role: .destructive) {
+                                                        manager.removeTagFromItem(item)
+                                                    } label: {
+                                                        Label("Remove Tag", systemImage: "tag.slash")
+                                                    }
+                                                }
+                                                
+                                                if manager.tags.isEmpty {
+                                                    Text("No tags yet - create one in tag settings")
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            } label: {
+                                                Label("Tag", systemImage: "tag")
+                                            }
+                                        }
+                                        
                                         Divider()
                                         
                                         // Move to Shelf/Basket
@@ -1165,6 +1250,7 @@ struct ClipboardItemRow: View {
     let item: ClipboardItem
     let isSelected: Bool
     
+    @AppStorage(AppPreferenceKey.clipboardTagsEnabled) private var tagsEnabled = PreferenceDefault.clipboardTagsEnabled
     @State private var isHovering = false
     @State private var dashPhase: CGFloat = 0
     @State private var cachedThumbnail: NSImage? // Async-loaded thumbnail
@@ -1232,8 +1318,14 @@ struct ClipboardItemRow: View {
             
             Spacer(minLength: 8)
             
-            // Status icons (key + flag + star)
+            // Status icons (tag dot + key + flag + star)
             HStack(spacing: 4) {
+                // Tag dot - shows tag color (only when tags enabled)
+                if tagsEnabled, let tag = ClipboardManager.shared.getTag(by: item.tagId) {
+                    Circle()
+                        .fill(tag.color)
+                        .frame(width: 6, height: 6)
+                }
                 if item.isConcealed {
                     Image(systemName: "key.fill")
                         .foregroundStyle(.secondary)
@@ -1293,7 +1385,7 @@ struct ClipboardPreviewView: View {
     let onDelete: () -> Void
     
     @ObservedObject private var manager = ClipboardManager.shared
-    
+    @AppStorage(AppPreferenceKey.clipboardTagsEnabled) private var tagsEnabled = PreferenceDefault.clipboardTagsEnabled
 
     @State private var isPasteHovering = false
     @State private var isCopyHovering = false
@@ -1302,6 +1394,7 @@ struct ClipboardPreviewView: View {
     @State private var isTrashHovering = false
     @State private var starAnimationTrigger = false
     @State private var flagAnimationTrigger = false
+    @State private var isTagPopoverVisible = false
     @State private var isDownloadHovering = false
     @State private var isSavingFile = false
     @State private var showSaveSuccess = false
@@ -1926,6 +2019,82 @@ struct ClipboardPreviewView: View {
                 }
                 .buttonStyle(DroppyCircleButtonStyle(size: 40))
                 .help("Flag as Important")
+                
+                // Tag Button (if tags enabled)
+                if tagsEnabled {
+                    Button {
+                        isTagPopoverVisible.toggle()
+                    } label: {
+                        ZStack {
+                            Image(systemName: "tag")
+                                .foregroundStyle(item.tagId != nil ? (manager.getTag(by: item.tagId)?.color ?? .cyan) : .white.opacity(0.8))
+                        }
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 40))
+                    .help("Assign Tag")
+                    .popover(isPresented: $isTagPopoverVisible, arrowEdge: .bottom) {
+                        VStack(spacing: 4) {
+                            ForEach(manager.tags) { tag in
+                                Button {
+                                    if item.tagId == tag.id {
+                                        manager.removeTagFromItem(item)
+                                    } else {
+                                        manager.assignTag(tag, to: item)
+                                    }
+                                    isTagPopoverVisible = false
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(tag.color)
+                                            .frame(width: 10, height: 10)
+                                        Text(tag.name)
+                                            .font(.system(size: 12))
+                                        Spacer()
+                                        if item.tagId == tag.id {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.cyan)
+                                        }
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(item.tagId == tag.id ? Color.white.opacity(0.1) : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            if item.tagId != nil {
+                                Divider()
+                                Button {
+                                    manager.removeTagFromItem(item)
+                                    isTagPopoverVisible = false
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "tag.slash")
+                                            .font(.system(size: 10))
+                                        Text("Remove Tag")
+                                            .font(.system(size: 12))
+                                    }
+                                    .foregroundStyle(.red)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            if manager.tags.isEmpty {
+                                Text("No tags yet")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .padding(8)
+                            }
+                        }
+                        .padding(8)
+                        .frame(minWidth: 140)
+                        .background(.ultraThinMaterial)
+                    }
+                }
                 
                 // Edit Button (Text/URL only)
                 if !isEditing && (item.type == .text || item.type == .url) {
@@ -2970,5 +3139,477 @@ struct URLTypeBadge: View {
                     .stroke(Color.white.opacity(0.25), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+    }
+}
+
+// MARK: - Tag Filter Popover
+
+struct TagFilterPopover: View {
+    @Binding var selectedTagFilter: UUID?
+    @Binding var showTagManagement: Bool
+    @ObservedObject var manager: ClipboardManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("Filter by Tag")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    showTagManagement = true
+                } label: {
+                    Image(systemName: "gear")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Manage Tags")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            
+            Divider()
+            
+            // "All" option
+            Button {
+                selectedTagFilter = nil
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: selectedTagFilter == nil ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selectedTagFilter == nil ? .blue : .secondary)
+                        .font(.system(size: 14))
+                    Text("All Items")
+                        .font(.system(size: 13))
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .background(selectedTagFilter == nil ? Color.blue.opacity(0.15) : Color.clear)
+            
+            if !manager.tags.isEmpty {
+                Divider()
+                    .padding(.vertical, 4)
+                
+                // Tag list
+                ForEach(manager.tags) { tag in
+                    Button {
+                        selectedTagFilter = tag.id
+                    } label: {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(tag.color)
+                                .frame(width: 10, height: 10)
+                            Text(tag.name)
+                                .font(.system(size: 13))
+                            Spacer()
+                            if selectedTagFilter == tag.id {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .background(selectedTagFilter == tag.id ? Color.blue.opacity(0.15) : Color.clear)
+                }
+            }
+            
+            if manager.tags.isEmpty {
+                Text("No tags yet")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+            }
+        }
+        .frame(width: 200)
+        .background(.ultraThinMaterial)
+    }
+}
+
+// MARK: - Tag Management Sheet
+
+struct TagManagementSheet: View {
+    @ObservedObject var manager: ClipboardManager
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
+    
+    @State private var newTagName = ""
+    @State private var selectedColorIndex = 0
+    @State private var editingTag: ClipboardTag? = nil
+    @State private var editingName = ""
+    @State private var editingColorIndex = 0
+    @State private var draggingTagId: UUID? = nil
+    @FocusState private var isTextFieldFocused: Bool
+    
+    private var selectedColor: Color {
+        Color(hex: ClipboardTag.presetColors[selectedColorIndex]) ?? .cyan
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 12) {
+                Image(systemName: "tag.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(selectedColor)
+                    .animation(.easeInOut(duration: 0.2), value: selectedColorIndex)
+                
+                Text("Manage Tags")
+                    .font(.title2.bold())
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+            
+            Divider()
+                .padding(.horizontal, 24)
+            
+            // Add new tag section
+            VStack(spacing: 12) {
+                // Name field - Styled like clipboard search
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(selectedColor)
+                        .font(.system(size: 14))
+                        .animation(.easeInOut(duration: 0.2), value: selectedColorIndex)
+                    
+                    TextField("New tag name...", text: $newTagName)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .focused($isTextFieldFocused)
+                        .onSubmit { addTag() }
+                    
+                    Button {
+                        newTagName = ""
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 20))
+                    .opacity(newTagName.isEmpty ? 0 : 1)
+                    .disabled(newTagName.isEmpty)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.black.opacity(0.3))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            isTextFieldFocused ? selectedColor.opacity(0.8) : Color.white.opacity(0.2),
+                            style: StrokeStyle(
+                                lineWidth: 1.5,
+                                lineCap: .round,
+                                dash: [3, 3],
+                                dashPhase: 0
+                            )
+                        )
+                        .animation(.easeInOut(duration: 0.2), value: selectedColorIndex)
+                )
+                
+                // Color picker grid
+                HStack(spacing: 8) {
+                    ForEach(Array(ClipboardTag.presetColors.enumerated()), id: \.offset) { index, colorHex in
+                        Circle()
+                            .fill(Color(hex: colorHex) ?? .gray)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: selectedColorIndex == index ? 2 : 0)
+                            )
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .opacity(selectedColorIndex == index ? 1 : 0)
+                            )
+                            .scaleEffect(selectedColorIndex == index ? 1.1 : 1.0)
+                            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: selectedColorIndex)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                    selectedColorIndex = index
+                                }
+                            }
+                    }
+                }
+                .padding(.vertical, 4)
+                
+                // Add button - DroppyPillButtonStyle
+                Button {
+                    addTag()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add Tag")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DroppyAccentButtonStyle(color: .cyan, size: .small))
+                .disabled(newTagName.isEmpty)
+                .opacity(newTagName.isEmpty ? 0.5 : 1.0)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            
+            Divider()
+                .padding(.horizontal, 24)
+            
+            // Tag list
+            if manager.tags.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "tag.slash")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.secondary)
+                    Text("No tags yet")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                    Text("Add a tag above to get started")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(Array(manager.tags.enumerated()), id: \.element.id) { index, tag in
+                            TagRowView(
+                                tag: tag,
+                                isEditing: editingTag?.id == tag.id,
+                                editingName: $editingName,
+                                editingColorIndex: $editingColorIndex,
+                                onStartEdit: {
+                                    withAnimation(DroppyAnimation.transition) {
+                                        editingTag = tag
+                                        editingName = tag.name
+                                        editingColorIndex = ClipboardTag.presetColors.firstIndex(of: tag.colorHex) ?? 0
+                                    }
+                                },
+                                onSaveEdit: {
+                                    if !editingName.isEmpty {
+                                        let newColorHex = ClipboardTag.presetColors[editingColorIndex]
+                                        manager.updateTag(tag, name: editingName, colorHex: newColorHex)
+                                    }
+                                    withAnimation(DroppyAnimation.transition) {
+                                        editingTag = nil
+                                    }
+                                },
+                                onCancelEdit: {
+                                    withAnimation(DroppyAnimation.transition) {
+                                        editingTag = nil
+                                    }
+                                },
+                                onDelete: {
+                                    withAnimation(DroppyAnimation.transition) {
+                                        manager.deleteTag(tag)
+                                    }
+                                }
+                            )
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.8)),
+                                removal: .scale(scale: 0.9).combined(with: .opacity)
+                            ))
+                            .onDrag {
+                                draggingTagId = tag.id
+                                return NSItemProvider(object: tag.id.uuidString as NSString)
+                            }
+                            .onDrop(of: [.text], delegate: TagDropDelegate(
+                                tag: tag,
+                                tags: manager.tags,
+                                draggingTagId: $draggingTagId,
+                                onReorder: { from, to in
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                        manager.reorderTags(from: from, to: to)
+                                    }
+                                }
+                            ))
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                }
+            }
+            
+            Divider()
+                .padding(.horizontal, 24)
+            
+            // Done button
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                }
+                .buttonStyle(DroppyAccentButtonStyle(color: .cyan, size: .small))
+            }
+            .padding(16)
+        }
+        .frame(width: 340, height: 630)
+        .background(useTransparentBackground ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color(white: 0.1)))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func addTag() {
+        guard !newTagName.isEmpty else { return }
+        let colorHex = ClipboardTag.presetColors[selectedColorIndex]
+        withAnimation(DroppyAnimation.transition) {
+            _ = manager.addTag(name: newTagName, colorHex: colorHex)
+        }
+        newTagName = ""
+        // Cycle to next color
+        selectedColorIndex = (selectedColorIndex + 1) % ClipboardTag.presetColors.count
+    }
+}
+
+// MARK: - Tag Row View (for management)
+
+struct TagRowView: View {
+    let tag: ClipboardTag
+    let isEditing: Bool
+    @Binding var editingName: String
+    @Binding var editingColorIndex: Int
+    let onStartEdit: () -> Void
+    let onSaveEdit: () -> Void
+    let onCancelEdit: () -> Void
+    let onDelete: () -> Void
+    
+    @State private var isHovering = false
+    @FocusState private var isEditFocused: Bool
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            if isEditing {
+                // Editing mode - color picker + name field
+                HStack(spacing: 4) {
+                    ForEach(Array(ClipboardTag.presetColors.enumerated()), id: \.offset) { index, colorHex in
+                        Circle()
+                            .fill(Color(hex: colorHex) ?? .gray)
+                            .frame(width: 14, height: 14)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: editingColorIndex == index ? 1.5 : 0)
+                            )
+                            .scaleEffect(editingColorIndex == index ? 1.15 : 1.0)
+                            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: editingColorIndex)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                                    editingColorIndex = index
+                                }
+                            }
+                    }
+                }
+                
+                TextField("Tag name", text: $editingName)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(maxWidth: 80)
+                    .focused($isEditFocused)
+                    .onSubmit { onSaveEdit() }
+                    .onAppear { isEditFocused = true }
+                
+                Spacer()
+                
+                // Edit mode buttons - same positioning as display mode
+                HStack(spacing: 6) {
+                    Button {
+                        onSaveEdit()
+                    } label: {
+                        Image(systemName: "checkmark")
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 26))
+                    
+                    Button {
+                        onCancelEdit()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 26))
+                }
+                .frame(width: 60, alignment: .trailing)
+            } else {
+                // Normal display mode - capsule shaped row
+                Circle()
+                    .fill(tag.color)
+                    .frame(width: 12, height: 12)
+                
+                Text(tag.name)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                // Action buttons with animation - fixed width for symmetry
+                HStack(spacing: 6) {
+                    Button {
+                        onStartEdit()
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 26))
+                    
+                    Button {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(DroppyCircleButtonStyle(size: 26))
+                }
+                .frame(width: 60, alignment: .trailing)
+                .opacity(isHovering ? 1 : 0)
+                .animation(.easeInOut(duration: 0.15), value: isHovering)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(isHovering || isEditing ? 0.08 : 0.04))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(isHovering || isEditing ? 0.1 : 0.05), lineWidth: 1)
+        )
+        .contentShape(Capsule())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
+        }
+    }
+}
+
+// MARK: - Tag Drop Delegate
+
+struct TagDropDelegate: DropDelegate {
+    let tag: ClipboardTag
+    let tags: [ClipboardTag]
+    @Binding var draggingTagId: UUID?
+    let onReorder: (Int, Int) -> Void
+    
+    func dropEntered(info: DropInfo) {
+        guard let draggedId = draggingTagId,
+              draggedId != tag.id,
+              let fromIndex = tags.firstIndex(where: { $0.id == draggedId }),
+              let toIndex = tags.firstIndex(where: { $0.id == tag.id }),
+              fromIndex != toIndex else { return }
+        
+        onReorder(fromIndex, toIndex)
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
+    }
+    
+    func performDrop(info: DropInfo) -> Bool {
+        draggingTagId = nil
+        return true
     }
 }

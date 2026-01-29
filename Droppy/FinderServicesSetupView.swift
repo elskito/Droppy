@@ -71,9 +71,8 @@ struct FinderServicesSetupView: View {
     private var stepsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             stepRow(number: 1, text: "Click \"Open Settings\" below")
-            stepRow(number: 2, text: "Click \"Keyboard Shortcuts...\" button")
-            stepRow(number: 3, text: "Select \"Services\" in the left sidebar")
-            stepRow(number: 4, text: "Enable \"Add to Droppy Shelf\" and \"Add to Droppy Basket\"")
+            stepRow(number: 2, text: "Enable \"Add to Droppy Shelf\"")
+            stepRow(number: 3, text: "Enable \"Add to Droppy Basket\"")
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
@@ -127,9 +126,8 @@ struct FinderServicesSetupView: View {
     }
     
     private func openServicesSettings() {
-        // Opens System Settings > Keyboard
-        // Opens System Settings > Keyboard (user then clicks Keyboard Shortcuts... > Services)
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings") {
+        // Opens System Settings > Extensions > Services directly
+        if let url = URL(string: "x-apple.systempreferences:com.apple.ExtensionsPreferences?Services") {
             NSWorkspace.shared.open(url)
         }
     }
@@ -196,9 +194,8 @@ struct FinderServicesSetupSheetView: View {
     private var stepsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             stepRow(number: 1, text: "Click \"Open Settings\" below")
-            stepRow(number: 2, text: "Click \"Keyboard Shortcuts...\" button")
-            stepRow(number: 3, text: "Select \"Services\" in the left sidebar")
-            stepRow(number: 4, text: "Enable \"Add to Droppy Shelf\" and \"Add to Droppy Basket\"")
+            stepRow(number: 2, text: "Enable \"Add to Droppy Shelf\"")
+            stepRow(number: 3, text: "Enable \"Add to Droppy Basket\"")
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 20)
@@ -252,8 +249,8 @@ struct FinderServicesSetupSheetView: View {
     }
     
     private func openServicesSettings() {
-        // Opens System Settings > Keyboard (user then clicks Keyboard Shortcuts... > Services)
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings") {
+        // Opens System Settings > Extensions > Services directly
+        if let url = URL(string: "x-apple.systempreferences:com.apple.ExtensionsPreferences?Services") {
             NSWorkspace.shared.open(url)
         }
     }

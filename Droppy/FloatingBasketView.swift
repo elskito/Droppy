@@ -73,7 +73,7 @@ struct FloatingBasketView: View {
         let slotCount = state.basketDisplaySlotCount
         
         if slotCount == 0 {
-            return 220  // Empty basket - SAME size as collapsed
+            return 230  // Empty basket - SAME size as collapsed
         } else if isExpanded {
             let rowCount = ceil(Double(slotCount) / Double(columnsPerRow))
             let headerHeight: CGFloat = 44  // Header + top padding
@@ -98,7 +98,7 @@ struct FloatingBasketView: View {
             }
         } else {
             // Collapsed stacked preview - same as empty
-            return 220
+            return 230
         }
     }
     
@@ -219,7 +219,7 @@ struct FloatingBasketView: View {
                             }
                             .menuStyle(.borderlessButton)
                             .menuIndicator(.hidden)
-                            .fixedSize()
+                            .frame(width: 32, height: 32) // Match close button size exactly for symmetry
                         }
                     }
                     .padding(.horizontal, 18)

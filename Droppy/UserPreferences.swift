@@ -81,6 +81,7 @@ enum AppPreferenceKey {
     static let clipboardAutoFocusSearch = "clipboardAutoFocusSearch"
     static let clipboardHistoryLimit = "clipboardHistoryLimit"
     static let clipboardCopyFavoriteEnabled = "clipboardCopyFavoriteEnabled"
+    static let clipboardTagsEnabled = "clipboardTagsEnabled"
     static let showClipboardInMenuBar = "showClipboardInMenuBar"
     
     // MARK: - UI Elements
@@ -200,6 +201,7 @@ enum PreferenceDefault {
     static let clipboardAutoFocusSearch = false
     static let clipboardHistoryLimit = 50
     static let clipboardCopyFavoriteEnabled = false
+    static let clipboardTagsEnabled = true  // Tags enabled by default
     static let showClipboardInMenuBar = false
     
     // MARK: - UI Elements

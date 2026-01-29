@@ -201,10 +201,25 @@ class AudioSpectrum: NSView {
     }
     
     private func resetBars() {
+        // Animate bars smoothly back to small/paused state
         for (i, barLayer) in barLayers.enumerated() {
-            barLayer.removeAllAnimations()
-            barLayer.transform = CATransform3DMakeScale(1, 0.35, 1)
-            barScales[i] = 0.35
+            let currentScale = barScales[i]
+            let targetScale: CGFloat = 0.2 // Small bars when paused
+            
+            barScales[i] = targetScale
+            
+            // Smooth spring animation to paused state
+            let spring = CASpringAnimation(keyPath: "transform.scale.y")
+            spring.fromValue = currentScale
+            spring.toValue = targetScale
+            spring.damping = 15
+            spring.stiffness = 200
+            spring.mass = 0.6
+            spring.duration = spring.settlingDuration
+            spring.fillMode = .forwards
+            spring.isRemovedOnCompletion = false
+            
+            barLayer.add(spring, forKey: "scaleY")
         }
     }
     

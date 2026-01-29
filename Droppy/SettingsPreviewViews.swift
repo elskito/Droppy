@@ -995,21 +995,21 @@ struct FloatingBasketPreview: View {
                 
                 // Header with X and chevron buttons - matching DroppyCircleButtonStyle
                 HStack(alignment: .center) {
-                    // X close button - matches DroppyCircleButtonStyle
+                    // X close button - matches DroppyCircleButtonStyle (CIRCLE)
                     Image(systemName: "xmark")
                         .font(.system(size: buttonSize * 0.4, weight: .bold))
                         .foregroundStyle(.white.opacity(0.8))
                         .frame(width: buttonSize, height: buttonSize)
-                        .background(Color.white.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: buttonSize / 4, style: .continuous))
+                        .background(Circle().fill(Color.white.opacity(0.12)))
                     
                     Spacer()
                     
-                    // Chevron menu button - no background, just icon
+                    // Chevron menu button - matches DroppyCircleButtonStyle (CIRCLE)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: buttonSize * 0.45, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .font(.system(size: buttonSize * 0.4, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.8))
                         .frame(width: buttonSize, height: buttonSize)
+                        .background(Circle().fill(Color.white.opacity(0.12)))
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 6)
