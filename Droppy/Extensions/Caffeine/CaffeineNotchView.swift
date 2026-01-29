@@ -87,6 +87,8 @@ struct CaffeineNotchView: View {
                 }
             }
         }
+        // Left-align content like other extension windows (Terminal, etc.)
+        .frame(maxWidth: .infinity, alignment: .leading)
         // SSOT contentPadding - same as NotificationHUDView
         .padding(contentPadding)
     }
