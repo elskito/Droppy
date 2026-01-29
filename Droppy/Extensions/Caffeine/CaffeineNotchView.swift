@@ -23,8 +23,7 @@ struct CaffeineNotchView: View {
     private let hourPresets: [CaffeineDuration] = [.hours(1), .hours(2), .hours(3), .hours(4), .hours(5)]
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 16) {
+        HStack(spacing: 16) {
                 // Toggle Section
                 VStack(spacing: 6) {
                     Button {
@@ -39,7 +38,7 @@ struct CaffeineNotchView: View {
                                         .stroke(manager.isActive ? .orange : .white.opacity(0.1), lineWidth: 2)
                                 )
                             
-                            Image(systemName: manager.isActive ? "cup.and.saucer.fill" : "cup.and.saucer")
+                            Image(systemName: manager.isActive ? "eyes" : "eyes")
                                 .font(.system(size: 20))
                                 .foregroundStyle(manager.isActive ? .orange : .white.opacity(0.8))
                                 .contentTransition(.symbolEffect(.replace))
@@ -84,10 +83,7 @@ struct CaffeineNotchView: View {
                             }
                         }
                     }
-                }
-                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity) // Centers visually in the container
         }
         .padding(contentPadding)
     }
