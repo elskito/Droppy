@@ -22,7 +22,7 @@ struct CaffeineExtension: ExtensionDefinition {
     ]
     
     static var screenshotURL: URL? {
-        URL(string: "https://getdroppy.app/assets/images/high-alert-screenshot.png")
+        URL(string: "https://getdroppy.app/assets/images/high-alert-screenshot.gif")
     }
     
     static var iconURL: URL? {
