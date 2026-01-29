@@ -371,6 +371,9 @@ final class NotificationHUDManager {
         // Respect the "Notify me!" toggle in HUDs settings
         guard isEnabled else { return }
         
+        // Respect Focus mode / DND - don't show notifications when Focus is active
+        guard !DNDManager.shared.isDNDActive else { return }
+        
         for notification in notifications {
             if currentNotification == nil {
                 // Show immediately
