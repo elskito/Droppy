@@ -25,9 +25,7 @@
 
 ## See Droppy in Action
 
-[![Droppy Demo](https://img.youtube.com/vi/k-BQ-TvSVpY/maxresdefault.jpg)](https://www.youtube.com/watch?v=k-BQ-TvSVpY)
-
-> Click to watch the full demo on YouTube
+https://github.com/user-attachments/assets/0d98eb89-5309-4bea-be74-6700897a5319
 
 ---
 
