@@ -1587,17 +1587,8 @@ struct SettingsView: View {
                     TerminalHUDIcon(isEnabled: isTerminalNotchInstalled)
                     
                     if isTerminalNotchInstalled {
-                        // Extension is installed - show on/off toggle (controls visibility via manager)
-                        Toggle(isOn: Binding(
-                            get: { TerminalNotchManager.shared.isInstalled },
-                            set: { newValue in
-                                if newValue {
-                                    TerminalNotchManager.shared.install()
-                                } else {
-                                    TerminalNotchManager.shared.uninstall()
-                                }
-                            }
-                        )) {
+                        // Extension is installed - show on/off toggle
+                        Toggle(isOn: $isTerminalNotchInstalled) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Terminal Notch")
                                 Text("Quick command bar in the shelf")
