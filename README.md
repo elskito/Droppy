@@ -1,368 +1,154 @@
-
 <p align="center">
-  <img src="docs/assets/app-icon.png" alt="Droppy Icon" width="120">
+  <img src="docs/assets/droppy-logo-transparent.png" alt="Droppy" width="140" />
 </p>
 
 <h1 align="center">Droppy</h1>
 
 <p align="center">
-  <strong>The native productivity layer macOS is missing.</strong><br>
-  <em>Free, open-source, and built entirely in Swift.</em>
+  <b>The free native productivity layer macOS is missing.</b><br>
+  <sub>100% Swift • Signed & Notarized • Open Source</sub>
 </p>
 
 <p align="center">
-    <a href="https://github.com/iordv/Droppy/releases/latest"><img src="https://img.shields.io/github/v/release/iordv/Droppy?style=flat-square&color=007AFF" alt="Latest Release"></a>
-    <img src="https://img.shields.io/badge/macOS_14+-000?style=flat-square" alt="Platform">
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square" alt="License"></a>
-    <a href="https://buymeacoffee.com/droppy"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a>
-    <a href="https://discord.gg/uxqynmJb"><img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://github.com/iordv/Droppy/releases/latest"><img src="https://img.shields.io/badge/Download-macOS-blue?style=for-the-badge&logo=apple" alt="Download for macOS" /></a>
+  <a href="https://buymeacoffee.com/droppy"><img src="https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/iordv/Droppy/releases/latest"><img src="https://img.shields.io/github/v/release/iordv/Droppy?style=flat-square&label=Version" /></a>
+  <a href="https://github.com/iordv/Droppy/stargazers"><img src="https://img.shields.io/github/stars/iordv/Droppy?style=flat-square" /></a>
+  <a href="https://github.com/iordv/Droppy/blob/main/LICENSE"><img src="https://img.shields.io/github/license/iordv/Droppy?style=flat-square" /></a>
+  <a href="https://discord.gg/7dVMKJmHqR"><img src="https://img.shields.io/discord/1337148979547848778?style=flat-square&logo=discord&logoColor=white&label=Discord" /></a>
 </p>
 
 ---
 
-<p align="center">
-  <img src="docs/assets/images/droppy-demo-new.gif" alt="Droppy Demo" width="100%">
-</p>
+## 🎬 See Droppy in Action
 
-<p align="center">
-  <img src="docs/assets/images/basket-demo-new.gif" alt="Floating Basket" width="100%">
-</p>
+[![Droppy Demo](https://img.youtube.com/vi/k-BQ-TvSVpY/maxresdefault.jpg)](https://www.youtube.com/watch?v=k-BQ-TvSVpY)
 
-<p align="center">
-  <a href="https://getdroppy.app/"><strong>🌐 Website</strong></a> · 
-  <a href="https://github.com/iordv/Droppy/releases/latest"><strong>⬇️ Download</strong></a> · 
-  <a href="https://getdroppy.app/extensions.html"><strong>🧩 Extensions</strong></a> · 
-  <a href="https://discord.gg/uxqynmJb"><strong>💬 Discord</strong></a>
-</p>
-
-<p align="center">
-  <strong>📰 As Seen On</strong><br>
-  <a href="https://medium.com/@PowerUpSkills/droppy-is-the-free-mac-productivity-app-power-users-should-install-first-61e1f42c9b3d">Medium</a> · 
-  <a href="https://appaddict.app/post/droppy-a-notch-app-with-a-lot-to-like">AppAddict</a> · 
-  <a href="https://www.producthunt.com/products/droppy-3">Product Hunt</a>
-</p>
+> 📺 Click to watch the full demo on YouTube
 
 ---
 
-## What is Droppy?
+## ✨ Core Features
 
-Droppy turns your Mac's notch into a productivity powerhouse. Drop files in, stash them, drag them out anywhere. But it's grown into much more: clipboard history, menu bar manager, media controls, AI background removal, voice transcription, and a growing library of optional extensions.
+### 📁 File Shelf
+Drop files into your notch for quick access. Hover to peek, drag out to use anywhere.
 
-No notch? No problem — works as a Dynamic Island or floating basket on any Mac.
+### 🧺 Floating Basket  
+Jiggle your mouse to summon a floating basket for temporary file staging.
 
-Built entirely in Swift. Tiny, instant, native. Free and open-source.
+### 📋 Clipboard Manager
+`⌘⇧Space` opens your clipboard history. Search, pin favorites, and paste with a click.
 
----
+### 🎵 Beautiful HUDs
+Gorgeous replacements for macOS volume, brightness, and media controls — all in your notch.
 
-## 🎵 Shelf & Media Player
-
-Your notch becomes a **media powerhouse**. See stunning album art, control playback with tap-to-seek, skip tracks, shuffle, and repeat—all without leaving your workflow. The live **audio visualizer** dances to your music in real-time. Drop files into the shelf and drag them out anywhere.
-
-<p align="center">
-  <img src="docs/assets/images/shelf-demo.gif" alt="Shelf & Media Player" width="100%">
-</p>
-
----
-
-## 📋 Clipboard Manager
-
-Never lose a copy again. Your **full clipboard history** with instant search, favorites, **flag as important**, and rich previews. Push items to your shelf or basket, rename entries, extract text with **OCR**, and bulk-copy multiple items at once. Open with `⌘ + Shift + Space` (customizable).
-
-<p align="center">
-  <img src="docs/assets/images/clipboard-demo.gif" alt="Clipboard Manager" width="100%">
-</p>
+### 🎛️ Powerful Extensions
+Modular extensions add even more functionality. See the full list below.
 
 ---
 
-## 🧺 Floating Basket
+## 🧩 Extensions
 
-**Jiggle your mouse** to summon a floating basket anywhere on screen. Drop files in, push to shelf, convert formats, compress, extract text, remove backgrounds, share—all from a beautiful context menu. Enable drag-to-summon for instant access, and enjoy smooth **peek and hide** animations.
-
-<p align="center">
-  <img src="docs/assets/images/basket-demo-new.gif" alt="Floating Basket" width="100%">
-</p>
-
----
-
-## Everything Included
-
-| Feature | Description |
-|:---|:---|
-| **File Shelf & Basket** | Drag files to the notch. Jiggle your mouse to summon a floating basket with peek & hide animations. |
-| **Clipboard Manager** | Full history, instant search, favorites, flag as important, OCR text extraction, rename entries, bulk copy, drag-out |
-| **Power Folders** | Pin folders to the shelf and drop files directly into them—organize on the fly |
-| **Tracked Folders** | Watch any folder for changes—new files automatically appear on your shelf |
-| **Smart Export** | Auto-save processed files to a folder and reveal them in Finder with one click |
-| **Native HUDs** | Volume, brightness, battery, caps lock, screen unlock, AirPods connection—all beautifully animated |
-| **Media Controls** | Album art, tap-to-seek slider, playback controls, shuffle, repeat, live audio visualizer |
-| **Quick Actions** | Right-click to compress, convert formats, extract text, remove backgrounds, share via AirDrop |
-| **Dynamic Island** | No notch? Adds a sleek iPhone-style pill to any Mac with optional transparency mode |
-| **Multi-Monitor** | Works on external displays with smart fullscreen detection and per-screen expansion |
-| **Powerful Extensions** | Window snapping, voice transcription, AI background removal, video compression, and more |
+| Icon | Extension | Description |
+|:----:|-----------|-------------|
+| 🍎 | **Apple Music** | Full playback controls, shuffle, repeat, love tracks |
+| 🟢 | **Spotify** | Spotify integration with album art & visualizer |
+| 🔔 | **Notify Me!** | Beautiful notification banners in your notch |
+| 🪟 | **Window Snap** | Keyboard shortcuts for window management |
+| 💤 | **High Alert** | Keep your Mac awake with timers |
+| 🖥️ | **Termi-Notch** | Quick terminal access from the notch |
+| ✈️ | **AirDrop Zone** | Drop files to share instantly via AirDrop |
+| 🔋 | **Battery HUD** | Elegant battery status indicator |
+| ⌨️ | **Caps Lock HUD** | Visual Caps Lock indicator |
+| 🌙 | **Focus HUD** | Do Not Disturb status in your notch |
+| 🎧 | **AirPods HUD** | AirPods connection status |
+| 🔒 | **Lock Screen Widget** | Media controls on the lock screen |
+| 🎙️ | **Voice Transcribe** | Transcribe audio using AI *(coming soon)* |
+| 🪄 | **Background Removal** | AI-powered background removal *(coming soon)* |
 
 ---
 
-## 🧩 All Extensions
-
-Droppy's built-in **Extension Store** adds powerful features on demand. Everything's free.
-
-<table align="center">
-<tr>
-<td align="center"><img src="https://getdroppy.app/assets/icons/voice-transcribe.jpg" height="28"> <strong>Voice Transcribe</strong><br>On-device speech-to-text using WhisperKit AI</td>
-<td align="center"><img src="https://getdroppy.app/assets/icons/ai-bg.jpg" height="28"> <strong>AI Background Removal</strong><br>Remove backgrounds locally using ML</td>
-</tr>
-<tr>
-<td align="center"><img src="https://getdroppy.app/assets/icons/video-target-size.png" height="28"> <strong>Video Target Size</strong><br>Compress videos to exact file sizes with FFmpeg</td>
-<td align="center"><img src="https://getdroppy.app/assets/icons/window-snap.jpg" height="28"> <strong>Window Snap</strong><br>Snap windows with keyboard shortcuts</td>
-</tr>
-<tr>
-<td align="center"><img src="https://getdroppy.app/assets/icons/spotify.png" height="28"> <strong>Spotify Integration</strong><br>Control Spotify playback from your notch</td>
-<td align="center"><img src="https://getdroppy.app/assets/icons/element-capture.jpg" height="28"> <strong>Element Capture</strong><br>Screenshot any UI element</td>
-</tr>
-<tr>
-<td align="center"><img src="https://getdroppy.app/assets/icons/alfred.png" height="28"> <strong>Alfred Workflow</strong><br>Add files to Droppy from Alfred</td>
-<td align="center"><img src="https://getdroppy.app/assets/icons/finder.png" height="28"> <strong>Finder Services</strong><br>Right-click in Finder to send files</td>
-</tr>
-<tr>
-<td align="center"><img src="https://getdroppy.app/assets/icons/termi-notch.jpg" height="28"> <strong>Termi-Notch</strong><br>Quick terminal access from your notch</td>
-<td align="center"><img src="https://getdroppy.app/assets/icons/menu-bar-manager.jpg" height="28"> <strong>Menu Bar Manager</strong><br>Hide and show menu bar icons</td>
-</tr>
-</table>
-
-<p align="center">
-  <strong>Power User? Extensions make you fully stacked.</strong><br>
-  Like Termi-Notch — a quick terminal right in your notch. Run commands instantly without switching apps.
-</p>
-
-<p align="center">
-  <img src="docs/assets/images/terminal-notch-screenshot.png" alt="Termi-Notch Extension" width="80%">
-</p>
-
-<p align="center">
-  Or Menu Bar Manager — hide unused menu bar icons and reveal them with a click.
-</p>
-
-<p align="center">
-  <img src="docs/assets/screenshots/menu-bar-manager.png" alt="Menu Bar Manager Extension" width="80%">
-</p>
-
-<p align="center">
-  Or Voice Transcribe — on-device AI speech-to-text, triggered via custom shortcut or menu bar.
-</p>
-
-<p align="center">
-  <img src="docs/assets/images/voice-transcribe-recording.png" alt="Voice Transcribe Extension" width="50%">
-</p>
-
-<p align="center">
-  Or window snapping, capturing specific UI elements, connecting to Alfred, and much more.
-</p>
-
-<p align="center">
-  <strong>📊 Visit the live Extension Store to see real reviews, ratings, and install counts!</strong><br>
-  Available both in the app and on the web.
-</p>
-
-<p align="center">
-  <a href="https://getdroppy.app/extensions.html">
-    <img src="https://img.shields.io/badge/Browse_Live_Extension_Store-blueviolet?style=for-the-badge" alt="Extension Store">
-  </a>
-</p>
-
-<p align="center">
-  <strong>🤝 Want to build your own extension?</strong><br>
-  We're open to community contributions! Submit a pull request to add your extension—the first community extensions are already in the making.
-</p>
-
----
-
-## Install
-
-### Direct Download (recommended)
-1. Download [**Droppy.dmg**](https://github.com/iordv/Droppy/releases/latest)
-2. Open the DMG and drag Droppy to Applications
-3. Launch and enjoy!
-
-> ✅ **Signed & Notarized** — Droppy is fully signed with Apple Developer ID and notarized. No quarantine warnings, no terminal commands needed.
-
-### Homebrew
-```bash
-brew install --cask iordv/tap/droppy
-```
-
----
-
-## Permissions
-
-Droppy requires a few permissions to work properly. All processing happens locally—no data ever leaves your Mac.
-
-| Permission | Required | What it's used for |
-|:---|:---:|:---|
-| **Accessibility** | ✅ | Global keyboard shortcuts, drag detection, media key interception |
-| **Screen Recording** | Optional | Element Capture extension, Audio Visualizer (to capture system audio) |
-| **Microphone** | Optional | Voice Transcribe extension (speech-to-text recording) |
-
----
-
-## Requirements
-
-- **macOS** 14.0 (Sonoma) or later
-- **Architecture**: Apple Silicon (M1–M4) and Intel
-
----
-
-## FAQ
+## ❓ FAQ
 
 <details>
-<summary><strong>Is Droppy really free?</strong></summary>
-
-Yes! Droppy is completely free forever—no ads, no subscriptions, no hidden fees, no paywalls. Every feature, including all extensions like Voice Transcribe and AI Background Removal, is included at no cost. We believe great software should be accessible to everyone.
-</details>
-
-
-
-<details>
-<summary><strong>Does it work on Macs without a notch?</strong></summary>
-
-Absolutely! On Macs without a notch (like iMacs, Mac minis, or older MacBooks), Droppy displays a sleek **Dynamic Island-style pill** at the top center of your screen. You get all the same features—shelf, media controls, HUDs, clipboard—just in a beautiful floating pill that matches the iPhone's Dynamic Island aesthetic.
+<summary><b>Is Droppy really free?</b></summary>
+<br>
+Yes! Droppy is 100% free and open source. No subscriptions, no paywalls.
 </details>
 
 <details>
-<summary><strong>Is my data private?</strong></summary>
-
-100% private. Droppy is designed with privacy-first principles:
-- **Clipboard history** stays on your Mac—never uploaded anywhere
-- **Voice transcription** uses on-device AI (WhisperKit)—audio never leaves your Mac
-- **AI background removal** runs locally using Apple's ML framework
-- **No analytics, no tracking, no telemetry** that identifies you
-- The app is open-source, so you can verify this yourself
+<summary><b>Is it safe to install?</b></summary>
+<br>
+Droppy is signed and notarized by Apple. You can install it without any security warnings.
 </details>
 
 <details>
-<summary><strong>Why does Droppy need Accessibility permissions?</strong></summary>
-
-Accessibility is the only **required** permission and enables Droppy's core features:
-- **Global keyboard shortcuts** (like ⌘+Shift+Space to open clipboard)
-- **Drag detection** to show the floating basket when you're moving files
-- **Media key interception** to display custom volume/brightness HUDs
-- **Mouse jiggle detection** to summon the basket
-
-Droppy never reads your keystrokes, screen content, or any personal data. The permission is purely for detecting gestures and shortcuts.
+<summary><b>Does it work on Macs without a notch?</b></summary>
+<br>
+Yes! Droppy works on all Macs (with or without physical notch) using a "Dynamic Island" style.
 </details>
 
 <details>
-<summary><strong>Why does Droppy need Screen Recording permission?</strong></summary>
-
-Screen Recording is **optional** and only needed for two specific features:
-- **Element Capture extension**: Screenshots individual UI elements by clicking on them
-- **Audio Visualizer**: Captures system audio output to display the live frequency spectrum
-
-If you don't use these features, you don't need to grant this permission. Droppy works perfectly fine without it.
+<summary><b>How do I get updates?</b></summary>
+<br>
+Droppy has built-in update notifications. Or use Homebrew: <code>brew upgrade --cask droppy</code>
 </details>
 
 <details>
-<summary><strong>Can I use Droppy on multiple monitors?</strong></summary>
-
-Yes! Droppy fully supports multi-monitor setups:
-- The notch/island appears on each connected display
-- **Smart fullscreen detection** automatically hides when apps go fullscreen
-- The shelf expands only on the screen where you're interacting
-- HUDs appear on the display with your active cursor
-- Works seamlessly with external monitors, including ultrawide displays
+<summary><b>Can I contribute?</b></summary>
+<br>
+Absolutely! PRs welcome. Check out the issues for ideas or propose your own.
 </details>
-
-<details>
-<summary><strong>How do I change the keyboard shortcuts?</strong></summary>
-
-Open Droppy's Settings (click the gear icon in the shelf, or right-click the menu bar icon) → **Shortcuts** tab. Here you can customize:
-- Clipboard Manager shortcut (default: ⌘+Shift+Space)
-- Window Snap shortcuts (if you have the extension)
-- Voice Transcribe Quick Record (if you have the extension)
-- And more
-
-Click any shortcut field and press your desired key combination to record a new shortcut.
-</details>
-
-<details>
-<summary><strong>Does Droppy work with external keyboards?</strong></summary>
-
-Yes! All keyboard shortcuts and media key interception work with any keyboard:
-- Built-in MacBook keyboards
-- External USB and Bluetooth keyboards
-- Apple Magic Keyboard
-- Third-party keyboards (Logitech, Keychron, etc.)
-
-Media keys (play/pause, volume, brightness) are detected regardless of which keyboard you use.
-</details>
-
-<details>
-<summary><strong>How do I uninstall Droppy?</strong></summary>
-
-**Simple uninstall:** Drag Droppy from the Applications folder to Trash.
-
-**Complete removal** (including all data and preferences):
-```bash
-rm -rf ~/Library/Application\ Support/Droppy
-rm -rf ~/Library/Preferences/iordv.Droppy.plist
-rm -rf ~/Library/Caches/iordv.Droppy
-```
-
-**If you installed via Homebrew:**
-```bash
-brew uninstall droppy
-```
-</details>
-
-<details>
-<summary><strong>Is Droppy open-source?</strong></summary>
-
-Yes! Droppy's full source code is available on GitHub under the **GPL-3.0 license with Commons Clause**. This means:
-- ✅ Free to use, modify, and learn from
-- ✅ You can build it yourself from source
-- ✅ Contributions and pull requests are welcome
-- ❌ Cannot be sold or used commercially without permission
-
-We believe in transparency—you can see exactly what the app does and verify it respects your privacy.
-</details>
-
-
-
-## Build from Source
-
-```bash
-git clone https://github.com/iordv/Droppy.git
-cd Droppy && open Droppy.xcodeproj
-# Build with ⌘ + R
-```
 
 ---
 
-## Support
+## ☕ Support Droppy
 
-<p align="center">
-  <strong>Hey! I'm Jordy 👋</strong><br>
-  I'm a solo developer building Droppy in my spare time because I love creating tools that make Mac workflows better.
-</p>
-
-<p align="center">
-  Droppy is <strong>free forever</strong>—no ads, no subscriptions, no paywalls, no tracking.<br>
-  Every feature and extension is included at no cost because I believe great software should be accessible to everyone.
-</p>
-
-<p align="center">
-  If Droppy saves you time or makes your workflow better, consider buying me a coffee.<br>
-  It helps keep the project alive and motivates me to keep adding new features! ☕
-</p>
+Droppy is **completely free** and built by a single developer. If you find it useful, please consider supporting development:
 
 <p align="center">
   <a href="https://buymeacoffee.com/droppy">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="220">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=droppy&button_colour=FFDD00&font_colour=000000&font_family=Inter&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" />
   </a>
 </p>
+
+**Donor perks:**
+- 🎖️ Special Discord role
+- 💬 Access to exclusive donor channel  
+- ⭐ Credit on the website
+
+Your support helps cover development costs and keeps Droppy free for everyone!
+
+---
+
+## 🙏 Credits & Acknowledgements
+
+### 🧑‍💻 Contributors
+Thank you to everyone who has contributed code, features, and extensions!
+
+### ✨ Alcove
+Great inspiration for creating a beautiful notch app. One of the founding fathers of good-looking notch apps on macOS.  
+→ [tryalcove.com](https://tryalcove.com/)
+
+### 🌊 Atoll  
+Inspired some animations and foundational functionalities. A fork of Boringnotch.  
+→ [github.com/Ebullioscopic/Atoll](https://github.com/Ebullioscopic/Atoll)
+
+### 🎯 Boringnotch
+The original project that pioneered notch creativity on macOS.  
+→ [github.com/TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch)
+
+---
+
+## 📜 License
+
+Droppy is released under the [MIT License](LICENSE).
 
 ---
 
 <p align="center">
-  <strong><a href="LICENSE">GPL-3.0 + Commons Clause</a></strong> — Source available, not for resale.<br>
-  <a href="TRADEMARK">Droppy™</a> by <a href="https://github.com/iordv">Jordy Spruit</a>
+  <sub>Made with ❤️ for the Mac community</sub>
 </p>
