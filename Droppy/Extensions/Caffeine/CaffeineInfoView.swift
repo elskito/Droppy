@@ -306,9 +306,34 @@ struct CaffeineInfoView: View {
             
             Spacer()
             
-            DisableExtensionButton(extensionType: .caffeine)
+            if isInstalled {
+                DisableExtensionButton(extensionType: .caffeine)
+            } else {
+                Button {
+                    installExtension()
+                } label: {
+                    Text("Install")
+                }
+                .buttonStyle(DroppyAccentButtonStyle(color: .orange, size: .small))
+            }
         }
         .padding(16)
+    }
+    
+    // MARK: - Actions
+    
+    private func installExtension() {
+        isInstalled = true
+        caffeineManager.isInstalled = true
+        ExtensionType.caffeine.setRemoved(false)
+        
+        // Track installation
+        Task {
+            AnalyticsService.shared.trackExtensionActivation(extensionId: "caffeine")
+        }
+        
+        // Post notification
+        NotificationCenter.default.post(name: .extensionStateChanged, object: ExtensionType.caffeine)
     }
 }
 
