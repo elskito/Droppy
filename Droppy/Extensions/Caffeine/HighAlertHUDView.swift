@@ -43,7 +43,7 @@ struct HighAlertHUDView: View {
                         .font(.system(size: iconSize, weight: .semibold))
                         .foregroundStyle(layout.adjustedColor(accentColor))
                         .symbolEffect(.bounce.up, value: isActive)
-                        .frame(width: 24, height: iconSize, alignment: .leading)
+                        .frame(width: 20, height: iconSize, alignment: .leading)
                     
                     Spacer()
                     
@@ -68,7 +68,7 @@ struct HighAlertHUDView: View {
                             .font(.system(size: iconSize, weight: .semibold))
                             .foregroundStyle(accentColor)
                             .symbolEffect(.bounce.up, value: isActive)
-                            .frame(width: iconSize + 4, height: iconSize, alignment: .leading)
+                            .frame(width: iconSize, height: iconSize, alignment: .leading)
                         Spacer(minLength: 0)
                     }
                     .padding(.leading, symmetricPadding)
