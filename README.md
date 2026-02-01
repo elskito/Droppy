@@ -26,7 +26,9 @@
 ## See Droppy in Action
 
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/813c3eea-6588-4f23-880f-135833d26a16" width="100%" controls></video>
+  <a href="https://github.com/user-attachments/assets/813c3eea-6588-4f23-880f-135833d26a16">
+    <img src="https://github.com/user-attachments/assets/813c3eea-6588-4f23-880f-135833d26a16" width="100%" alt="Droppy Demo - Click to play"/>
+  </a>
 </div>
 
 ---
