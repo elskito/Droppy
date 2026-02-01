@@ -129,12 +129,18 @@ final class MenuBarSection {
             controlItem.state = .showItems
             visibleSection.controlItem.state = .showItems
         }
+        
+        // Schedule auto-hide if enabled
+        manager.scheduleAutoHide()
     }
     
     /// Hides the section.
     func hide() {
         guard !isHidden else { return }
         guard let manager else { return }
+        
+        // Cancel any pending auto-hide
+        manager.cancelAutoHide()
         
         switch name {
         case .visible:
@@ -362,7 +368,18 @@ final class ControlItem {
             case .hideItems: iconSet.visibleSymbol
             case .showItems: iconSet.hiddenSymbol
             }
-            button.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Toggle Menu Bar")
+            
+            // Create the base image
+            var image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Toggle Menu Bar")
+            
+            // Apply gradient tint if enabled
+            if manager?.useGradientIcon == true {
+                image = image?.withSymbolConfiguration(
+                    NSImage.SymbolConfiguration(paletteColors: [.systemBlue, .systemPurple])
+                )
+            }
+            
+            button.image = image
             
             print("[MenuBarManager] Updated main item appearance: \(iconName)")
             
@@ -378,22 +395,30 @@ final class ControlItem {
             case .showItems:
                 isVisible = true
                 button.cell?.isEnabled = true
-                // Set the divider chevron image
-                button.alphaValue = 0.7
-                let image = NSImage(size: CGSize(width: 12, height: 12), flipped: false) { bounds in
-                    let insetBounds = bounds.insetBy(dx: 1, dy: 1)
-                    let path = NSBezierPath()
-                    path.move(to: CGPoint(x: (insetBounds.midX + insetBounds.maxX) / 2, y: insetBounds.maxY))
-                    path.line(to: CGPoint(x: (insetBounds.minX + insetBounds.midX) / 2, y: insetBounds.midY))
-                    path.line(to: CGPoint(x: (insetBounds.midX + insetBounds.maxX) / 2, y: insetBounds.minY))
-                    path.lineWidth = 2
-                    path.lineCapStyle = .butt
-                    NSColor.black.setStroke()
-                    path.stroke()
-                    return true
+                
+                // Check if chevron separator should be shown
+                if manager?.showChevronSeparator == true {
+                    // Set the divider chevron image
+                    button.alphaValue = 0.7
+                    let image = NSImage(size: CGSize(width: 12, height: 12), flipped: false) { bounds in
+                        let insetBounds = bounds.insetBy(dx: 1, dy: 1)
+                        let path = NSBezierPath()
+                        path.move(to: CGPoint(x: (insetBounds.midX + insetBounds.maxX) / 2, y: insetBounds.maxY))
+                        path.line(to: CGPoint(x: (insetBounds.minX + insetBounds.midX) / 2, y: insetBounds.midY))
+                        path.line(to: CGPoint(x: (insetBounds.midX + insetBounds.maxX) / 2, y: insetBounds.minY))
+                        path.lineWidth = 2
+                        path.lineCapStyle = .butt
+                        NSColor.black.setStroke()
+                        path.stroke()
+                        return true
+                    }
+                    image.isTemplate = true
+                    button.image = image
+                } else {
+                    // No chevron - just hide it
+                    button.alphaValue = 0
+                    button.image = nil
                 }
-                image.isTemplate = true
-                button.image = image
             }
         }
     }
@@ -617,11 +642,46 @@ final class MenuBarManager: ObservableObject {
     @Published var showChevronSeparator: Bool {
         didSet {
             UserDefaults.standard.set(showChevronSeparator, forKey: "MenuBarManager_ShowChevronSeparator")
+            // Update the hidden section's appearance
+            if let hiddenSection = section(withName: .hidden) {
+                hiddenSection.controlItem.updateStatusItem(with: hiddenSection.controlItem.state)
+            }
         }
     }
     
     /// Mouse monitoring
     private var mouseMonitor: Any?
+    
+    /// Auto-hide timer
+    private var autoHideTimer: Timer?
+    
+    /// Schedules auto-hide after showing items
+    func scheduleAutoHide() {
+        // Cancel any existing timer
+        cancelAutoHide()
+        
+        // Only schedule if auto-hide is enabled (delay > 0)
+        guard autoHideDelay > 0 else { return }
+        
+        autoHideTimer = Timer.scheduledTimer(withTimeInterval: autoHideDelay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.hideAllSections()
+            }
+        }
+    }
+    
+    /// Cancels any pending auto-hide
+    func cancelAutoHide() {
+        autoHideTimer?.invalidate()
+        autoHideTimer = nil
+    }
+    
+    /// Hides all sections
+    private func hideAllSections() {
+        for section in sections {
+            section.hide()
+        }
+    }
     
     /// Initializes a new menu bar manager instance.
     init() {
