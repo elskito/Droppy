@@ -516,8 +516,10 @@ final class NotchWindowController: NSObject, ObservableObject {
         // CRITICAL (v7.0.2): Also update when drag LOCATION changes during a drag.
         // This ensures the window ignores events when drag moves BELOW the notch,
         // preventing blocking of bookmarks bar and other UI elements.
+        // PERFORMANCE (v10.x): Throttle to 200ms to avoid CPU spike from heavy rect calculations
         DragMonitor.shared.$dragLocation
             .receive(on: DispatchQueue.main)
+            .throttle(for: .milliseconds(200), scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self] _ in
                 // Only update if actively dragging - no need during idle
                 if DragMonitor.shared.isDragging {
