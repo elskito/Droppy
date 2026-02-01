@@ -135,7 +135,7 @@ struct ExtensionsShopView: View {
                     subtitle: "Show notifications",
                     iconURL: "https://getdroppy.app/assets/icons/notification-hud.png",
                     screenshotURL: "https://getdroppy.app/assets/images/notification-hud-screenshot.png",
-                    accentColor: .purple,
+                    accentColor: .red,
                     isInstalled: isNotificationHUDInstalled,
                     isNew: true,
                     isCommunity: true

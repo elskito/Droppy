@@ -72,7 +72,7 @@ struct ElementCaptureInfoView: View {
             } placeholder: {
                 Image(systemName: "viewfinder")
                     .font(.system(size: 32, weight: .medium))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.yellow)
             }
             .frame(width: 64, height: 64)
             .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
@@ -119,7 +119,7 @@ struct ElementCaptureInfoView: View {
                 // Category badge
                 Text("Productivity")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.yellow)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(
@@ -170,7 +170,7 @@ struct ElementCaptureInfoView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.blue)
+                .foregroundStyle(.yellow)
                 .frame(width: 24)
             
             Text(text)

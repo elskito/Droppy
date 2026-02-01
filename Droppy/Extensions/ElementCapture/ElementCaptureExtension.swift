@@ -12,7 +12,7 @@ struct ElementCaptureExtension: ExtensionDefinition {
     static let title = "Element Capture"
     static let subtitle = "Capture any screen element instantly"
     static let category: ExtensionGroup = .productivity
-    static let categoryColor: Color = .blue
+    static let categoryColor: Color = .yellow // Matches yellow capture icon
     
     static let description = "Capture specific screen elements and copy them to clipboard or add to Droppy. Perfect for grabbing UI components, icons, or any visual element."
     

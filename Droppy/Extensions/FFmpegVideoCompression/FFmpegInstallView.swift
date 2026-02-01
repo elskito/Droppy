@@ -143,7 +143,7 @@ struct FFmpegInstallView: View {
                 CachedAsyncImage(url: URL(string: "https://getdroppy.app/assets/icons/targeted-video-size.jpg")) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Image(systemName: "film").font(.system(size: 32)).foregroundStyle(.green)
+                    Image(systemName: "film").font(.system(size: 32)).foregroundStyle(.blue)
                 }
                 .frame(width: 64, height: 64)
                 .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
@@ -194,7 +194,7 @@ struct FFmpegInstallView: View {
                 // Category badge
                 Text("Media")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.blue)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(
@@ -275,7 +275,7 @@ struct FFmpegInstallView: View {
                     .frame(width: 8, height: 8)
                 Text("Installed & Ready")
                     .font(.callout.weight(.medium))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.blue)
             }
             
             // Smart Export info card - clickable to open settings
@@ -366,10 +366,10 @@ struct FFmpegInstallView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.blue)
                 Text("Homebrew Required")
                     .font(.callout.weight(.semibold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.blue)
             }
             
             Text("Homebrew is a package manager for macOS. Install it first by running this command in Terminal:")
@@ -419,7 +419,7 @@ struct FFmpegInstallView: View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 16))
-                .foregroundStyle(.green)
+                .foregroundStyle(.blue)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("Homebrew Detected")

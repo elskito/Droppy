@@ -59,7 +59,7 @@ struct NotificationHUDInfoView: View {
             CachedAsyncImage(url: URL(string: "https://getdroppy.app/assets/icons/notification-hud.png")) { image in
                 image.resizable().aspectRatio(contentMode: .fill)
             } placeholder: {
-                Image(systemName: "bell.badge.fill").font(.system(size: 32, weight: .medium)).foregroundStyle(.orange)
+                Image(systemName: "bell.badge.fill").font(.system(size: 32, weight: .medium)).foregroundStyle(.red)
             }
             .frame(width: 64, height: 64)
             .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
@@ -103,7 +103,7 @@ struct NotificationHUDInfoView: View {
 
                 Text("Productivity")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.red)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.orange.opacity(0.15)))
@@ -124,7 +124,7 @@ struct NotificationHUDInfoView: View {
                     .foregroundStyle(.tertiary)
                 Link("Valetivivek", destination: URL(string: "https://github.com/valetivivek")!)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.red)
             }
             .foregroundStyle(.secondary)
             .padding(.horizontal, 12)
@@ -189,7 +189,7 @@ struct NotificationHUDInfoView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.orange)
+                .foregroundStyle(.red)
                 .frame(width: 24)
 
             Text(text)
@@ -225,7 +225,7 @@ struct NotificationHUDInfoView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "externaldrive.fill")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.red)
                         .frame(width: 32, height: 32)
                         .background(Color.orange.opacity(0.15))
                         .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.small, style: .continuous))

@@ -12,7 +12,7 @@ struct WindowSnapExtension: ExtensionDefinition {
     static let title = "Window Snap"
     static let subtitle = "Keyboard-driven window management"
     static let category: ExtensionGroup = .productivity
-    static let categoryColor: Color = .cyan
+    static let categoryColor: Color = .blue // Matches blue window icon
     
     static let description = "Snap windows to halves, quarters, thirds, or full screen with customizable keyboard shortcuts. Multi-monitor support included."
     

@@ -12,7 +12,7 @@ struct VideoTargetSizeExtension: ExtensionDefinition {
     static let title = "Video Target Size"
     static let subtitle = "Compress videos to exact file sizes"
     static let category: ExtensionGroup = .media
-    static let categoryColor = Color(red: 0.0, green: 0.5, blue: 0.25) // Dark green
+    static let categoryColor: Color = .blue // Matches blue video camera icon
     
     static let description = "Compress videos to exact file sizes using FFmpeg two-pass encoding. Perfect for file size limits on Discord, email, or social media."
     
