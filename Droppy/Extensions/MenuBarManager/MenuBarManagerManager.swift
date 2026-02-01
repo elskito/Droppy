@@ -556,7 +556,7 @@ enum MBMIconSet: String, CaseIterable, Identifiable {
         case .chevron: return "chevron.right"
         case .circle: return "circle.fill"
         case .line: return "line.3.horizontal"
-        case .dot: return "circle.fill"
+        case .dot: return "smallcircle.filled.circle"
         case .arrow: return "arrowtriangle.right.fill"
         case .square: return "square.fill"
         case .diamond: return "diamond.fill"
@@ -569,7 +569,7 @@ enum MBMIconSet: String, CaseIterable, Identifiable {
         case .chevron: return "chevron.left"
         case .circle: return "circle"
         case .line: return "line.3.horizontal.decrease"
-        case .dot: return "circle.dotted"
+        case .dot: return "smallcircle.circle"
         case .arrow: return "arrowtriangle.left.fill"
         case .square: return "square"
         case .diamond: return "diamond"
@@ -814,10 +814,12 @@ final class MenuBarManager: ObservableObject {
         
         if let hiddenSection = section(withName: .hidden) {
             if isInMenuBar && hiddenSection.isHidden {
+                // Cancel auto-hide when hovering back in
+                cancelAutoHide()
                 hiddenSection.show()
             } else if !isInMenuBar && !hiddenSection.isHidden {
-                // Add a small delay before hiding
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                // Add a delay before hiding using the configured hover delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + showOnHoverDelay) { [weak self] in
                     guard self != nil else { return }
                     let currentLocation = NSEvent.mouseLocation
                     let stillInMenuBar = currentLocation.y >= screen.frame.maxY - menuBarHeight
