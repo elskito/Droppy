@@ -320,6 +320,9 @@ final class MenuBarManager: ObservableObject {
             button.target = self
             button.action = #selector(mainItemClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            print("[MenuBarManager] Created MAIN item, button=\(button), window=\(String(describing: button.window))")
+        } else {
+            print("[MenuBarManager] ERROR: mainItem has no button!")
         }
         
         // Create DIVIDER item (the hidden section marker that expands)
@@ -330,9 +333,12 @@ final class MenuBarManager: ObservableObject {
             button.target = self
             button.action = #selector(dividerClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            print("[MenuBarManager] Created DIVIDER item, button=\(button), window=\(String(describing: button.window))")
+        } else {
+            print("[MenuBarManager] ERROR: dividerItem has no button!")
         }
         
-        print("[MenuBarManager] Created status items")
+        print("[MenuBarManager] Created status items - mainItem=\(String(describing: mainItem)), dividerItem=\(String(describing: dividerItem))")
     }
     
     private func removeStatusItems() {
@@ -377,7 +383,12 @@ final class MenuBarManager: ObservableObject {
     }
     
     private func updateDividerItem() {
-        guard let dividerItem = dividerItem, let button = dividerItem.button else { return }
+        guard let dividerItem = dividerItem, let button = dividerItem.button else {
+            print("[MenuBarManager] updateDividerItem: NO DIVIDER ITEM!")
+            return
+        }
+        
+        print("[MenuBarManager] updateDividerItem: state=\(state), current length=\(dividerItem.length)")
         
         switch state {
         case .showItems:
@@ -390,6 +401,7 @@ final class MenuBarManager: ObservableObject {
             button.image = NSImage(systemSymbolName: "chevron.compact.left", accessibilityDescription: "Drag icons left to hide")?
                 .withSymbolConfiguration(config)
             button.image?.isTemplate = true
+            print("[MenuBarManager] updateDividerItem: SET TO SHOW (length=\(dividerItem.length))")
             
         case .hideItems:
             // Expanded to push icons off - Button Stealth Pattern
@@ -397,6 +409,7 @@ final class MenuBarManager: ObservableObject {
             button.cell?.isEnabled = false  // Prevent highlighting
             button.isHighlighted = false     // Force unhighlight
             button.image = nil               // Hide the chevron
+            print("[MenuBarManager] updateDividerItem: SET TO HIDE (length=\(dividerItem.length))")
         }
     }
     
