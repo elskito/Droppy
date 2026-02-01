@@ -559,22 +559,25 @@ final class MenuBarManager: ObservableObject {
     
     /// Initializes a new menu bar manager instance.
     init() {
-        self.isEnabled = UserDefaults.standard.bool(forKey: "MenuBarManager_Enabled")
+        // Load saved settings first
+        let savedEnabled = !UserDefaults.standard.bool(forKey: "MenuBarManager_Removed")
+        self.isEnabled = savedEnabled
         self.showOnHover = UserDefaults.standard.bool(forKey: "MenuBarManager_ShowOnHover")
         let storedDelay = UserDefaults.standard.double(forKey: "MenuBarManager_ShowOnHoverDelay")
         self.showOnHoverDelay = storedDelay == 0 ? 0.3 : storedDelay
         self.iconSet = MBMIconSet(rawValue: UserDefaults.standard.string(forKey: "MenuBarManager_IconSet") ?? "") ?? .eye
         
-        // Check if extension was removed
-        if UserDefaults.standard.bool(forKey: "MenuBarManager_Removed") {
-            print("[MenuBarManager] Extension was removed, not initializing")
-            return
-        }
+        print("[MenuBarManager] INIT CALLED, isEnabled: \(savedEnabled)")
         
-        print("[MenuBarManager] INIT CALLED")
-        print("[MenuBarManager] Extension not removed, loading settings...")
-        
+        // Always perform setup to create sections
         performSetup()
+        
+        // If not enabled, remove from menu bar
+        if !savedEnabled {
+            for section in sections {
+                section.controlItem.removeFromMenuBar()
+            }
+        }
     }
     
     deinit {
