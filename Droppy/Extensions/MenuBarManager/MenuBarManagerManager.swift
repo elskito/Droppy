@@ -228,12 +228,14 @@ final class ControlItem {
         let autosaveName = identifier.rawValue
         
         // If the status item doesn't have a preferred position, seed a default
+        // macOS menu bar: lower position = further right
+        // Toggle icon at position 1 stays on-screen when divider at position 0 expands
         if StatusItemDefaults.preferredPosition(for: autosaveName) == nil {
             switch identifier {
             case .toggleIcon:
-                StatusItemDefaults.setPreferredPosition(0, for: autosaveName)
-            case .hidden:
                 StatusItemDefaults.setPreferredPosition(1, for: autosaveName)
+            case .hidden:
+                StatusItemDefaults.setPreferredPosition(0, for: autosaveName)
             }
         }
         
