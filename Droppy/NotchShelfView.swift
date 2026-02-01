@@ -1127,11 +1127,14 @@ struct NotchShelfView: View {
                 let mouseLocation = NSEvent.mouseLocation
                 let expandedHeight = DroppyState.expandedShelfHeight(for: screen)
                 // Match the expanded zone calculation from NotchWindow.handleGlobalMouseEvent
+                // CRITICAL: Extend zone BELOW shelf to include floating buttons (32px) + gap (12px) + margin
+                // This prevents auto-collapse when hovering over the floating action buttons
+                let floatingButtonZone: CGFloat = 60  // 32px button + 12px gap + 16px margin
                 let expandedZone = CGRect(
                     x: screen.frame.midX - (expandedWidth / 2) - 20,
-                    y: screen.frame.maxY - expandedHeight - 20,
+                    y: screen.frame.maxY - expandedHeight - floatingButtonZone,
                     width: expandedWidth + 40,
-                    height: expandedHeight + 40
+                    height: expandedHeight + floatingButtonZone + 20  // +20 above for safe margin
                 )
                 isMouseInExpandedZone = expandedZone.contains(mouseLocation)
                 print("⏳ GEOMETRIC CHECK: mouse=\(mouseLocation), zone=\(expandedZone), isInZone=\(isMouseInExpandedZone)")
