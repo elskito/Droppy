@@ -476,7 +476,7 @@ struct ExtensionsShopView: View {
             },
             ExtensionListItem(
                 id: "menuBarManager",
-                iconURL: "https://getdroppy.app/assets/icons/menu-bar-manager.jpg",
+                iconURL: "https://getdroppy.app/assets/icons/menubarmanager.png",
                 title: "Menu Bar Manager",
                 subtitle: "Organize your menu bar",
                 category: .productivity,
