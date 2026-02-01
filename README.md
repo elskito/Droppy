@@ -88,6 +88,7 @@ Modular extensions add even more functionality. Install only what you need.
 | <img src="https://getdroppy.app/assets/icons/element-capture.jpg" width="24"> | **Element Capture** | Capture UI elements from any app |
 | <img src="https://getdroppy.app/assets/icons/voice-transcribe.jpg" width="24"> | **Voice Transcribe** | Transcribe audio using AI |
 | <img src="https://getdroppy.app/assets/icons/ai-bg.jpg" width="24"> | **Background Removal** | AI-powered background removal |
+| <img src="https://getdroppy.app/assets/icons/menubarmanager.png" width="24"> | **Menu Bar Manager** | Hide menu bar icons with a toggle |
 
 ---
 

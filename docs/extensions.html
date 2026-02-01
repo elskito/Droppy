@@ -427,6 +427,9 @@
         }
 
         .extension-card {
+            position: relative;
+            z-index: 20;
+            pointer-events: auto;
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 20px;
@@ -1513,7 +1516,7 @@
     </div>
 
     <script>
-        const SUP'https://anannmonpspjsnfgdglb.supabase.co';
+        const SUPABASE_URL = 'https://anannmonpspjsnfgdglb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuYW5ubW9ucHNwanNuZmdkZ2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDgxODQsImV4cCI6MjA4MzEyNDE4NH0.5BvuW5cS0kJCuA2Nm5HCVDLNWNzn6EA_8JVVrW6pfnY';
 
         // Map website IDs to Supabase analytics IDs
@@ -1836,7 +1839,8 @@
         });
 
         // Staggered fade-in for cards with rotation
-        doct.querySelectorAll('.card').forEach((card, i) =>   const rot = card.dataset.rot || 0;
+        document.querySelectorAll('.card').forEach((card, i) => {
+            const rot = card.dataset.rot || 0;
             card.style.transform = `rotate(${rot}deg)`;
             setTimeout(() => card.classList.add('visible'), 80 + Math.random() * 500);
         });
