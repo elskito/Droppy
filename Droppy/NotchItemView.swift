@@ -679,6 +679,31 @@ struct NotchItemView: View {
             }
             .disabled(isCreatingZIP)
             
+            // Unzip option - only for archive files
+            let archiveExtensions = ["zip", "tar", "gz", "bz2", "xz", "7z"]
+            let itemExt = item.url.pathExtension.lowercased()
+            if archiveExtensions.contains(itemExt) && state.selectedItems.count <= 1 {
+                Button {
+                    unzipFile()
+                } label: {
+                    Label("Unzip", systemImage: "arrow.up.bin")
+                }
+                .disabled(isUnzipping)
+            }
+            
+            // Create Folder option - for non-archive files
+            if !archiveExtensions.contains(itemExt) && !item.isDirectory {
+                Button {
+                    createFolderForSelection()
+                } label: {
+                    if state.selectedItems.count > 1 && state.selectedItems.contains(item.id) {
+                        Label("Create Folder (\(state.selectedItems.count))", systemImage: "folder.badge.plus")
+                    } else {
+                        Label("Create Folder", systemImage: "folder.badge.plus")
+                    }
+                }
+            }
+            
             // Rename option (single item only)
             if state.selectedItems.count <= 1 {
                 Button {
@@ -1098,6 +1123,73 @@ struct NotchItemView: View {
                 isUnzipping = false
                 state.endFileOperation()
             }
+        }
+    }
+    
+    /// Create a folder for the selected files and move them into it
+    private func createFolderForSelection() {
+        let fm = FileManager.default
+        HapticFeedback.tap()
+        
+        // Get items to process
+        let itemsToProcess: [DroppedItem]
+        if state.selectedItems.count > 1 && state.selectedItems.contains(item.id) {
+            itemsToProcess = state.items.filter { state.selectedItems.contains($0.id) }
+        } else {
+            itemsToProcess = [item]
+        }
+        
+        guard !itemsToProcess.isEmpty else { return }
+        
+        // Determine folder name
+        let folderName: String
+        if itemsToProcess.count == 1 {
+            // Single file: use file name without extension
+            folderName = itemsToProcess[0].url.deletingPathExtension().lastPathComponent
+        } else {
+            // Multiple files: use "New Folder"
+            folderName = "New Folder"
+        }
+        
+        // Get parent directory from first item
+        let parentDir = itemsToProcess[0].url.deletingLastPathComponent()
+        var folderURL = parentDir.appendingPathComponent(folderName)
+        
+        // Handle name collisions
+        var counter = 1
+        while fm.fileExists(atPath: folderURL.path) {
+            folderURL = parentDir.appendingPathComponent("\(folderName) \(counter)")
+            counter += 1
+        }
+        
+        do {
+            // Create the folder
+            try fm.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            
+            // Move all items into the folder
+            for fileItem in itemsToProcess {
+                let destURL = folderURL.appendingPathComponent(fileItem.url.lastPathComponent)
+                try fm.moveItem(at: fileItem.url, to: destURL)
+            }
+            
+            // Create new DroppedItem for the folder
+            let newFolderItem = DroppedItem(url: folderURL)
+            
+            // Replace items with the new folder
+            withAnimation(DroppyAnimation.state) {
+                // Remove all processed items
+                for fileItem in itemsToProcess {
+                    state.removeItemByID(fileItem.id)
+                }
+                // Add the new folder
+                state.addItem(newFolderItem)
+            }
+            
+            state.deselectAll()
+            HapticFeedback.drop()
+        } catch {
+            print("❌ Create folder error: \(error.localizedDescription)")
+            HapticFeedback.error()
         }
     }
     
