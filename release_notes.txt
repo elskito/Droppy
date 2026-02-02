@@ -1,12 +1,15 @@
-✨ New Features
+## ✨ New Features
 - Added adjustable Island height slider with smooth live preview animation
 - Added subtle haptic feedback to all sliders for premium tactile experience
 - Added Gradient Visualizer toggle in Settings → Media for two-tone audio visualization
 
-🐛 Bug Fixes
+## 🐛 Bug Fixes
+- Fixed HUD padding asymmetry: visualizer now perfectly mirrors album art spacing
+- Fixed Island not displaying correctly on MacBook Air models
 - Fixed media title not vertically centered with album art in collapsed HUD
 
-🎯 Polish & Refinements
+## 🎯 Polish & Refinements
 - Complete Settings redesign with high-density grids and modern button styles
+- Centralized all HUD padding calculations to HUDLayoutCalculator for pixel-perfect consistency
 - Refined slider controls with consistent haptic responses across all settings
 - Improved visual hierarchy with new grouped layouts

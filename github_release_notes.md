@@ -4,6 +4,7 @@
 - Added Gradient Visualizer toggle in Settings → Media for two-tone audio visualization
 
 ## 🐛 Bug Fixes
+- Fixed Island not displaying correctly on MacBook Air models
 - Fixed media title not vertically centered with album art in collapsed HUD
 
 ## 🎯 Polish & Refinements

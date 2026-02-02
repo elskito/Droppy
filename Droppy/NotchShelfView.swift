@@ -1698,8 +1698,10 @@ struct NotchShelfView: View {
             // Calculate position offsets
             // Use fixed dimensions for HUD to prevent jumping on hover
             let fixedHUDHeight: CGFloat = notchHeight
-            // +wingCornerCompensation for curved wing corners (topCornerRadius)
-            let hudSymmetricPadding: CGFloat = isDynamicIslandMode ? (notchHeight - hudHeight) / 2 : max((notchHeight - hudHeight) / 2, 6) + NotchLayoutConstants.wingCornerCompensation
+            // SYMMETRY: Use the SAME edge padding as album art (based on album size, not visualizer size)
+            // This ensures equal visual padding on both sides
+            let hudAlbumSize: CGFloat = isDynamicIslandMode ? 18 : 20
+            let hudSymmetricPadding: CGFloat = isDynamicIslandMode ? (notchHeight - hudAlbumSize) / 2 : max((notchHeight - hudAlbumSize) / 2, 6) + NotchLayoutConstants.wingCornerCompensation
             
             // HUD X: Right side of HUD (mirror of album art position)
             // Use FIXED HUD container width to prevent jumping during transitions

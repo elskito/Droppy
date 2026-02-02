@@ -30,6 +30,11 @@ struct NotchHUDView: View {
     var targetScreen: NSScreen? = nil  // Target screen for multi-monitor support
     var onValueChange: ((CGFloat) -> Void)?
     
+    /// SSOT: Use HUDLayoutCalculator for consistent padding across all HUDs
+    private var layout: HUDLayoutCalculator {
+        HUDLayoutCalculator(screen: targetScreen ?? NSScreen.main ?? NSScreen.screens.first)
+    }
+    
     /// Whether we're in Dynamic Island mode (screen-aware for multi-monitor)
     /// For HUD LAYOUT purposes: external displays always use compact layout (no physical notch)
     private var isDynamicIslandMode: Bool {
@@ -70,11 +75,9 @@ struct NotchHUDView: View {
         VStack(alignment: .center, spacing: 0) {
             if isDynamicIslandMode {
                 // DYNAMIC ISLAND: Compact horizontal layout - icon + slider only (no text label)
-                // This creates a minimal, clean appearance matching the DI aesthetic
-                let iconSize = HUDLayoutCalculator.dynamicIslandIconSize
-                // +wingCornerCompensation when external display uses notch style (curved topCornerRadius)
-                let basePadding = (notchHeight - iconSize) / 2
-                let symmetricPadding = isExternalWithNotchStyle ? basePadding + NotchLayoutConstants.wingCornerCompensation : basePadding
+                // SSOT: Use HUDLayoutCalculator for consistent padding across all modes/displays
+                let iconSize = layout.iconSize
+                let symmetricPadding = layout.symmetricPadding(for: iconSize)
                 
                 HStack(spacing: 12) {
                     // Left side: Icon with BUTTERY SMOOTH SCALING
@@ -104,11 +107,10 @@ struct NotchHUDView: View {
                 .frame(height: notchHeight)
             } else {
                 // NOTCH MODE: Wide layout - icon + label on left wing, slider on right wing
-                // Using HUDLayoutCalculator for consistent sizing across all HUDs
-                let iconSize = HUDLayoutCalculator.notchIconSize
-                let labelSize = HUDLayoutCalculator(screen: targetScreen ?? NSScreen.main).labelFontSize
-                // +wingCornerCompensation for curved wing corners (topCornerRadius)
-                let symmetricPadding = max((notchHeight - iconSize) / 2, 6) + NotchLayoutConstants.wingCornerCompensation
+                // SSOT: Use HUDLayoutCalculator for consistent padding across all modes/displays
+                let iconSize = layout.iconSize
+                let labelSize = layout.labelFontSize
+                let symmetricPadding = layout.symmetricPadding(for: iconSize)
                 
                 HStack(spacing: 0) {
                     // Left wing: Icon + Label

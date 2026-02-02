@@ -208,6 +208,11 @@ struct MediaHUDView: View {
     var showAlbumArt: Bool = true  // PREMIUM: Set to false when morphing is handled externally
     var showVisualizer: Bool = true  // PREMIUM: Set to false when morphing is handled externally
     var showTitle: Bool = true  // PREMIUM: Set to false when morphing is handled externally
+    
+    /// SSOT: Use HUDLayoutCalculator for consistent padding across all HUDs
+    private var layout: HUDLayoutCalculator {
+        HUDLayoutCalculator(screen: targetScreen ?? NSScreen.main ?? NSScreen.screens.first)
+    }
 
     
     /// Whether we're in Dynamic Island mode (screen-aware for multi-monitor)
@@ -263,9 +268,9 @@ struct MediaHUDView: View {
             // Main HUD layout differs for Dynamic Island vs Notch mode
             if isDynamicIslandMode {
                 // DYNAMIC ISLAND: Album on left, Visualizer on right, Title centered
-                // Using Droppy pattern: padding = (notchHeight - iconHeight) / 2 for symmetry
-                let iconSize = HUDLayoutCalculator.dynamicIslandIconSize
-                let symmetricPadding = (notchHeight - iconSize) / 2
+                // SSOT: Use HUDLayoutCalculator for consistent padding across all modes/displays
+                let iconSize = layout.iconSize
+                let symmetricPadding = layout.symmetricPadding(for: iconSize)
                 
                 ZStack {
                     // Title - truly centered in the island (both horizontally and vertically)
@@ -338,10 +343,9 @@ struct MediaHUDView: View {
                 .frame(height: notchHeight)
             } else {
                 // NOTCH MODE: Two wings separated by the notch space
-                // Using Droppy pattern: icons from HUDLayoutCalculator with symmetricPadding for outer-wing alignment
-                let iconSize = HUDLayoutCalculator.notchIconSize
-                // +wingCornerCompensation for curved wing corners (topCornerRadius)
-                let symmetricPadding = max((notchHeight - iconSize) / 2, 6) + NotchLayoutConstants.wingCornerCompensation
+                // SSOT: Use HUDLayoutCalculator for consistent padding across all modes/displays
+                let iconSize = layout.iconSize
+                let symmetricPadding = layout.symmetricPadding(for: iconSize)
                 
                 HStack(spacing: 0) {
                     // Left wing: Album art near left edge
