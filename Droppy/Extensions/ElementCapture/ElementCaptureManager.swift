@@ -22,6 +22,7 @@ import ApplicationServices
 // MARK: - Capture Mode
 enum ElementCaptureMode: String, CaseIterable, Identifiable {
     case element = "element"
+    case area = "area"
     case fullscreen = "fullscreen"
     case window = "window"
     
@@ -30,6 +31,7 @@ enum ElementCaptureMode: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .element: return "Element"
+        case .area: return "Area"
         case .fullscreen: return "Fullscreen"
         case .window: return "Window"
         }
@@ -38,7 +40,8 @@ enum ElementCaptureMode: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .element: return "viewfinder"
-        case .fullscreen: return "rectangle.dashed"
+        case .area: return "rectangle.dashed"
+        case .fullscreen: return "rectangle.inset.filled"
         case .window: return "macwindow"
         }
     }
@@ -46,11 +49,13 @@ enum ElementCaptureMode: String, CaseIterable, Identifiable {
     var shortcutKey: String {
         switch self {
         case .element: return "elementCaptureShortcut"
+        case .area: return "elementCaptureAreaShortcut"
         case .fullscreen: return "elementCaptureFullscreenShortcut"
         case .window: return "elementCaptureWindowShortcut"
         }
     }
 }
+
 
 // MARK: - Editor Shortcut Actions
 enum EditorShortcut: String, CaseIterable, Identifiable {
@@ -187,6 +192,9 @@ final class ElementCaptureManager: ObservableObject {
     @Published var shortcut: SavedShortcut? {
         didSet { saveShortcut(for: .element) }
     }
+    @Published var areaShortcut: SavedShortcut? {
+        didSet { saveShortcut(for: .area) }
+    }
     @Published var fullscreenShortcut: SavedShortcut? {
         didSet { saveShortcut(for: .fullscreen) }
     }
@@ -238,6 +246,7 @@ final class ElementCaptureManager: ObservableObject {
     func shortcut(for mode: ElementCaptureMode) -> SavedShortcut? {
         switch mode {
         case .element: return shortcut
+        case .area: return areaShortcut
         case .fullscreen: return fullscreenShortcut
         case .window: return windowShortcut
         }
@@ -247,6 +256,7 @@ final class ElementCaptureManager: ObservableObject {
     func setShortcut(_ newShortcut: SavedShortcut?, for mode: ElementCaptureMode) {
         switch mode {
         case .element: shortcut = newShortcut
+        case .area: areaShortcut = newShortcut
         case .fullscreen: fullscreenShortcut = newShortcut
         case .window: windowShortcut = newShortcut
         }
@@ -279,6 +289,14 @@ final class ElementCaptureManager: ObservableObject {
             installEventTap()
             installEscapeMonitor()
             NSCursor.crosshair.push()
+            
+        case .area:
+            // Area mode: click-drag to select region
+            setupAreaSelectionOverlay()
+            installEscapeMonitor()
+            NSCursor.crosshair.push()
+            print("[ElementCapture] Area selection mode started")
+            return
             
         case .fullscreen:
             // Fullscreen: immediately capture the entire screen
@@ -320,6 +338,11 @@ final class ElementCaptureManager: ObservableObject {
         // Hide and destroy overlay
         highlightWindow?.orderOut(nil)
         highlightWindow = nil
+        
+        // Hide and destroy area selection window
+        areaSelectionWindow?.orderOut(nil)
+        areaSelectionWindow = nil
+        
         currentScreenDisplayID = 0
         
         // Restore cursor
@@ -336,6 +359,7 @@ final class ElementCaptureManager: ObservableObject {
                let decoded = try? JSONDecoder().decode(SavedShortcut.self, from: data) {
                 switch mode {
                 case .element: shortcut = decoded
+                case .area: areaShortcut = decoded
                 case .fullscreen: fullscreenShortcut = decoded
                 case .window: windowShortcut = decoded
                 }
@@ -530,6 +554,74 @@ final class ElementCaptureManager: ObservableObject {
         
         highlightWindow?.orderFrontRegardless()
         print("[ElementCapture] Created highlight window on screen \(currentScreenDisplayID), frame: \(screen.frame)")
+    }
+    
+    // MARK: - Area Selection (Click-Drag)
+    
+    private var areaSelectionWindow: AreaSelectionWindow?
+    
+    private func setupAreaSelectionOverlay() {
+        let mouseLocation = NSEvent.mouseLocation
+        
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) ?? NSScreen.main else {
+            print("[ElementCapture] ERROR: No screen found for area selection!")
+            return
+        }
+        
+        areaSelectionWindow = AreaSelectionWindow(
+            contentRect: screen.frame,
+            styleMask: .borderless,
+            backing: .buffered,
+            defer: false
+        )
+        
+        areaSelectionWindow?.configure { [weak self] selectedRect in
+            guard let self = self else { return }
+            
+            // Capture the selected area
+            Task {
+                await self.captureArea(selectedRect, on: screen)
+            }
+        }
+        
+        areaSelectionWindow?.onCancel = { [weak self] in
+            self?.stopCaptureMode()
+        }
+        
+        areaSelectionWindow?.orderFrontRegardless()
+        print("[ElementCapture] Created area selection window, frame: \(screen.frame)")
+    }
+    
+    private func captureArea(_ rect: CGRect, on screen: NSScreen) async {
+        guard rect.width > 10 && rect.height > 10 else {
+            // Too small, ignore
+            stopCaptureMode()
+            return
+        }
+        
+        // Convert from NSWindow coordinates to screen coordinates for capture
+        let captureRect = NSRect(
+            x: rect.origin.x,
+            y: screen.frame.height - rect.origin.y - rect.height + screen.frame.origin.y,
+            width: rect.width,
+            height: rect.height
+        )
+        
+        // Use the same capture path as element capture
+        await MainActor.run {
+            self.currentElementFrame = captureRect
+            self.hasElement = true
+        }
+        
+        // Trigger the capture
+        await captureCurrentElement()
+        
+        // Cleanup
+        await MainActor.run {
+            self.areaSelectionWindow?.orderOut(nil)
+            self.areaSelectionWindow = nil
+            self.stopCaptureMode()
+        }
     }
     
     /// Move highlight window to a different screen when mouse moves there
@@ -1142,6 +1234,7 @@ final class ElementCaptureManager: ObservableObject {
         
         // Clear all saved shortcuts
         shortcut = nil
+        areaShortcut = nil
         fullscreenShortcut = nil
         windowShortcut = nil
         for mode in ElementCaptureMode.allCases {

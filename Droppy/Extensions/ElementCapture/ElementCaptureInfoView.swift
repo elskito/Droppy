@@ -25,6 +25,7 @@ struct ElementCaptureInfoView: View {
     
     // Shortcuts for each capture mode (loaded from manager)
     @State private var elementShortcut: SavedShortcut?
+    @State private var areaShortcut: SavedShortcut?
     @State private var fullscreenShortcut: SavedShortcut?
     @State private var windowShortcut: SavedShortcut?
     
@@ -212,6 +213,7 @@ struct ElementCaptureInfoView: View {
             
             VStack(spacing: 10) {
                 shortcutRow(mode: .element, shortcut: $elementShortcut)
+                shortcutRow(mode: .area, shortcut: $areaShortcut)
                 shortcutRow(mode: .fullscreen, shortcut: $fullscreenShortcut)
                 shortcutRow(mode: .window, shortcut: $windowShortcut)
             }
@@ -440,6 +442,7 @@ struct ElementCaptureInfoView: View {
     
     private func loadShortcuts() {
         elementShortcut = ElementCaptureManager.shared.shortcut
+        areaShortcut = ElementCaptureManager.shared.areaShortcut
         fullscreenShortcut = ElementCaptureManager.shared.fullscreenShortcut
         windowShortcut = ElementCaptureManager.shared.windowShortcut
         // Sync with binding for legacy compatibility
@@ -486,6 +489,8 @@ struct ElementCaptureInfoView: View {
         case .element:
             elementShortcut = shortcut
             currentShortcut = shortcut
+        case .area:
+            areaShortcut = shortcut
         case .fullscreen:
             fullscreenShortcut = shortcut
         case .window:
@@ -517,6 +522,8 @@ struct ElementCaptureInfoView: View {
         case .element:
             elementShortcut = nil
             currentShortcut = nil
+        case .area:
+            areaShortcut = nil
         case .fullscreen:
             fullscreenShortcut = nil
         case .window:

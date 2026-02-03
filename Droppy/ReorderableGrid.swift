@@ -63,7 +63,7 @@ struct ReorderableForEach<Item: Identifiable, Content: View>: View {
                                     draggingItem = item.id
                                     dragStartPosition = positionFor(index: index)
                                     hasStartedDrag = true
-                                    HapticFeedback.impact(.medium)
+                                    HapticFeedback.tap()
                                 }
                                 
                                 if draggingItem == item.id {
@@ -82,7 +82,7 @@ struct ReorderableForEach<Item: Identifiable, Content: View>: View {
                                         withAnimation(DroppyAnimation.bouncy) {
                                             items.move(fromOffsets: IndexSet(integer: currentIndex), toOffset: targetIndex > currentIndex ? targetIndex + 1 : targetIndex)
                                         }
-                                        HapticFeedback.selection()
+                                        HapticFeedback.select()
                                     }
                                 }
                             }
@@ -176,7 +176,7 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
                     .onChanged { value in
                         if draggingItem == nil {
                             draggingItem = item.id
-                            HapticFeedback.impact(.medium)
+                            HapticFeedback.tap()
                         }
                         
                         if draggingItem == item.id {
@@ -196,7 +196,7 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
                                         toOffset: targetIndex > currentIndex ? targetIndex + 1 : targetIndex
                                     )
                                 }
-                                HapticFeedback.selection()
+                                HapticFeedback.select()
                             }
                         }
                     }
