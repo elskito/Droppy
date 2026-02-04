@@ -2005,6 +2005,7 @@ class NotchWindow: NSPanel {
             let calculatedWidth = rightArea.minX - leftArea.maxX
             notchWidth = max(calculatedWidth, 180)
             print("📐 NotchWindowController: leftArea.maxX=\(leftArea.maxX), rightArea.minX=\(rightArea.minX), calculatedWidth=\(calculatedWidth), notchWidth=\(notchWidth)")
+            print("📐 NotchWindowController: screen.frame=\(screen.frame), backingScaleFactor=\(screen.backingScaleFactor)")
             // Derive X position directly from auxiliary areas (already in screen-local coordinates)
             // Convert to global coordinates by adding screen origin
             notchX = screen.frame.origin.x + leftArea.maxX
@@ -2031,12 +2032,14 @@ class NotchWindow: NSPanel {
         // Y position in global coordinates
         let notchY = screen.frame.origin.y + screen.frame.height - notchHeight
 
-        return NSRect(
+        let finalFrame = NSRect(
             x: notchX,
             y: notchY,
             width: notchWidth,
             height: notchHeight
         )
+        print("📐 NotchWindowController.calculateNotchFrame: returning frame=\(finalFrame)")
+        return finalFrame
     }
     
     /// Public accessor for the real hardware notch rect in screen coordinates
