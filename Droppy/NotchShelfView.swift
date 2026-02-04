@@ -1971,7 +1971,7 @@ struct NotchShelfView: View {
         .animation(.smooth(duration: 0.35), value: mediaHUDIsHovered)
         .animation(.smooth(duration: 0.35), value: musicManager.isPlaying)
         .animation(.smooth(duration: 0.35), value: isSongTransitioning)
-        .animation(.smooth(duration: 0.35), value: state.shelfDisplaySlotCount)
+        .animation(state.isBulkUpdating ? nil : .smooth(duration: 0.35), value: state.shelfDisplaySlotCount)
         .animation(.smooth(duration: 0.35), value: useDynamicIslandStyle)
         // INTERACTIVE: Keep bouncy for user-triggered actions
         .animation(DroppyAnimation.hoverBouncy, value: dragMonitor.isDragging)
@@ -2371,7 +2371,7 @@ struct NotchShelfView: View {
                             }
                         )
                         // PERFORMANCE: Skip transitions during bulk add
-                        .transition(state.isBulkAdding ? .identity : .scale.combined(with: .opacity))
+                        .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
                     }
                     
                     // Regular items - flat display with drag-to-rearrange
@@ -2396,7 +2396,12 @@ struct NotchShelfView: View {
                             spacing: 12
                         )
                         // PERFORMANCE: Skip transitions during bulk add
-                        .transition(state.isBulkAdding ? .identity : .scale.combined(with: .opacity))
+                        .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
+                    }
+                }
+                .transaction { transaction in
+                    if state.isBulkUpdating {
+                        transaction.animation = nil
                     }
                 }
                 // SSOT: Top padding clears physical notch in built-in notch mode
@@ -2661,4 +2666,3 @@ extension NotchShelfView {
         }
     }
 }
-

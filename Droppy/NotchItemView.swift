@@ -330,15 +330,17 @@ struct NotchItemView: View {
                 }
             }
             .frame(width: 76, height: 96)
-            .background {
-                GeometryReader { geo in
-                    Color.clear
-                        .preference(
-                            key: ItemFramePreferenceKey.self,
-                            value: [item.id: geo.frame(in: .named("shelfGrid"))]
-                        )
+                .background {
+                    if !state.isBulkUpdating {
+                        GeometryReader { geo in
+                            Color.clear
+                                .preference(
+                                    key: ItemFramePreferenceKey.self,
+                                    value: [item.id: geo.frame(in: .named("shelfGrid"))]
+                                )
+                        }
+                    }
                 }
-            }
             // Drop target for ANY folder - drop files INTO the folder
             // CRITICAL: Disable when this item is being dragged to prevent gesture conflict
             .dropDestination(for: URL.self) { urls, location in
@@ -751,6 +753,9 @@ struct NotchItemView: View {
         }
             .task {
                 // ASYNC: Load QuickLook thumbnail (if available)
+                while state.isBulkUpdating {
+                    try? await Task.sleep(nanoseconds: 120_000_000)
+                }
                 if let cached = ThumbnailCache.shared.cachedThumbnail(for: item) {
                     thumbnail = cached
                 } else if let asyncThumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 120, height: 120)) {
@@ -759,7 +764,7 @@ struct NotchItemView: View {
                     }
                 }
             }
-            .animation(DroppyAnimation.hoverBouncy, value: isHovering)
+            .animation(state.isBulkUpdating ? .none : DroppyAnimation.hoverBouncy, value: isHovering)
         } // DraggableArea closes here
     }
 
@@ -1358,7 +1363,7 @@ private struct NotchItemContent: View {
                             .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.xs, style: .continuous))
                     } else {
                         // Native icon (folders, dmg, zip, etc): keep original shape
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))
+                        Image(nsImage: ThumbnailCache.shared.cachedIcon(forPath: item.url.path))
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             // AUTO-TINT for Pinned Folders: Blue -> Yellow (+180 deg)

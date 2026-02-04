@@ -269,6 +269,15 @@ class DraggableAreaView<Content: View>: NSView, NSDraggingSource {
         // Clear any images from previous drag session
         dragSessionImages.removeAll()
         
+        let bulkDragThreshold = 20
+        let isBulkDrag = pasteboardItems.count > bulkDragThreshold
+        let maxStackDepth = 10
+        let bulkDragImage: NSImage? = {
+            guard isBulkDrag else { return nil }
+            let image = (DroppedItem.placeholderIcon.copy() as? NSImage) ?? DroppedItem.placeholderIcon
+            image.size = CGSize(width: 64, height: 64)
+            return image
+        }()
         let draggingItems = pasteboardItems.enumerated().compactMap { [weak self] (index, writer) -> NSDraggingItem? in
             guard let self = self else { return nil }
             let dragItem = NSDraggingItem(pasteboardWriter: writer)
@@ -278,20 +287,24 @@ class DraggableAreaView<Content: View>: NSView, NSDraggingSource {
             let frameSize = CGSize(width: 64, height: 64)
             
             if let url = writer as? NSURL, let fileURL = url as URL? {
-                // Check if this is a folder (use custom FolderIcon for visual consistency)
-                var isDirectory: ObjCBool = false
-                if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
-                    // Folder: Check if it's pinned by looking it up in DroppyState
-                    let isPinned = DroppyState.shared.items.contains(where: { $0.url == fileURL && $0.isPinned }) ||
-                                   DroppyState.shared.basketItems.contains(where: { $0.url == fileURL && $0.isPinned })
-                    usedImage = ThumbnailCache.shared.renderFolderIcon(size: frameSize.width, isPinned: isPinned)
+                if isBulkDrag, let bulkImage = bulkDragImage {
+                    usedImage = bulkImage
                 } else {
-                    // File: Try to get cached THUMBNAIL first (for PDFs, videos, images, etc.)
-                    // If no cached thumbnail exists, fall back to icon for instant performance
-                    usedImage = ThumbnailCache.shared.getCachedThumbnail(for: fileURL)
-                        ?? ThumbnailCache.shared.cachedIcon(forPath: fileURL.path)
+                    // Check if this is a folder (use custom FolderIcon for visual consistency)
+                    var isDirectory: ObjCBool = false
+                    if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                        // Folder: Check if it's pinned by looking it up in DroppyState
+                        let isPinned = DroppyState.shared.items.contains(where: { $0.url == fileURL && $0.isPinned }) ||
+                                       DroppyState.shared.basketItems.contains(where: { $0.url == fileURL && $0.isPinned })
+                        usedImage = ThumbnailCache.shared.renderFolderIcon(size: frameSize.width, isPinned: isPinned)
+                    } else {
+                        // File: Try to get cached THUMBNAIL first (for PDFs, videos, images, etc.)
+                        // If no cached thumbnail exists, fall back to icon for instant performance
+                        usedImage = ThumbnailCache.shared.getCachedThumbnail(for: fileURL)
+                            ?? ThumbnailCache.shared.cachedIcon(forPath: fileURL.path)
+                    }
+                    usedImage?.size = frameSize
                 }
-                usedImage?.size = frameSize
             } else {
                 // Fallback to view snapshot for non-file items
                 if let bitmap = self.hostingView.bitmapImageRepForCachingDisplay(in: self.hostingView.bounds),
@@ -310,7 +323,8 @@ class DraggableAreaView<Content: View>: NSView, NSDraggingSource {
             // We use the mouse down location to calculate where to place the frame
             let mouseInView = self.convert(mouseDown.locationInWindow, from: nil)
             let baseOffset = DroppySpacing.dragCursorOffset
-            let stackOffset = CGFloat(index) * DroppySpacing.dragStackOffset
+            let stackDepth = min(index, maxStackDepth)
+            let stackOffset = CGFloat(stackDepth) * DroppySpacing.dragStackOffset
             
             // Position frame so image appears to the RIGHT and BELOW the cursor
             // Origin = mouse position + offset (right/down in view coords)

@@ -1,10 +1,18 @@
 ✨ New Features
-- Area Capture mode: click-drag-snap selection for capturing any screen region
-- iPhone-style drag-to-rearrange for basket and shelf items with smooth animations
-- Persistent reorder mode with iOS-style jiggle animation for easy reorganization
-- Enhanced drag previews showing actual thumbnails and correct folder icons
+- Quickshare is now removable: disable it like any other extension to hide from menus and quick actions
 
 🐛 Bug Fixes
-- Fixed Quick Actions bar being clipped when dragging files over multi-row shelf
-- Fixed Dock folder drags not triggering shelf actions
-- Added cask URL verification to prevent Homebrew version mismatch bugs
+- Fixed floating basket revealing too early when cursor approaches edge (now requires actual sliver contact)
+- Fixed Quick Actions bar collapsing prematurely when drag ends near the bar
+- Fixed reorder drag position jumping when items swap positions
+
+⚡ Performance
+- Context menus now use cached sharing services and app lists for faster rendering
+- Bulk operations (clear all, remove selected, move to shelf) now skip animations for instant feedback
+- Drag preview stack limited to 5 visible items for snappier multi-select drags
+
+🔧 Improvements
+- Simplified floating basket peek animation (removed unnecessary 3D transforms)
+- Basket now preserves position when auto-hiding to edge (no more vertical centering jumps)
+- Removed experimental "Notch Height" adjustment feature
+- Folder drag previews now use custom folder icon with correct pinned state

@@ -772,7 +772,7 @@ struct FloatingBasketView: View {
                                 state.basketPowerFolders.removeAll { $0.id == folder.id }
                             }
                         }
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
                     }
                     
                     // Regular items - flat display with drag-to-rearrange
@@ -791,11 +791,16 @@ struct FloatingBasketView: View {
                             itemSize: CGSize(width: itemWidth, height: 90),
                             spacing: itemSpacing
                         )
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
                     }
                 }
-                .animation(DroppyAnimation.bouncy, value: state.basketItemsList.count)
-                .animation(DroppyAnimation.bouncy, value: state.basketPowerFolders.count)
+                .transaction { transaction in
+                    if state.isBulkUpdating {
+                        transaction.animation = nil
+                    }
+                }
+                .animation(state.isBulkUpdating ? nil : DroppyAnimation.bouncy, value: state.basketItemsList.count)
+                .animation(state.isBulkUpdating ? nil : DroppyAnimation.bouncy, value: state.basketPowerFolders.count)
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.bottom, 18)
@@ -838,6 +843,11 @@ struct FloatingBasketView: View {
                     )
                 }
             }
+            .transaction { transaction in
+                if state.isBulkUpdating {
+                    transaction.animation = nil
+                }
+            }
             .padding(.horizontal, horizontalPadding)
             .padding(.top, 24)
             .padding(.bottom, 18)
@@ -861,6 +871,8 @@ struct FloatingBasketView: View {
             itemsToMove = state.basketItemsList.filter { state.selectedBasketItems.contains($0.id) }
             powerFoldersToMove = state.basketPowerFolders.filter { state.selectedBasketItems.contains($0.id) }
         }
+
+        state.beginBulkUpdateIfNeeded(itemsToMove.count + powerFoldersToMove.count)
         
         // Collect items that will be moved (to remove after adding)
         var movedItems: [DroppedItem] = []
@@ -1124,5 +1136,3 @@ private struct AutoSelectTextField: NSViewRepresentable {
         }
     }
 }
-
-

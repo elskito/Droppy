@@ -269,6 +269,13 @@ final class DroppyState {
     /// Flag to indicate bulk add operation in progress
     /// When true, item transitions are skipped for performance
     var isBulkAdding: Bool = false
+
+    /// Flag to indicate any bulk update (add/remove/move) in progress
+    /// Used to disable animations during large changes
+    var isBulkUpdating: Bool = false
+
+    /// Threshold for considering an update "bulk"
+    private let bulkUpdateThreshold: Int = 6
     
     /// Whether any rename text field is currently active (blocks spacebar Quick Look)
     var isRenaming: Bool = false
@@ -412,6 +419,7 @@ final class DroppyState {
         let isBulk = urls.count > 3
         if isBulk {
             isBulkAdding = true
+            isBulkUpdating = true
         }
         
         // PERFORMANCE: Build Set of existing URLs for O(1) lookup instead of O(n) contains()
@@ -432,25 +440,35 @@ final class DroppyState {
         
         if !regularItems.isEmpty {
             // PERFORMANCE: Single animation block for all items
-            if isBulk {
-                // For bulk: no animation, just append immediately
-                shelfItems.append(contentsOf: regularItems)
-                triggerAutoExpand()
-                
-                // Clear bulk flag after a brief delay to allow UI to settle
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.isBulkAdding = false
-                }
-            } else {
-                // For small adds: use animation
-                withAnimation(DroppyAnimation.state) {
+                if isBulk {
+                    // For bulk: no animation, just append immediately
                     shelfItems.append(contentsOf: regularItems)
+                    triggerAutoExpand()
+                    
+                    // Clear bulk flag after a brief delay to allow UI to settle
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                        self?.isBulkAdding = false
+                        self?.isBulkUpdating = false
+                    }
+                } else {
+                    // For small adds: use animation
+                    withAnimation(DroppyAnimation.state) {
+                        shelfItems.append(contentsOf: regularItems)
                 }
                 triggerAutoExpand()
             }
             HapticFeedback.drop()
         } else if isBulk {
             isBulkAdding = false
+            isBulkUpdating = false
+        }
+    }
+
+    func beginBulkUpdateIfNeeded(_ count: Int) {
+        guard count > bulkUpdateThreshold else { return }
+        isBulkUpdating = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.isBulkUpdating = false
         }
     }
     
@@ -471,6 +489,7 @@ final class DroppyState {
     
     /// Removes selected items
     func removeSelectedItems() {
+        beginBulkUpdateIfNeeded(selectedItems.count)
         // Remove from power folders
         for item in shelfPowerFolders.filter({ selectedItems.contains($0.id) }) {
             item.cleanupIfTemporary()
@@ -489,6 +508,7 @@ final class DroppyState {
     
     /// Clears all items from the shelf
     func clearAll() {
+        beginBulkUpdateIfNeeded(shelfItems.count + shelfPowerFolders.count)
         for item in shelfItems {
             item.cleanupIfTemporary()
         }
@@ -697,6 +717,7 @@ final class DroppyState {
         let isBulk = urls.count > 3
         if isBulk {
             isBulkAdding = true
+            isBulkUpdating = true
         }
         
         let enablePowerFolders = UserDefaults.standard.object(forKey: AppPreferenceKey.enablePowerFolders) as? Bool ?? true
@@ -728,10 +749,12 @@ final class DroppyState {
                 // Clear bulk flag after UI settles
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                     self?.isBulkAdding = false
+                    self?.isBulkUpdating = false
                 }
             }
         } else if isBulk {
             isBulkAdding = false
+            isBulkUpdating = false
         }
     }
     
@@ -763,6 +786,7 @@ final class DroppyState {
     
     /// Clears all items from the basket (preserves pinned folders)
     func clearBasket() {
+        beginBulkUpdateIfNeeded(basketItemsList.count + basketPowerFolders.count)
         // Cleanup regular items
         for item in basketItemsList {
             item.cleanupIfTemporary()
@@ -782,6 +806,7 @@ final class DroppyState {
     
     /// Moves all basket items to the shelf
     func moveBasketToShelf() {
+        beginBulkUpdateIfNeeded(basketItemsList.count + basketPowerFolders.count)
         // Move power folders
         for folder in basketPowerFolders {
             if !shelfPowerFolders.contains(where: { $0.url == folder.url }) {

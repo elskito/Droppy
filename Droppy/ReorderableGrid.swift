@@ -172,15 +172,16 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
     /// Current drag offset
     @State private var dragOffset: CGSize = .zero
     
-    /// Timestamp of last swap for debouncing
-    @State private var lastSwapTime: Date = .distantPast
+    /// Track drag start index for stable positioning
+    @State private var dragStartIndex: Int?
+
+    /// Last target index to avoid redundant moves
+    @State private var lastTargetIndex: Int?
     
     /// Long-press detection for entering edit mode
     @GestureState private var isDetectingLongPress = false
     
     // MARK: - Constants
-    
-    private let swapDebounceInterval: TimeInterval = 0.15
     
     // MARK: - Computed Properties
     
@@ -194,6 +195,15 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
     
     private var cellHeight: CGFloat {
         itemSize.height + spacing
+    }
+
+    private func positionFor(index: Int) -> CGPoint {
+        let row = index / columns
+        let col = index % columns
+        return CGPoint(
+            x: CGFloat(col) * cellWidth,
+            y: CGFloat(row) * cellHeight
+        )
     }
     
     private var longPressDuration: TimeInterval {
@@ -289,6 +299,8 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
                 if draggingItem == nil {
                     // Start dragging this item
                     draggingItem = item.id
+                    dragStartIndex = items.firstIndex(where: { $0.id == item.id })
+                    lastTargetIndex = dragStartIndex
                     HapticFeedback.tap()
                 }
                 
@@ -304,57 +316,43 @@ struct ReorderableItemModifier<Item: Identifiable>: ViewModifier {
     // MARK: - Drag Processing
     
     private func processDrag(translation: CGSize) {
-        dragOffset = translation
-        
         guard let currentIndex = items.firstIndex(where: { $0.id == item.id }) else { return }
-        
-        let colOffset = translation.width / cellWidth
-        let rowOffset = translation.height / cellHeight
-        
-        let currentRow = currentIndex / columns
-        let currentCol = currentIndex % columns
-        
-        var targetIndex = currentIndex
-        
-        // Single-axis swap based on larger offset
-        if abs(colOffset) >= 0.5 && abs(colOffset) >= abs(rowOffset) {
-            if colOffset > 0 && currentCol < columns - 1 {
-                targetIndex = currentIndex + 1
-            } else if colOffset < 0 && currentCol > 0 {
-                targetIndex = currentIndex - 1
-            }
-        } else if abs(rowOffset) >= 0.5 {
-            let maxRow = (items.count - 1) / columns
-            if rowOffset > 0 && currentRow < maxRow && currentIndex + columns < items.count {
-                targetIndex = currentIndex + columns
-            } else if rowOffset < 0 && currentRow > 0 {
-                targetIndex = currentIndex - columns
-            }
-        }
-        
+        let startIndex = dragStartIndex ?? currentIndex
+
+        let startPosition = positionFor(index: startIndex)
+        let currentPosition = positionFor(index: currentIndex)
+
+        dragOffset = CGSize(
+            width: translation.width + (startPosition.x - currentPosition.x),
+            height: translation.height + (startPosition.y - currentPosition.y)
+        )
+
+        let colDelta = Int(round(translation.width / cellWidth))
+        let rowDelta = Int(round(translation.height / cellHeight))
+        let rawTargetIndex = startIndex + (rowDelta * columns) + colDelta
+        let targetIndex = max(0, min(items.count - 1, rawTargetIndex))
+
         guard targetIndex != currentIndex else { return }
-        guard targetIndex >= 0 && targetIndex < items.count else { return }
-        
-        let now = Date()
-        guard now.timeIntervalSince(lastSwapTime) >= swapDebounceInterval else { return }
-        lastSwapTime = now
-        
+        guard targetIndex != lastTargetIndex else { return }
+        lastTargetIndex = targetIndex
+
         withAnimation(DroppyAnimation.bouncy) {
             items.move(
                 fromOffsets: IndexSet(integer: currentIndex),
                 toOffset: targetIndex > currentIndex ? targetIndex + 1 : targetIndex
             )
         }
-        
+
         HapticFeedback.select()
     }
     
     private func cleanupDrag() {
-        lastSwapTime = .distantPast
         withAnimation(DroppyAnimation.bouncy) {
             draggingItem = nil
             dragOffset = .zero
         }
+        dragStartIndex = nil
+        lastTargetIndex = nil
     }
 }
 
@@ -434,4 +432,3 @@ extension View {
         ))
     }
 }
-
