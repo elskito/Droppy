@@ -23,6 +23,9 @@ class ClipboardWindowController: NSObject, NSWindowDelegate {
             onPaste: { item in
                 self.paste(item)
             },
+            onPasteItems: { items in
+                self.paste(items)
+            },
             onClose: {
                 self.close()
             },
@@ -344,6 +347,47 @@ class ClipboardWindowController: NSObject, NSWindowDelegate {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     ClipboardManager.shared.paste(item: item)
+                }
+            }
+        })
+    }
+    
+    /// Batch paste multiple items (Issue #154)
+    /// Dismisses window once and pastes all items together
+    func paste(_ items: [ClipboardItem]) {
+        guard let window = window, !items.isEmpty else { return }
+        
+        // Single item: use regular paste
+        if items.count == 1, let item = items.first {
+            paste(item)
+            return
+        }
+        
+        // Dismiss clipboard immediately
+        isAnimating = true
+        stopClickMonitoring()
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.1
+            window.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            self?.window?.orderOut(nil)
+            self?.isAnimating = false
+            
+            // The Mirror Method (V12): Refined Sequence
+            if let targetApp = self?.previousApp {
+                let pid = targetApp.processIdentifier
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    targetApp.activate(options: .activateAllWindows)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        ClipboardManager.shared.paste(items: items, targetPID: pid)
+                    }
+                }
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    ClipboardManager.shared.paste(items: items)
                 }
             }
         })

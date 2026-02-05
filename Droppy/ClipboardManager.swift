@@ -846,6 +846,74 @@ class ClipboardManager: ObservableObject {
         HapticFeedback.copy()
     }
     
+    /// Batch paste multiple items to the clipboard (Issue #154)
+    /// Writes all items to pasteboard in a single operation, then simulates one paste
+    func paste(items: [ClipboardItem], targetPID: pid_t? = nil) {
+        guard !items.isEmpty else { return }
+        
+        // Single item: use regular paste
+        if items.count == 1, let item = items.first {
+            paste(item: item, targetPID: targetPID)
+            return
+        }
+        
+        // Re-check permission right before simulation
+        checkPermission()
+        
+        // Show feedback toast in UI
+        DispatchQueue.main.async {
+            self.showPasteFeedback = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.showPasteFeedback = false
+            }
+        }
+        
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        
+        // Collect all content types
+        var strings: [String] = []
+        var urls: [URL] = []
+        var images: [NSImage] = []
+        
+        for item in items {
+            switch item.type {
+            case .text:
+                if let str = item.content {
+                    strings.append(str)
+                }
+            case .url:
+                if let str = item.content {
+                    strings.append(str)
+                }
+            case .file:
+                if let path = item.content {
+                    urls.append(URL(fileURLWithPath: path))
+                }
+            case .image:
+                if let data = item.loadImageData(), let img = NSImage(data: data) {
+                    images.append(img)
+                }
+            default: break
+            }
+        }
+        
+        // Write all content in order of priority
+        // Note: Multiple images/files are written together; text is joined with newlines
+        if !strings.isEmpty {
+            pasteboard.setString(strings.joined(separator: "\n"), forType: .string)
+        }
+        if !urls.isEmpty {
+            pasteboard.writeObjects(urls as [NSURL])
+        }
+        if !images.isEmpty {
+            pasteboard.writeObjects(images)
+        }
+        
+        self.simulatePasteCommand(targetPID: targetPID)
+        HapticFeedback.copy()
+    }
+    
     private func simulatePasteCommand(targetPID: pid_t?) {
         // EXACT Mirror of ClipBook Method (V12):
         // Use discrete events for Cmd and V to correctly simulate physical input

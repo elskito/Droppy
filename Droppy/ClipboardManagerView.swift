@@ -104,6 +104,7 @@ struct ClipboardManagerView: View {
     
     // Actions passed from Controller
     var onPaste: (ClipboardItem) -> Void
+    var onPasteItems: ([ClipboardItem]) -> Void  // Issue #154: Batch paste
     var onClose: () -> Void
     var onReset: () -> Void
     
@@ -230,9 +231,8 @@ struct ClipboardManagerView: View {
     
     private var pasteShortcutButton: some View {
         Button("") {
-            for item in selectedItemsArray {
-                onPaste(item)
-            }
+            // Issue #154: Use batch paste to avoid race conditions
+            onPasteItems(selectedItemsArray)
         }
             .keyboardShortcut(.return, modifiers: []) // 1. Return -> Paste
             .keyboardShortcut(.return, modifiers: .command) // 2. Cmd+Return -> Paste (Bonus)
@@ -259,11 +259,9 @@ struct ClipboardManagerView: View {
                 // Command+C -> Copy Selected to Clipboard
                 Button("") { copySelectedToClipboard() }.keyboardShortcut("c", modifiers: .command)
                 
-                // Command+V -> Paste Selected Item
+                // Command+V -> Paste Selected Items (Issue #154: Batch paste)
                 Button("") {
-                    for item in selectedItemsArray {
-                        onPaste(item)
-                    }
+                    onPasteItems(selectedItemsArray)
                 }.keyboardShortcut("v", modifiers: .command)
                 
                 // Spacebar -> Quick Look for images
@@ -994,13 +992,14 @@ struct ClipboardManagerView: View {
         return sanitized
     }
     
-    /// Copy all selected items to system clipboard
+    /// Copy all selected items to system clipboard (Issue #154: Fixed batch writes)
     private func copySelectedToClipboard() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         
         var strings: [String] = []
         var urls: [URL] = []
+        var images: [NSImage] = []  // Collect images for batch write
         
         for item in selectedItemsArray {
             switch item.type {
@@ -1013,19 +1012,24 @@ struct ClipboardManagerView: View {
                     urls.append(URL(fileURLWithPath: path))
                 }
             case .image:
+                // Collect images instead of writing individually
                 if let data = item.loadImageData(), let image = NSImage(data: data) {
-                    pasteboard.writeObjects([image])
+                    images.append(image)
                 }
             case .color:
                 break
             }
         }
         
+        // Write all content types in batches
         if !strings.isEmpty {
             pasteboard.setString(strings.joined(separator: "\n"), forType: .string)
         }
         if !urls.isEmpty {
             pasteboard.writeObjects(urls as [NSURL])
+        }
+        if !images.isEmpty {
+            pasteboard.writeObjects(images)
         }
     }
     
