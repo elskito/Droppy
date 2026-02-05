@@ -5,6 +5,7 @@
   - Modal sovereignty: basket hides when reordering for clear focus
 - **Quickshare is now removable**: Disable it like any other extension to hide from menus and quick actions
 - **Area Capture mode**: Click-drag-snap selection for capturing any screen region
+- **Configurable Editor Shortcuts**: Customize screenshot editor keybindings with Window Snap-style UI
 - **Enhanced drag previews** showing actual thumbnails and correct folder icons
 
 ## 🔧 Improvements
@@ -26,6 +27,7 @@
 - Fixed reorder drag position jumping when items swap positions
 - Fixed Quick Actions bar being clipped when dragging files over multi-row shelf
 - Fixed Dock folder drags not triggering shelf actions
+- Fixed shortcut registration not persisting after restart
 - Added cask URL verification to prevent Homebrew version mismatch bugs
 
 ---
