@@ -1,5 +1,9 @@
+✨ New Features
+- Settings scroll blur: Native blur/fade overlay elegantly hides content behind the header when scrolling
+- Configurable blur strength: Adjust redaction intensity from Strong to Subtle in Element Capture settings
+- Text Recognition (OCR): Quick shortcut to capture screen text, now integrated into Element Capture with configurable keybind
+
 🔧 Improvements
-- Settings scroll blur: Native blur/fade overlay appears when scrolling to elegantly hide content behind the header
-  - Uses ultraThinMaterial blur in transparent mode
-  - Uses smooth black gradient in dark mode
-  - Smoothly fades in based on scroll position
+- Crosshair cursor: Drawing tools and area capture now show crosshair for precise selections
+- Screenshot Editor enforces 900pt minimum width to ensure toolbar is always fully visible
+- Settings scroll blur adapts to appearance: ultraThinMaterial blur in transparent mode, smooth black gradient in dark mode
