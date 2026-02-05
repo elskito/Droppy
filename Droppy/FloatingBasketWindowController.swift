@@ -601,6 +601,14 @@ final class FloatingBasketWindowController: NSObject {
     /// Called when cursor exits the basket area (from FloatingBasketView)
     func onBasketHoverExit() {
         guard isAutoHideEnabled, !DroppyState.shared.basketItems.isEmpty else { return }
+
+        // If cursor is still inside the basket window, don't start hide
+        if let panel = basketWindow {
+            let mouseLocation = NSEvent.mouseLocation
+            if panel.frame.contains(mouseLocation) {
+                return
+            }
+        }
         
         // Don't trigger hide during file operations
         guard !DroppyState.shared.isFileOperationInProgress else { return }

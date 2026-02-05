@@ -111,6 +111,18 @@ struct BasketItemView: View {
     }
     
     var body: some View {
+        draggableItemContent
+        .animation(DroppyAnimation.hoverBouncy, value: isHovering)
+        .background(GeometryReader { geo in
+            Color.clear.preference(
+                key: ItemFramePreferenceKey.self,
+                value: [item.id: geo.frame(in: .named("basketContainer"))]
+            )
+        })
+    }
+
+    @ViewBuilder
+    private var draggableItemContent: some View {
         // MARK: - Pre-defined closures to help compiler type-check
         // (Breaking up complex expression that was timing out)
         
@@ -191,8 +203,8 @@ struct BasketItemView: View {
             HapticFeedback.pin()
             state.togglePin(item)
         } : nil
-        
-        return DraggableArea(
+
+        DraggableArea(
             items: itemsClosure,
             onTap: tapClosure,
             onDoubleClick: doubleClickClosure,
@@ -356,7 +368,7 @@ struct BasketItemView: View {
                     .frame(width: listRowWidth)
                     .background(
                         RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous)
-                            .fill(isSelected 
+                            .fill(isSelected
                                   ? Color.blue.opacity(isHovering ? 1.0 : 0.8)
                                   : Color.white.opacity(isHovering ? 0.18 : 0.12))
                     )
@@ -401,157 +413,350 @@ struct BasketItemView: View {
                     .frame(width: 76, height: 96)
                 }
             }
-            // Drop target for pinned folders - drop files INTO the folder
-            // CRITICAL: Disable when this item is being dragged to prevent gesture conflict
-            .dropDestination(for: URL.self) { urls, location in
-                guard !isDraggingSelf && enablePowerFolders && item.isPinned && item.isDirectory else { return false }
-                moveFilesToFolder(urls: urls, destination: item.url)
-                return true
-            } isTargeted: { targeted in
-                guard !isDraggingSelf && enablePowerFolders && item.isPinned && item.isDirectory else { return }
-                withAnimation(DroppyAnimation.easeOut) {
-                    isDropTargeted = targeted
-                }
-                // Cancel folder preview when drop is happening
-                if targeted {
-                    hoverTask?.cancel()
-                    showFolderPreview = false
-                }
+        }
+        // Drop target for pinned folders - drop files INTO the folder
+        // CRITICAL: Disable when this item is being dragged to prevent gesture conflict
+        .dropDestination(for: URL.self) { urls, location in
+            guard !isDraggingSelf && enablePowerFolders && item.isPinned && item.isDirectory else { return false }
+            moveFilesToFolder(urls: urls, destination: item.url)
+            return true
+        } isTargeted: { targeted in
+            guard !isDraggingSelf && enablePowerFolders && item.isPinned && item.isDirectory else { return }
+            withAnimation(DroppyAnimation.easeOut) {
+                isDropTargeted = targeted
             }
-            .overlay {
-                // Visual feedback when dropping files onto pinned folder
-                if isDropTargeted && item.isPinned {
-                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                        .stroke(Color.yellow, lineWidth: 3)
-                        .frame(width: 60, height: 60)
-                        .offset(y: -12)
-                }
+            // Cancel folder preview when drop is happening
+            if targeted {
+                hoverTask?.cancel()
+                showFolderPreview = false
             }
-            .onHover { hovering in
-                // CRITICAL: Ignore interaction if blocked (e.g. context menu open)
-                guard !state.isInteractionBlocked else { return }
-                
-                // Haptic feedback on hover start
-                if hovering {
-                    HapticFeedback.pop()
-                }
-                
-                // Direct state update - animation handled by view-level modifier
-                isHovering = hovering
-                
-                // Delayed folder preview for ALL folders (not just pinned)
-                if item.isDirectory {
-                    if hovering && !isDropTargeted {
-                        // Cancel any pending dismiss when returning to folder
-                        dismissTask?.cancel()
-                        dismissTask = nil
-                        
-                        hoverTask = Task {
-                            try? await Task.sleep(nanoseconds: 800_000_000)  // 0.8s delay
-                            if !Task.isCancelled && !isDropTargeted && !state.isInteractionBlocked {
-                                showFolderPreview = true
-                            }
-                        }
-                    } else {
-                        // Cancel pending show task
-                        hoverTask?.cancel()
-                        hoverTask = nil
-                        
-                        // Delayed dismiss - give user time to reach the popover
-                        if showFolderPreview {
-                            dismissTask = Task {
-                                try? await Task.sleep(nanoseconds: 300_000_000)  // 0.3s grace period
-                                // Only dismiss if cursor hasn't moved to the popover
-                                if !Task.isCancelled && !isHoveringPopover && !isHovering {
-                                    showFolderPreview = false
-                                }
-                            }
+        }
+        .overlay {
+            // Visual feedback when dropping files onto pinned folder
+            if isDropTargeted && item.isPinned {
+                RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
+                    .stroke(Color.yellow, lineWidth: 3)
+                    .frame(width: 60, height: 60)
+                    .offset(y: -12)
+            }
+        }
+        .onHover { hovering in
+            // CRITICAL: Ignore interaction if blocked (e.g. context menu open)
+            guard !state.isInteractionBlocked else { return }
+            
+            // Haptic feedback on hover start
+            if hovering {
+                HapticFeedback.pop()
+            }
+            
+            // Direct state update - animation handled by view-level modifier
+            isHovering = hovering
+            
+            // Delayed folder preview for ALL folders (not just pinned)
+            if item.isDirectory {
+                if hovering && !isDropTargeted {
+                    // Cancel any pending dismiss when returning to folder
+                    dismissTask?.cancel()
+                    dismissTask = nil
+                    
+                    hoverTask = Task {
+                        try? await Task.sleep(nanoseconds: 800_000_000)  // 0.8s delay
+                        if !Task.isCancelled && !isDropTargeted && !state.isInteractionBlocked {
+                            showFolderPreview = true
                         }
                     }
-                }
-            }
-            .onChange(of: state.isInteractionBlocked) { _, blocked in
-                if blocked {
+                } else {
+                    // Cancel pending show task
                     hoverTask?.cancel()
                     hoverTask = nil
-                    dismissTask?.cancel()
-                    dismissTask = nil
-                    showFolderPreview = false
-                    isHovering = false
-                }
-            }
-            .popover(isPresented: $showFolderPreview, arrowEdge: .bottom) {
-                FolderPreviewPopover(
-                    folderURL: item.url,
-                    isPinned: item.isPinned,
-                    isHovering: $isHoveringPopover
-                )
-            }
-            .onChange(of: isHoveringPopover) { _, hovering in
-                // When cursor leaves the popover, dismiss after grace period (if not back on folder)
-                if !hovering && showFolderPreview {
-                    dismissTask?.cancel()
-                    dismissTask = Task {
-                        try? await Task.sleep(nanoseconds: 150_000_000)  // 150ms to allow return to folder
-                        if !Task.isCancelled && !isHoveringPopover && !isHovering {
-                            showFolderPreview = false
+                    
+                    // Delayed dismiss - give user time to reach the popover
+                    if showFolderPreview {
+                        dismissTask = Task {
+                            try? await Task.sleep(nanoseconds: 300_000_000)  // 0.3s grace period
+                            // Only dismiss if cursor hasn't moved to the popover
+                            if !Task.isCancelled && !isHoveringPopover && !isHovering {
+                                showFolderPreview = false
+                            }
                         }
-                    }
-                } else if hovering {
-                    // Cancel any pending dismiss when entering popover
-                    dismissTask?.cancel()
-                    dismissTask = nil
-                }
-            }
-            .onChange(of: state.poofingItemIds) { _, newIds in
-                // Trigger local poof animation when this item is marked for poof (from bulk operations)
-                if newIds.contains(item.id) {
-                    withAnimation(DroppyAnimation.state) {
-                        isPoofing = true
-                    }
-                    // Clear the poof state after triggering
-                    state.clearPoof(for: item.id)
-                }
-            }
-            .onAppear {
-                // Check if this item was created with poof pending (from bulk operations)
-                if state.poofingItemIds.contains(item.id) {
-                    // Small delay to ensure view is fully rendered before animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        withAnimation(DroppyAnimation.state) {
-                            isPoofing = true
-                        }
-                        state.clearPoof(for: item.id)
-                    }
-                }
-                refreshContextMenuCache()
-            }
-            .onChange(of: item.url) { _, _ in
-                refreshContextMenuCache()
-            }
-            .contextMenu {
-                contextMenuContent()
-            }
-            .task {
-                // ASYNC: Load QuickLook thumbnail (if available)
-                if let cached = ThumbnailCache.shared.cachedThumbnail(for: item) {
-                    thumbnail = cached
-                } else if let asyncThumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 120, height: 120)) {
-                    withAnimation(DroppyAnimation.hover) {
-                        thumbnail = asyncThumbnail
                     }
                 }
             }
         }
-        .animation(DroppyAnimation.hoverBouncy, value: isHovering)
-        .background(GeometryReader { geo in
-            Color.clear.preference(
-                key: ItemFramePreferenceKey.self,
-                value: [item.id: geo.frame(in: .named("basketContainer"))]
+        .onChange(of: state.isInteractionBlocked) { _, blocked in
+            if blocked {
+                hoverTask?.cancel()
+                hoverTask = nil
+                dismissTask?.cancel()
+                dismissTask = nil
+                showFolderPreview = false
+                isHovering = false
+            }
+        }
+        .popover(isPresented: $showFolderPreview, arrowEdge: .bottom) {
+            FolderPreviewPopover(
+                folderURL: item.url,
+                isPinned: item.isPinned,
+                isHovering: $isHoveringPopover
             )
-        })
+        }
+        .onChange(of: isHoveringPopover) { _, hovering in
+            // When cursor leaves the popover, dismiss after grace period (if not back on folder)
+            if !hovering && showFolderPreview {
+                dismissTask?.cancel()
+                dismissTask = Task {
+                    try? await Task.sleep(nanoseconds: 150_000_000)  // 150ms to allow return to folder
+                    if !Task.isCancelled && !isHoveringPopover && !isHovering {
+                        showFolderPreview = false
+                    }
+                }
+            } else if hovering {
+                // Cancel any pending dismiss when entering popover
+                dismissTask?.cancel()
+                dismissTask = nil
+            }
+        }
+        .onChange(of: state.poofingItemIds) { _, newIds in
+            // Trigger local poof animation when this item is marked for poof (from bulk operations)
+            if newIds.contains(item.id) {
+                withAnimation(DroppyAnimation.state) {
+                    isPoofing = true
+                }
+                // Clear the poof state after triggering
+                state.clearPoof(for: item.id)
+            }
+        }
+        .onAppear {
+            // Check if this item was created with poof pending (from bulk operations)
+            if state.poofingItemIds.contains(item.id) {
+                // Small delay to ensure view is fully rendered before animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation(DroppyAnimation.state) {
+                        isPoofing = true
+                    }
+                    state.clearPoof(for: item.id)
+                }
+            }
+            refreshContextMenuCache()
+        }
+        .onChange(of: item.url) { _, _ in
+            refreshContextMenuCache()
+        }
+        .contextMenu {
+            contextMenuContent()
+        }
+        .task {
+            // ASYNC: Load QuickLook thumbnail (if available)
+            if let cached = ThumbnailCache.shared.cachedThumbnail(for: item) {
+                thumbnail = cached
+            } else if let asyncThumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 120, height: 120)) {
+                withAnimation(DroppyAnimation.hover) {
+                    thumbnail = asyncThumbnail
+                }
+            }
+        }
     }
     
+    // MARK: - Reorder Mode Content
+
+    @ViewBuilder
+    private var basketItemContent: some View {
+        if layoutMode == .list {
+            // List row layout
+            HStack(spacing: 12) {
+                // Squircle thumbnail with activity overlay
+                ZStack {
+                    Group {
+                        if let thumb = thumbnail {
+                            // QuickLook preview thumbnail
+                            Image(nsImage: thumb)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            // Native macOS icon (folders, zip, dmg, etc.) - matches grid view
+                            RoundedRectangle(cornerRadius: DroppyRadius.small, style: .continuous)
+                                .fill(Color.white.opacity(0.08))
+                                .overlay(
+                                    Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 24, height: 24)
+                                        // AUTO-TINT for Pinned Folders: Blue -> Yellow (+180 deg)
+                                        .hueRotation(item.isPinned && item.isDirectory ? .degrees(180) : .degrees(0))
+                                )
+                        }
+                    }
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.small, style: .continuous))
+                    
+                    // Activity indicator overlay
+                    if isConverting || isCompressing || isRemovingBackground || isExtractingText || isCreatingZIP {
+                        RoundedRectangle(cornerRadius: DroppyRadius.small, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 36, height: 36)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .tint(.white)
+                            )
+                    }
+                    
+                    // Poof overlay
+                    if isPoofing {
+                        RoundedRectangle(cornerRadius: DroppyRadius.small, style: .continuous)
+                            .fill(Color.green.opacity(0.8))
+                            .frame(width: 36, height: 36)
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.white)
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                            .onAppear {
+                                // Auto-fade after 1.5 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    withAnimation(DroppyAnimation.easeOut) {
+                                        isPoofing = false
+                                    }
+                                }
+                            }
+                    }
+                }
+                
+                // Name and size (with renaming support)
+                VStack(alignment: .leading, spacing: 2) {
+                    // Filename or rename text field
+                    if renamingItemId == item.id {
+                        RenameTextField(
+                            text: $renamingText,
+                            isRenaming: Binding(
+                                get: { renamingItemId == item.id },
+                                set: { if !$0 { 
+                                    renamingItemId = nil
+                                    state.isRenaming = false
+                                    state.endFileOperation()
+                                } }
+                            ),
+                            onRename: performRename
+                        )
+                        .frame(maxWidth: listRowWidth.map { $0 - 80 })
+                        .onAppear {
+                            renamingText = item.url.deletingPathExtension().lastPathComponent
+                        }
+                    } else {
+                        Text(item.name)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    
+                    if isConverting {
+                        Text("Converting...")
+                            .font(.system(size: 11))
+                            .foregroundStyle(isSelected ? .white.opacity(0.9) : .orange.opacity(0.8))
+                    } else if isCompressing {
+                        Text("Compressing...")
+                            .font(.system(size: 11))
+                            .foregroundStyle(isSelected ? .white.opacity(0.9) : .blue.opacity(0.8))
+                    } else if isRemovingBackground {
+                        Text("Removing BG...")
+                            .font(.system(size: 11))
+                            .foregroundStyle(isSelected ? .white.opacity(0.9) : .purple.opacity(0.8))
+                    } else if isExtractingText {
+                        Text("Extracting text...")
+                            .font(.system(size: 11))
+                            .foregroundStyle(isSelected ? .white.opacity(0.9) : .green.opacity(0.8))
+                    } else if isCreatingZIP {
+                        Text("Creating ZIP...")
+                            .font(.system(size: 11))
+                            .foregroundStyle(isSelected ? .white.opacity(0.9) : .cyan.opacity(0.8))
+                    } else if item.isDirectory {
+                        Text(item.isPinned ? "Pinned Folder" : "Folder")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.5))
+                    } else {
+                        Text(listFileSize)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                // Text container: MUST truncate, never expand
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()  // CRITICAL: Force text truncation
+                
+                // File extension or folder badge - FIXED width, never shrink
+                Group {
+                    if item.isDirectory {
+                        Text("FOLDER")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.white.opacity(0.1)))
+                    } else if !item.url.pathExtension.isEmpty {
+                        Text(item.url.pathExtension.uppercased())
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.white.opacity(0.1)))
+                    }
+                }
+                .fixedSize()  // Badge never shrinks
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            // CRITICAL: Fixed width inside DraggableArea to constrain text (matches ClipboardItemRow pattern)
+            .frame(width: listRowWidth)
+            .background(
+                RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous)
+                    .fill(isSelected 
+                          ? Color.blue.opacity(isHovering ? 1.0 : 0.8)
+                          : Color.white.opacity(isHovering ? 0.18 : 0.12))
+            )
+            .scaleEffect(isHovering && !isSelected ? 1.02 : 1.0)
+        } else {
+            // Grid card layout (original)
+            BasketItemContent(
+                item: item,
+                state: state,
+                onRemove: onRemove,
+                thumbnail: thumbnail,
+                isHovering: isHovering,
+                isConverting: isConverting,
+                isExtractingText: isExtractingText,
+                isRemovingBackground: isRemovingBackground,
+                isCompressing: isCompressing,
+                isUnzipping: isUnzipping,
+                isCreatingZIP: isCreatingZIP,
+                isSelected: isSelected,
+                isPoofing: $isPoofing,
+                pendingConvertedItem: $pendingConvertedItem,
+                renamingItemId: $renamingItemId,
+                renamingText: $renamingText,
+                onRename: performRename,
+                onUnzip: unzipFile
+            )
+            .offset(x: shakeOffset)
+            .overlay(alignment: .center) {
+                if isShakeAnimating {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
+                            .fill(useTransparentBackground ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.black))
+                            .frame(width: 44, height: 44)
+                            .shadow(radius: 4)
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(LinearGradient(colors: [.green, .mint], startPoint: .top, endPoint: .bottom))
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .frame(width: 76, height: 96)
+        }
+    }
+
     // MARK: - Context Menu Content
     @ViewBuilder
     private func contextMenuContent() -> some View {

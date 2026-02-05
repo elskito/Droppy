@@ -121,6 +121,9 @@ struct ScreenshotEditorView: View {
     private let colors: [Color] = [.red, .orange, .yellow, .green, .cyan, .purple, .white]
     private let strokeWidths: [(CGFloat, String)] = [(2, "S"), (4, "M"), (6, "L")]
     
+    // Transparent mode preference
+    @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
+    
     var body: some View {
         VStack(spacing: 0) {
             // Title bar (draggable area)
@@ -190,10 +193,11 @@ struct ScreenshotEditorView: View {
                     canvasSize = scaledSize
                 }
             }
-            .background(Color.black)
+            .background(useTransparentBackground ? Color.clear : Color.black)
         }
-        .frame(minWidth: 800, minHeight: 500)
-        .background(Color(white: 0.10))
+        .frame(minWidth: 600, idealWidth: 800, maxWidth: .infinity)
+        .frame(minHeight: 400, idealHeight: 600, maxHeight: .infinity)
+        .background(useTransparentBackground ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color(white: 0.10)))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .sheet(isPresented: $showingTextInput) {
             textInputSheet
@@ -347,7 +351,11 @@ struct ScreenshotEditorView: View {
         .padding(.vertical, 10)
         .background(
             ZStack {
-                Color(white: 0.08)
+                if useTransparentBackground {
+                    Color.white.opacity(0.06)
+                } else {
+                    Color(white: 0.08)
+                }
                 WindowDragView()
             }
         )
@@ -500,7 +508,7 @@ struct ScreenshotEditorView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
         }
-        .background(Color(white: 0.06))
+        .background(useTransparentBackground ? Color.white.opacity(0.04) : Color(white: 0.06))
     }
     
     private var toolbarDivider: some View {

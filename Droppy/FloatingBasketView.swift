@@ -53,12 +53,6 @@ struct FloatingBasketView: View {
     // Global rename state
     @State private var renamingItemId: UUID?
     
-    // Drag-to-rearrange state
-    @State private var draggingBasketItem: UUID?
-    
-    // iOS-style persistent reorder mode
-    @State private var isReorderModeActive = false
-    
     private let cornerRadius: CGFloat = 28
     
     // Each item is 72pt wide + 12pt spacing (in expanded view)
@@ -262,6 +256,15 @@ struct FloatingBasketView: View {
             }
         }
         .contextMenu {
+            if !state.basketItems.isEmpty {
+                Button {
+                    let basketFrame = FloatingBasketWindowController.shared.basketWindow?.frame
+                    ReorderWindowController.shared.show(state: state, target: .basket, anchorFrame: basketFrame)
+                } label:{
+                    Label("Reorder Items", systemImage: "arrow.up.arrow.down")
+                }
+            }
+            
             Button {
                 closeBasket()
             } label: {
@@ -743,15 +746,6 @@ struct FloatingBasketView: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Exit reorder mode
-                        if isReorderModeActive {
-                            withAnimation(DroppyAnimation.bouncy) {
-                                isReorderModeActive = false
-                            }
-                            DroppyState.shared.isReorderModeActive = false
-                            return
-                        }
-                        
                         state.deselectAllBasket()
                         // If rename was active, end the file operation lock
                         if renamingItemId != nil {
@@ -775,22 +769,13 @@ struct FloatingBasketView: View {
                         .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
                     }
                     
-                    // Regular items - flat display with drag-to-rearrange
+                    // Regular items - flat display
                     ForEach(state.basketItemsList) { item in
                         BasketItemView(item: item, state: state, renamingItemId: $renamingItemId) {
                             withAnimation(DroppyAnimation.state) {
                                 state.removeBasketItem(item)
                             }
                         }
-                        .reorderable(
-                            item: item,
-                            in: $state.basketItemsList,
-                            draggingItem: $draggingBasketItem,
-                            isEditModeActive: $isReorderModeActive,
-                            columns: columnsPerRow,
-                            itemSize: CGSize(width: itemWidth, height: 90),
-                            spacing: itemSpacing
-                        )
                         .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))
                     }
                 }

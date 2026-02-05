@@ -60,18 +60,29 @@ final class ScreenshotEditorWindowController {
         hosting.layer?.cornerRadius = cornerRadius
         self.hostingView = hosting
         
-        // Create borderless Droppy sheet window
+        // Create resizable window with hidden titlebar
         let newWindow = NSWindow(
             contentRect: NSRect(origin: .zero, size: NSSize(width: windowWidth, height: windowHeight)),
-            styleMask: [.borderless],
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
+        // Hide titlebar but keep resize functionality
+        newWindow.titlebarAppearsTransparent = true
+        newWindow.titleVisibility = .hidden
+        newWindow.standardWindowButton(.closeButton)?.isHidden = true
+        newWindow.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        newWindow.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        // Size constraints for resizing
+        newWindow.minSize = NSSize(width: 600, height: 400)
+        newWindow.maxSize = NSSize(width: 1600, height: 1200)
+        
         newWindow.contentView = hosting
         newWindow.backgroundColor = .clear
         newWindow.isOpaque = false
-        newWindow.hasShadow = true  // Window-level shadow (properly rounded)
+        newWindow.hasShadow = true
         newWindow.level = .floating
         newWindow.isMovableByWindowBackground = false  // Disabled so canvas drawing doesn't move window
         newWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]

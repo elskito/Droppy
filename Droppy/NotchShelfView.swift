@@ -100,12 +100,6 @@ struct NotchShelfView: View {
     // Global rename state
     @State private var renamingItemId: UUID?
     
-    // Drag-to-rearrange state
-    @State private var draggingShelfItem: UUID?
-    
-    // iOS-style persistent reorder mode
-    @State private var isReorderModeActive = false
-    
     // Media HUD hover state - used to grow notch when showing song title
     @State private var mediaHUDIsHovered: Bool = false
     @State private var mediaHUDHoverWorkItem: DispatchWorkItem?  // Debounce for hover state
@@ -1984,6 +1978,28 @@ struct NotchShelfView: View {
                 } label: {
                     Label("Open Clipboard", systemImage: "clipboard")
                 }
+            }
+            
+            if !state.shelfItems.isEmpty {
+                Button {
+                    // Calculate shelf anchor: top-center of main screen
+                    if let screen = NSScreen.main {
+                        let shelfAnchor = NSRect(
+                            x: screen.frame.midX - 200,
+                            y: screen.frame.maxY - 100,  // Near top of screen where shelf is
+                            width: 400,
+                            height: 80
+                        )
+                        ReorderWindowController.shared.show(state: state, target: .shelf, anchorFrame: shelfAnchor)
+                    } else {
+                        ReorderWindowController.shared.show(state: state, target: .shelf)
+                    }
+                } label: {
+                    Label("Reorder Items", systemImage: "arrow.up.arrow.down")
+                }
+            }
+            
+            if showClipboardButton || !state.shelfItems.isEmpty {
                 Divider()
             }
             
@@ -2240,6 +2256,26 @@ struct NotchShelfView: View {
                 }
             }
             
+            // Reorder shelf items
+            if !state.shelfItems.isEmpty {
+                Button {
+                    // Calculate shelf anchor: top-center of main screen
+                    if let screen = NSScreen.main {
+                        let shelfAnchor = NSRect(
+                            x: screen.frame.midX - 200,
+                            y: screen.frame.maxY - 100,  // Near top of screen where shelf is
+                            width: 400,
+                            height: 80
+                        )
+                        ReorderWindowController.shared.show(state: state, target: .shelf, anchorFrame: shelfAnchor)
+                    } else {
+                        ReorderWindowController.shared.show(state: state, target: .shelf)
+                    }
+                } label: {
+                    Label("Reorder Items", systemImage: "arrow.up.arrow.down")
+                }
+            }
+            
             // Clear shelf (when items exist)
             if !state.items.isEmpty {
                 Button {
@@ -2300,28 +2336,17 @@ struct NotchShelfView: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Exit reorder mode
-                        if isReorderModeActive {
-                            withAnimation(DroppyAnimation.bouncy) {
-                                isReorderModeActive = false
-                            }
-                            DroppyState.shared.isReorderModeActive = false
-                            return
-                        }
-                        
                         state.deselectAll()
                         if renamingItemId != nil {
                             state.isRenaming = false
                         }
                         renamingItemId = nil
                     }
-                    // Moved Marquee Drag Gesture HERE so it doesn't conflict with dragging items
-                    // Use higher minimum distance (10) to allow item-level gestures (reordering at 8) to fire first
                     .gesture(
-                         DragGesture(minimumDistance: 10, coordinateSpace: .named("shelfGrid"))
-                             .onChanged { value in
-                                 // Start selection
-                                 if selectionRect == nil {
+                             DragGesture(minimumDistance: 10, coordinateSpace: .named("shelfGrid"))
+                              .onChanged { value in
+                                  // Start selection
+                                  if selectionRect == nil {
                                      initialSelection = state.selectedItems
                                      
                                      if !NSEvent.modifierFlags.contains(.command) && !NSEvent.modifierFlags.contains(.shift) {
@@ -2347,11 +2372,12 @@ struct NotchShelfView: View {
                                  }
                                  state.selectedItems = newSelection
                              }
-                             .onEnded { _ in
-                                 selectionRect = nil
-                                 initialSelection = []
-                             }
-                    )
+                              .onEnded { _ in
+                                   // Finalize selection
+                                   selectionRect = nil
+                                  initialSelection = []
+                              }
+                     )
                 
                 // Items grid using LazyVGrid with flexible layout to fill available space
                 // Use flexible columns that expand to fill the container width evenly
@@ -2385,15 +2411,6 @@ struct NotchShelfView: View {
                                     state.removeItem(item)
                                 }
                             }
-                        )
-                        .reorderable(
-                            item: item,
-                            in: $state.shelfItems,
-                            draggingItem: $draggingShelfItem,
-                            isEditModeActive: $isReorderModeActive,
-                            columns: 5,
-                            itemSize: CGSize(width: 72, height: 90),
-                            spacing: 12
                         )
                         // PERFORMANCE: Skip transitions during bulk add
                         .transition(state.isBulkUpdating ? .identity : .scale.combined(with: .opacity))

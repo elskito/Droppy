@@ -283,67 +283,58 @@ struct NotchItemView: View {
             state.togglePin(item)
         } : nil
         
-        return DraggableArea(
-            items: itemsClosure,
-            onTap: tapClosure,
-            onDoubleClick: doubleClickClosure,
-            onRightClick: rightClickClosure,
-            onDragStart: dragStartClosure,
-            onDragComplete: dragCompleteClosure,
-            onRemoveButton: item.isPinned ? nil : onRemove,
-            onPinButton: pinButtonClosure,
-            selectionSignature: state.selectedItems.hashValue
-        ) {
-            NotchItemContent(
-                item: item,
-                state: state,
-                onRemove: onRemove,
-                thumbnail: thumbnail,
-                isHovering: isHovering,
-                isConverting: isConverting,
-                isExtractingText: isExtractingText,
-                isRemovingBackground: isRemovingBackground,
-                isCompressing: isCompressing,
-                isUnzipping: isUnzipping,
-                isCreatingZIP: isCreatingZIP,
-                isPoofing: $isPoofing,
-                pendingConvertedItem: $pendingConvertedItem,
-                renamingItemId: $renamingItemId,
-                renamingText: $renamingText,
-                onRename: performRename,
-                onUnzip: unzipFile
-            )
-            .offset(x: shakeOffset)
-            .overlay(alignment: .center) {
-                if isShakeAnimating {
-                    ZStack {
-                        // NOTE: Part of shelf UI - always solid black
-                        RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                            .fill(Color.black)
-                            .frame(width: 44, height: 44)
-                            .shadow(radius: 4)
-                        Image(systemName: "checkmark.shield.fill")
-                            .font(.system(size: 22))
-                            .foregroundStyle(LinearGradient(colors: [.green, .mint], startPoint: .top, endPoint: .bottom))
+        let baseContent = NotchItemContent(
+            item: item,
+            state: state,
+            onRemove: onRemove,
+            thumbnail: thumbnail,
+            isHovering: isHovering,
+            isConverting: isConverting,
+            isExtractingText: isExtractingText,
+            isRemovingBackground: isRemovingBackground,
+            isCompressing: isCompressing,
+            isUnzipping: isUnzipping,
+            isCreatingZIP: isCreatingZIP,
+            isPoofing: $isPoofing,
+            pendingConvertedItem: $pendingConvertedItem,
+            renamingItemId: $renamingItemId,
+            renamingText: $renamingText,
+            onRename: performRename,
+            onUnzip: unzipFile
+        )
+        .offset(x: shakeOffset)
+        .overlay(alignment: .center) {
+            if isShakeAnimating {
+                ZStack {
+                    // NOTE: Part of shelf UI - always solid black
+                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
+                        .fill(Color.black)
+                        .frame(width: 44, height: 44)
+                        .shadow(radius: 4)
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(LinearGradient(colors: [.green, .mint], startPoint: .top, endPoint: .bottom))
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .frame(width: 76, height: 96)
+
+        let interactiveContent = baseContent
+            .background {
+                if !state.isBulkUpdating {
+                    GeometryReader { geo in
+                        Color.clear
+                            .preference(
+                                key: ItemFramePreferenceKey.self,
+                                value: [item.id: geo.frame(in: .named("shelfGrid"))]
+                            )
                     }
-                    .transition(.scale.combined(with: .opacity))
                 }
             }
-            .frame(width: 76, height: 96)
-                .background {
-                    if !state.isBulkUpdating {
-                        GeometryReader { geo in
-                            Color.clear
-                                .preference(
-                                    key: ItemFramePreferenceKey.self,
-                                    value: [item.id: geo.frame(in: .named("shelfGrid"))]
-                                )
-                        }
-                    }
-                }
             // Drop target for ANY folder - drop files INTO the folder
             // CRITICAL: Disable when this item is being dragged to prevent gesture conflict
-            .dropDestination(for: URL.self) { urls, location in
+            .dropDestination(for: URL.self) { urls, _ in
                 guard !isDraggingSelf && item.isDirectory else { return false }
                 moveFilesToFolder(urls: urls, destination: item.url)
                 return true
@@ -751,21 +742,50 @@ struct NotchItemView: View {
                 }
             }
         }
-            .task {
-                // ASYNC: Load QuickLook thumbnail (if available)
-                while state.isBulkUpdating {
-                    try? await Task.sleep(nanoseconds: 120_000_000)
-                }
-                if let cached = ThumbnailCache.shared.cachedThumbnail(for: item) {
-                    thumbnail = cached
-                } else if let asyncThumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 120, height: 120)) {
+
+        // SIMPLIFIED ARCHITECTURE:
+        // onDrag/onDrop works at the macOS pasteboard level, NOT the gesture level.
+        // This means it coexists peacefully with DraggableArea (NSViewRepresentable).
+        // We always wrap in DraggableArea for external file dragging, and conditionally
+        // apply .reorderable() on TOP of it when in reorder mode.
+        
+        // Common async task for thumbnail loading
+        let thumbnailTask: @Sendable () async -> Void = {
+            var isBulk = await MainActor.run { state.isBulkUpdating }
+            while isBulk {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+                isBulk = await MainActor.run { state.isBulkUpdating }
+            }
+            if let cached = await ThumbnailCache.shared.cachedThumbnail(for: item) {
+                await MainActor.run { thumbnail = cached }
+            } else if let asyncThumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 120, height: 120)) {
+                await MainActor.run {
                     withAnimation(DroppyAnimation.hover) {
                         thumbnail = asyncThumbnail
                     }
                 }
             }
+        }
+        
+        // Always use DraggableArea for file dragging to external apps
+        let dragWrapper = DraggableArea(
+            items: itemsClosure,
+            onTap: tapClosure,
+            onDoubleClick: doubleClickClosure,
+            onRightClick: rightClickClosure,
+            onDragStart: dragStartClosure,
+            onDragComplete: dragCompleteClosure,
+            onRemoveButton: item.isPinned ? nil : onRemove,
+            onPinButton: pinButtonClosure,
+            selectionSignature: state.selectedItems.hashValue
+        ) {
+            interactiveContent
+        }
+        
+        // Build the base view with common modifiers
+        return dragWrapper
+            .task { await thumbnailTask() }
             .animation(state.isBulkUpdating ? .none : DroppyAnimation.hoverBouncy, value: isHovering)
-        } // DraggableArea closes here
     }
 
     private func refreshContextMenuCache() {
