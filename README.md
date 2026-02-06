@@ -33,7 +33,7 @@
 </div>
 
 
-## ✨ Core Features
+## Core Features
 
 <p align="center">
 <img src="docs/assets/images/feature-shelf.png" width="300" alt="File Shelf" />
