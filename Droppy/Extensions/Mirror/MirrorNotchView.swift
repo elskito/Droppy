@@ -10,7 +10,6 @@ struct MirrorNotchView: View {
     @ObservedObject var manager: MirrorManager
     var notchHeight: CGFloat = 0
     var isExternalWithNotchStyle: Bool = false
-    private let previewAspectRatio: CGFloat = 16.0 / 9.0
 
     private var contentPadding: EdgeInsets {
         NotchLayoutConstants.contentEdgeInsets(
@@ -26,8 +25,8 @@ struct MirrorNotchView: View {
             switch manager.state {
             case .running:
                 MirrorCameraPreviewView(manager: manager)
-                    .aspectRatio(previewAspectRatio, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)

@@ -21,6 +21,7 @@ struct MirrorCameraPreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: MirrorPreviewContainerView, context: Context) {
+        nsView.previewLayer.videoGravity = .resizeAspectFill
         if nsView.previewLayer.session !== manager.session {
             nsView.previewLayer.session = manager.session
         }
@@ -46,6 +47,7 @@ final class MirrorPreviewContainerView: NSView {
 
     override func layout() {
         super.layout()
+        previewLayer.videoGravity = .resizeAspectFill
         previewLayer.frame = bounds
     }
 }
