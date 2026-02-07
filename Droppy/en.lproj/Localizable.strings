@@ -6,7 +6,7 @@
 */
 
 /* To-Do Extension Metadata */
-"todo.title" = "To-do";
+"todo.title" = "Reminders";
 "todo.subtitle" = "Tasks & Notes";
 "todo.description" = "A lightweight task capture bar and checklist. Supports priorities and auto-cleanup of completed tasks.";
 
@@ -34,13 +34,21 @@
 /* Actions & Accessibility */
 "action.delete" = "Delete";
 "action.delete_task" = "Delete task";
+"action.add_task" = "Add task";
 "action.mark_complete" = "Mark complete";
 "action.mark_incomplete" = "Mark incomplete";
 "action.set_priority" = "Set priority";
 "action.hide_tasks" = "Hide tasks";
 "action.show_tasks" = "Show tasks";
+"action.edit" = "Edit";
+"action.save" = "Save";
+"action.cancel" = "Cancel";
 "action.close" = "Close";
 "action.install" = "Install";
+
+/* Task Editing */
+"task_title" = "Task title";
+"tasks_cleaned_up %lld" = "%lld tasks cleaned up";
 
 /* Settings */
 "settings.title" = "Settings";

@@ -13,7 +13,10 @@ struct ToDoInfoView: View {
 
     @AppStorage(AppPreferenceKey.todoInstalled) private var isInstalled = PreferenceDefault.todoInstalled
     @AppStorage(AppPreferenceKey.todoAutoCleanupHours) private var autoCleanupHours = PreferenceDefault.todoAutoCleanupHours
+    @AppStorage(AppPreferenceKey.todoSyncRemindersEnabled) private var syncRemindersEnabled = PreferenceDefault.todoSyncRemindersEnabled
+    @State private var manager = ToDoManager.shared
     @State private var showReviewsSheet = false
+    @State private var focusedListIndex: Int? = nil
 
     // Stats passed from parent
     var installCount: Int?
@@ -54,6 +57,11 @@ struct ToDoInfoView: View {
         .sheet(isPresented: $showReviewsSheet) {
             ExtensionReviewsSheet(extensionType: .todo)
         }
+        .onAppear {
+            if syncRemindersEnabled {
+                manager.refreshReminderListsNow()
+            }
+        }
     }
 
     // MARK: - Header
@@ -61,15 +69,33 @@ struct ToDoInfoView: View {
     private var headerSection: some View {
         VStack(spacing: 12) {
             // Icon
-            Image(systemName: "checklist")
-                .font(.system(size: 32, weight: .medium))
-                .foregroundStyle(.blue)
+            if let iconURL = ToDoExtension.iconURL {
+                CachedAsyncImage(url: iconURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Image(systemName: "checklist")
+                        .font(.system(size: 32, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .frame(width: 64, height: 64)
+                        .background(Color.blue.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
+                }
                 .frame(width: 64, height: 64)
-                .background(Color.blue.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
                 .shadow(color: .blue.opacity(0.4), radius: 8, y: 4)
+            } else {
+                Image(systemName: "checklist")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .frame(width: 64, height: 64)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
+                    .shadow(color: .blue.opacity(0.4), radius: 8, y: 4)
+            }
 
-            Text("To-do")
+            Text("Reminders")
                 .font(.title2.bold())
 
             // Stats Row
@@ -116,6 +142,24 @@ struct ToDoInfoView: View {
             Text("Quick task capture and checklist")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            
+            // Community Extension Badge
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 11))
+                Text("Community Extension")
+                    .font(.caption.weight(.medium))
+                Text("by")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                Link("Valetivivek", destination: URL(string: "https://github.com/valetivivek")!)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.blue)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.purple.opacity(0.12)))
         }
         .padding(.top, 24)
         .padding(.bottom, 20)
@@ -169,6 +213,8 @@ struct ToDoInfoView: View {
                     }
                     Spacer()
                     Picker("", selection: $autoCleanupHours) {
+                        Text("Instantly").tag(0)
+                        Text("5 minutes").tag(-5)
                         Text("1 hour").tag(1)
                         Text("2 hours").tag(2)
                         Text("5 hours").tag(5)
@@ -176,9 +222,61 @@ struct ToDoInfoView: View {
                         Text("24 hours").tag(24)
                     }
                     .pickerStyle(.menu)
-                    .frame(width: 110)
+                    .frame(width: 120)
                 }
                 .padding(DroppySpacing.md)
+
+                Divider()
+                    .padding(.horizontal, DroppySpacing.md)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Apple Reminders sync")
+                            .font(.callout.weight(.medium))
+                        Text("Two-way sync with Apple Reminders")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { syncRemindersEnabled },
+                        set: { newValue in
+                            syncRemindersEnabled = newValue
+                            manager.setRemindersSyncEnabled(newValue)
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                }
+                .padding(.horizontal, DroppySpacing.md)
+                .padding(.vertical, 12)
+
+                if syncRemindersEnabled {
+                    Divider()
+                        .padding(.horizontal, DroppySpacing.md)
+
+                    reminderListsSection
+
+                    Divider()
+                        .padding(.horizontal, DroppySpacing.md)
+                } else {
+                    Divider()
+                        .padding(.horizontal, DroppySpacing.md)
+                }
+
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sync behavior")
+                            .font(.callout.weight(.medium))
+                        Text("Automatically syncs when Reminders opens and in real time when Apple Reminders change.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, DroppySpacing.md)
+                .padding(.vertical, 12)
             }
             .background(Color.white.opacity(0.03))
             .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous))
@@ -186,7 +284,145 @@ struct ToDoInfoView: View {
                 RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
                     .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
+            .onChange(of: autoCleanupHours) { _, _ in
+                manager.performCleanupNow()
+            }
         }
+    }
+
+    private var reminderListsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reminder lists")
+                        .font(.callout.weight(.medium))
+                    Text("Choose which Apple Reminders lists are shown in Reminders.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+                HStack(spacing: 6) {
+                    Button {
+                        manager.selectAllReminderLists()
+                    } label: {
+                        Text("All")
+                            .frame(minWidth: 34)
+                    }
+                    .buttonStyle(DroppyPillButtonStyle(size: .small))
+
+                    Button {
+                        manager.clearReminderListsSelection()
+                    } label: {
+                        Text("None")
+                            .frame(minWidth: 44)
+                    }
+                    .buttonStyle(DroppyPillButtonStyle(size: .small))
+                }
+            }
+            .padding(.horizontal, DroppySpacing.md)
+            .padding(.top, 12)
+
+            if manager.availableReminderLists.isEmpty {
+                Text("No reminder lists found.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, DroppySpacing.md)
+                    .padding(.bottom, 12)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(manager.availableReminderLists.enumerated()), id: \.element.id) { index, list in
+                        Button {
+                            manager.toggleReminderListSelection(list.id)
+                        } label: {
+                            HStack(spacing: 10) {
+                                reminderListBadge(colorHex: list.colorHex)
+                                Text(list.title)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                    .lineLimit(1)
+                                Spacer()
+                                Image(systemName: manager.isReminderListSelected(list.id) ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(manager.isReminderListSelected(list.id) ? .blue : .white.opacity(0.32))
+                            }
+                            .padding(.horizontal, DroppySpacing.md)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(focusedListIndex == index ? Color.white.opacity(0.08) : Color.clear)
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < manager.availableReminderLists.count - 1 {
+                            Divider()
+                                .padding(.leading, DroppySpacing.md + 28)
+                                .padding(.trailing, DroppySpacing.md)
+                        }
+                    }
+                }
+                .onKeyPress(.downArrow) {
+                    let count = manager.availableReminderLists.count
+                    guard count > 0 else { return .ignored }
+                    withAnimation(DroppyAnimation.hover) {
+                        if let current = focusedListIndex {
+                            focusedListIndex = min(current + 1, count - 1)
+                        } else {
+                            focusedListIndex = 0
+                        }
+                    }
+                    return .handled
+                }
+                .onKeyPress(.upArrow) {
+                    let count = manager.availableReminderLists.count
+                    guard count > 0 else { return .ignored }
+                    withAnimation(DroppyAnimation.hover) {
+                        if let current = focusedListIndex {
+                            focusedListIndex = max(current - 1, 0)
+                        } else {
+                            focusedListIndex = count - 1
+                        }
+                    }
+                    return .handled
+                }
+                .onKeyPress(.return) {
+                    guard let index = focusedListIndex,
+                          index < manager.availableReminderLists.count else { return .ignored }
+                    let list = manager.availableReminderLists[index]
+                    manager.toggleReminderListSelection(list.id)
+                    return .handled
+                }
+                .focusable()
+                .focusEffectDisabled()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func reminderListBadge(colorHex: String?) -> some View {
+        let tint = colorFromHex(colorHex) ?? Color.white.opacity(0.65)
+        ZStack {
+            Circle()
+                .fill(tint.opacity(0.2))
+                .frame(width: 18, height: 18)
+            Circle()
+                .stroke(tint.opacity(0.55), lineWidth: 1)
+                .frame(width: 18, height: 18)
+            Image(systemName: "list.bullet")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(tint)
+        }
+    }
+
+    private func colorFromHex(_ hex: String?) -> Color? {
+        guard let hex else { return nil }
+        let trimmed = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+        guard trimmed.count == 6, let value = Int(trimmed, radix: 16) else { return nil }
+        let red = Double((value >> 16) & 0xFF) / 255.0
+        let green = Double((value >> 8) & 0xFF) / 255.0
+        let blue = Double(value & 0xFF) / 255.0
+        return Color(red: red, green: green, blue: blue)
     }
 
     // MARK: - Footer
@@ -236,15 +472,15 @@ struct ToDoPreviewView: View {
         VStack(spacing: 1) {
             // Sample task rows
             previewRow(title: "Review pull request", priority: .high, isCompleted: false)
-            Divider().background(Color.white.opacity(0.1)).padding(.leading, 32)
+            Divider().background(Color.white.opacity(0.06)).padding(.horizontal, 24)
             
             previewRow(title: "Update documentation", priority: .medium, isCompleted: false)
-            Divider().background(Color.white.opacity(0.1)).padding(.leading, 32)
+            Divider().background(Color.white.opacity(0.06)).padding(.horizontal, 24)
             
             previewRow(title: "Fix login bug", priority: .normal, isCompleted: true)
         }
         .padding(12)
-        .background(Color.black.opacity(0.3))
+        .background(AdaptiveColors.buttonBackgroundAuto.opacity(0.6))
         .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous)
@@ -261,7 +497,7 @@ struct ToDoPreviewView: View {
             Text(title)
                 .font(.system(size: 13, weight: isCompleted ? .regular : .medium))
                 .strikethrough(isCompleted)
-                .foregroundColor(isCompleted ? .secondary : (priority == .normal ? .primary : priority.color))
+                .foregroundColor(isCompleted ? .secondary : .white.opacity(0.9))
                 .lineLimit(1)
 
             Spacer()

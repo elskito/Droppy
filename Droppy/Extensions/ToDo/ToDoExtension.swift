@@ -2,14 +2,14 @@
 //  ToDoExtension.swift
 //  Droppy
 //
-//  Self-contained definition for To-do/Notes extension
+//  Self-contained definition for Reminders extension
 //
 
 import SwiftUI
 
 struct ToDoExtension: ExtensionDefinition {
     static let id = "todo"
-    static let title = "To-do"
+    static let title = "Reminders"
     static let subtitle = "Tasks & Notes"
     static let category: ExtensionGroup = .productivity
     static let categoryColor: Color = .blue
@@ -23,14 +23,20 @@ struct ToDoExtension: ExtensionDefinition {
         ("keyboard", "Keyboard shortcuts for power users")
     ]
     
-    static let screenshotURL: URL? = nil
+    static let screenshotURL: URL? = URL(string: "https://getdroppy.app/assets/images/reminders-screenshot.gif")
     static let previewView: AnyView? = AnyView(ToDoPreviewView())
     
-    static let iconURL: URL? = nil 
+    static let iconURL: URL? = URL(string: "https://getdroppy.app/assets/icons/todo.svg")
     static let iconPlaceholder: String = "checklist"
     static let iconPlaceholderColor: Color = .blue
     
+    // MARK: - Community Extension
+    
+    static let isCommunity = true
+    static let creatorName: String? = "Valetivivek"
+    static let creatorURL: URL? = URL(string: "https://github.com/valetivivek")
+    
     static func cleanup() {
-        // No special cleanup needed beyond what standard persistence handles
+        ToDoManager.shared.hide()
     }
 }

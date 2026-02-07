@@ -119,8 +119,7 @@ struct ExtensionsShopView: View {
                     screenshotURL: "https://getdroppy.app/assets/images/quickshare-screenshot.png",
                     accentColor: .cyan,
                     isInstalled: true,
-                    features: ["Instant upload", "Auto-copy link", "Track expiry"],
-                    isNew: true
+                    features: ["Instant upload", "Auto-copy link", "Track expiry"]
                 ) {
                     QuickshareInfoView(
                         installCount: extensionCounts["quickshare"],
@@ -129,8 +128,27 @@ struct ExtensionsShopView: View {
                 }
             }
             
-            // Row 2: Notify me! + High Alert
+            // Row 2: Community extensions
             HStack(spacing: 12) {
+                FeaturedExtensionCardCompact(
+                    category: "COMMUNITY",
+                    title: "Reminders",
+                    subtitle: "Tasks & Notes",
+                    iconURL: "https://getdroppy.app/assets/icons/todo.svg",
+                    iconPlaceholder: "checklist",
+                    iconPlaceholderColor: .blue,
+                    screenshotURL: "https://getdroppy.app/assets/images/reminders-screenshot.gif",
+                    accentColor: .blue,
+                    isInstalled: isTodoInstalled,
+                    isNew: true,
+                    isCommunity: true
+                ) {
+                    ToDoInfoView(
+                        installCount: extensionCounts["todo"],
+                        rating: extensionRatings["todo"]
+                    )
+                }
+                
                 FeaturedExtensionCardCompact(
                     category: "COMMUNITY",
                     title: "Notify me!",
@@ -139,7 +157,6 @@ struct ExtensionsShopView: View {
                     screenshotURL: "https://getdroppy.app/assets/images/notification-hud-screenshot.png",
                     accentColor: .red,
                     isInstalled: isNotificationHUDInstalled,
-                    isNew: true,
                     isCommunity: true
                 ) {
                     NotificationHUDInfoView()
@@ -153,7 +170,6 @@ struct ExtensionsShopView: View {
                     screenshotURL: "https://getdroppy.app/assets/images/high-alert-screenshot.gif",
                     accentColor: .orange,
                     isInstalled: isCaffeineInstalled,
-                    isNew: true,
                     isCommunity: true
                 ) {
                     CaffeineInfoView(
@@ -495,14 +511,14 @@ struct ExtensionsShopView: View {
             },
             ExtensionListItem(
                 id: "todo",
-                iconPlaceholder: "checklist",
-                iconPlaceholderColor: .blue,
-                title: "To-do",
+                iconURL: "https://getdroppy.app/assets/icons/todo.svg",
+                title: "Reminders",
                 subtitle: "Quick task capture",
                 category: .productivity,
                 isInstalled: isTodoInstalled,
                 analyticsKey: "todo",
-                extensionType: .todo
+                extensionType: .todo,
+                isCommunity: true
             ) {
                 AnyView(ToDoInfoView(
                     installCount: extensionCounts["todo"],
@@ -859,7 +875,9 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
     let category: String
     let title: String
     let subtitle: String
-    let iconURL: String
+    let iconURL: String?
+    var iconPlaceholder: String? = nil
+    var iconPlaceholderColor: Color = .blue
     let screenshotURL: String?
     let accentColor: Color
     let isInstalled: Bool
@@ -914,16 +932,30 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
                     HStack {
                         Spacer()
                         
-                        CachedAsyncImage(url: URL(string: iconURL)) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Circle().fill(Color.white.opacity(0.1))
+                        if let iconURL, let iconURLValue = URL(string: iconURL) {
+                            CachedAsyncImage(url: iconURLValue) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Circle().fill(Color.white.opacity(0.1))
+                            }
+                            .frame(width: 36, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.ms, style: .continuous))
+                            .droppyCardShadow(opacity: 0.3)
+                        } else if let iconPlaceholder {
+                            Image(systemName: iconPlaceholder)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(iconPlaceholderColor)
+                                .frame(width: 36, height: 36)
+                                .background(iconPlaceholderColor.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.ms, style: .continuous))
+                                .droppyCardShadow(opacity: 0.3)
+                        } else {
+                            Circle()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 36, height: 36)
                         }
-                        .frame(width: 36, height: 36)
-                        .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.ms, style: .continuous))
-                        .droppyCardShadow(opacity: 0.3)
                     }
                     
                     Spacer()
@@ -942,19 +974,6 @@ struct FeaturedExtensionCardCompact<DetailView: View>: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Capsule().fill(Color.cyan.opacity(0.15)))
-                        }
-                        
-                        if isCommunity {
-                            HStack(spacing: 3) {
-                                Image(systemName: "person.2.fill")
-                                    .font(.system(size: 8))
-                                Text("Community")
-                                    .font(.system(size: 9, weight: .medium))
-                            }
-                            .foregroundStyle(.purple.opacity(0.9))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.purple.opacity(0.15)))
                         }
                     }
                     
