@@ -6,6 +6,9 @@ import Security
 final class LicenseManager: ObservableObject {
     static let shared = LicenseManager()
 
+    /// Maximum number of simultaneous device activations allowed per license key.
+    private static let maxDeviceActivations = 1
+
     @Published private(set) var requiresLicenseEnforcement: Bool
     @Published private(set) var isActivated: Bool
     @Published private(set) var isChecking: Bool = false
@@ -72,6 +75,16 @@ final class LicenseManager: ObservableObject {
             let response = try await verifyLicense(licenseKey: trimmedKey, incrementUsesCount: true)
             guard response.isValidPurchase else {
                 statusMessage = response.message?.nonEmpty ?? "That license key is not valid for this product."
+                return false
+            }
+
+            // Enforce single-device limit: if uses exceeds the max, this key is
+            // already active on another device. Roll back the increment and reject.
+            let currentUses = response.purchase?.uses ?? 1
+            if currentUses > Self.maxDeviceActivations {
+                // Decrement back so the count stays accurate
+                _ = try? await verifyLicense(licenseKey: trimmedKey, incrementUsesCount: false, decrementUsesCount: true)
+                statusMessage = "This license is already active on another device. Deactivate it there first."
                 return false
             }
 
@@ -392,6 +405,7 @@ private extension LicenseManager {
 
         struct Purchase: Decodable {
             let email: String?
+            let uses: Int?
             let refunded: Bool?
             let disputed: Bool?
             let chargebacked: Bool?
