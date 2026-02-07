@@ -26,7 +26,7 @@ struct ToDoExtension: ExtensionDefinition {
     static let screenshotURL: URL? = URL(string: "https://getdroppy.app/assets/images/reminders-screenshot.gif")
     static let previewView: AnyView? = AnyView(ToDoPreviewView())
     
-    static let iconURL: URL? = URL(string: "https://getdroppy.app/assets/icons/todo.svg")
+    static let iconURL: URL? = URL(string: "https://getdroppy.app/assets/icons/reminders.png")
     static let iconPlaceholder: String = "checklist"
     static let iconPlaceholderColor: Color = .blue
     

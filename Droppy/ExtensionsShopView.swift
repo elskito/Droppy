@@ -134,7 +134,7 @@ struct ExtensionsShopView: View {
                     category: "COMMUNITY",
                     title: "Reminders",
                     subtitle: "Tasks & Notes",
-                    iconURL: "https://getdroppy.app/assets/icons/todo.svg",
+                    iconURL: "https://getdroppy.app/assets/icons/reminders.png",
                     iconPlaceholder: "checklist",
                     iconPlaceholderColor: .blue,
                     screenshotURL: "https://getdroppy.app/assets/images/reminders-screenshot.gif",
@@ -511,7 +511,7 @@ struct ExtensionsShopView: View {
             },
             ExtensionListItem(
                 id: "todo",
-                iconURL: "https://getdroppy.app/assets/icons/todo.svg",
+                iconURL: "https://getdroppy.app/assets/icons/reminders.png",
                 title: "Reminders",
                 subtitle: "Quick task capture",
                 category: .productivity,
