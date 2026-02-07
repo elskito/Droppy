@@ -34,35 +34,44 @@
 
 ## Core Features
 
-### 📂 File Shelf
+### File Shelf
 
 <p align="center"><img src="docs/assets/images/feature-shelf.png" width="500" alt="File Shelf" /></p>
 
-Drop any file, folder, image, or URL onto the notch — it stays there until you need it. Create folders, pin favorites, watch directories, and manage everything with a full right-click menu: Copy, Move, Share, AirDrop, ZIP, Quick Look, OCR, and more.
+- Drop files, folders, images, and URLs onto the notch — pick them up in any app
+- Create folders, pin favorites, or watch a directory so its contents appear automatically
+- Full right-click menu: Copy, Move, Share, AirDrop, ZIP, Rename, Quick Look, OCR, and more
 
 ---
 
-### 🫧 Floating Basket
+### Floating Basket
 
 <p align="center"><img src="docs/assets/images/feature-basket.png" width="500" alt="Floating Basket" /></p>
 
-Jiggle your mouse while dragging and a floating basket appears anywhere on screen. Spawn multiple color-coded baskets for different workflows. Batch-drag items and drop them wherever you need — baskets auto-hide when idle.
+- Jiggle your mouse while dragging to spawn a floating basket anywhere on screen
+- Multiple color-coded baskets for organizing different workflows
+- Batch-drag items between apps — baskets auto-hide when empty or idle
 
 ---
 
-### 📋 Clipboard Manager
+### Clipboard Manager
 
 <p align="center"><img src="docs/assets/images/feature-clipboard.png" width="500" alt="Clipboard Manager" /></p>
 
-Every text, image, file, link, and color you copy — saved and searchable. Persistent history across restarts, custom tags, favorites, source app filtering, and rich previews for images, videos, and documents.
+- Saves every text, image, file, link, and color you copy — persistent across restarts
+- Custom tags, favorites, source app filtering, and full-text search
+- Rich previews for images, videos, and documents
 
 ---
 
-### 🎵 Beautiful HUDs
+### Beautiful HUDs
 
 <p align="center"><img src="docs/assets/images/feature-huds.png" width="500" alt="Beautiful HUDs" /></p>
 
-Replace macOS's boring system overlays with gorgeous HUDs in your notch. Volume, brightness (including external monitors), now-playing with album art, lyrics and visualizer, AirPods battery, and keyboard brightness — all premium.
+- Replaces macOS system overlays with premium HUDs in your notch
+- Volume and brightness controls — including full support for external monitors
+- Now-playing with album art, lyrics, and visualizer (Spotify & Apple Music)
+- AirPods battery, keyboard brightness, and more
 
 ## <img src="https://getdroppy.app/assets/icons/extensions.png" width="24"> Extensions
 
