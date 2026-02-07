@@ -33,8 +33,12 @@ final class MirrorManager: ObservableObject {
 
     nonisolated var session: AVCaptureSession { captureSession }
 
-    init(permissionProvider: MirrorCameraPermissionProviding = MirrorCameraPermissionService.shared) {
+    init(permissionProvider: MirrorCameraPermissionProviding) {
         self.permissionProvider = permissionProvider
+    }
+
+    convenience init() {
+        self.init(permissionProvider: MirrorCameraPermissionService.shared)
     }
 
     func toggle() {
