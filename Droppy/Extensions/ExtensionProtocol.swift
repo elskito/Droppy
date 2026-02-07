@@ -25,6 +25,7 @@ enum ExtensionType: String, CaseIterable, Identifiable {
     case notificationHUD
     case caffeine
     case menuBarManager
+    case mirror
 
     
     /// URL-safe ID for deep links

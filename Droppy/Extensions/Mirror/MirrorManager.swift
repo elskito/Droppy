@@ -26,13 +26,16 @@ final class MirrorManager: ObservableObject {
     @AppStorage(AppPreferenceKey.mirrorInstalled) var isInstalled = PreferenceDefault.mirrorInstalled
 
     private var startAttemptID: UInt64 = 0
+    private let permissionProvider: MirrorCameraPermissionProviding
 
     nonisolated(unsafe) private let captureSession = AVCaptureSession()
     nonisolated private let sessionQueue = DispatchQueue(label: "app.getdroppy.mirror.session")
 
     nonisolated var session: AVCaptureSession { captureSession }
 
-    private init() {}
+    init(permissionProvider: MirrorCameraPermissionProviding = MirrorCameraPermissionService.shared) {
+        self.permissionProvider = permissionProvider
+    }
 
     func toggle() {
         isVisible ? hide() : show()
@@ -60,19 +63,18 @@ final class MirrorManager: ObservableObject {
 
     func requestPermissionAndStart() {
         let attemptID = beginStartAttempt()
-        let permissionManager = PermissionManager.shared
 
-        if permissionManager.isCameraGranted {
+        if permissionProvider.isGranted() {
             startSession(for: attemptID)
             return
         }
 
-        switch permissionManager.cameraAuthorizationStatus {
+        switch permissionProvider.authorizationStatus {
         case .authorized:
             startSession(for: attemptID)
         case .notDetermined:
             state = .requestingPermission
-            permissionManager.requestCameraPermission { granted in
+            permissionProvider.request { granted in
                 Task { @MainActor in
                     guard self.isAttemptCurrent(attemptID), self.isVisible else { return }
                     if granted {
@@ -104,10 +106,14 @@ final class MirrorManager: ObservableObject {
         isInstalled = false
     }
 
+    func openCameraSettings() {
+        permissionProvider.openSettings()
+    }
+
     private func startSession(for attemptID: UInt64) {
         guard isAttemptCurrent(attemptID), isVisible else { return }
 
-        guard PermissionManager.shared.isCameraGranted else {
+        guard permissionProvider.isGranted() else {
             guard isAttemptCurrent(attemptID), isVisible else { return }
             state = .denied
             return

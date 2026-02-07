@@ -148,7 +148,7 @@ struct MirrorNotchView: View {
     }
 
     private func openCameraSettings() {
-        PermissionManager.shared.openCameraSettings()
+        manager.openCameraSettings()
     }
 }
 
