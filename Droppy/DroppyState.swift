@@ -406,8 +406,11 @@ final class DroppyState {
         let caffeineInstalled = UserDefaults.standard.preference(AppPreferenceKey.caffeineInstalled, default: PreferenceDefault.caffeineInstalled)
         let caffeineEnabled = UserDefaults.standard.preference(AppPreferenceKey.caffeineEnabled, default: PreferenceDefault.caffeineEnabled)
         let caffeineButtonVisible = caffeineInstalled && caffeineEnabled
+        let cameraInstalled = UserDefaults.standard.preference(AppPreferenceKey.cameraInstalled, default: PreferenceDefault.cameraInstalled)
+        let cameraEnabled = UserDefaults.standard.preference(AppPreferenceKey.cameraEnabled, default: PreferenceDefault.cameraEnabled)
+        let cameraButtonVisible = cameraInstalled && cameraEnabled && !ExtensionType.camera.isRemoved
         let isDragging = DragMonitor.shared.isDragging
-        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || isDragging || caffeineButtonVisible
+        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || isDragging || caffeineButtonVisible || cameraButtonVisible
         
         if hasFloatingButtons {
             // Reserve space for offset + button/bar size + hover/animation headroom.

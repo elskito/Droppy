@@ -667,30 +667,14 @@ struct ToDoStableTextField: NSViewRepresentable {
                         attributed.addAttributes([
                             .foregroundColor: NSColor.white.withAlphaComponent(0.95),
                             .toDoBadgeColor: NSColor.white.withAlphaComponent(0.18),
-                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
-                            .kern: 0.3
+                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
                         ], range: nsRange)
-                        // Add spacing around badge so it doesn't touch adjacent text
-                        if nsRange.location > 0 {
-                            attributed.addAttribute(.kern, value: 4.0, range: NSRange(location: nsRange.location - 1, length: 1))
-                        }
-                        if NSMaxRange(nsRange) < fullRange.length {
-                            attributed.addAttribute(.kern, value: 4.0, range: NSRange(location: NSMaxRange(nsRange) - 1, length: 1))
-                        }
                     case .listMentionToken:
                         attributed.addAttributes([
                             .foregroundColor: NSColor.white.withAlphaComponent(0.95),
                             .toDoBadgeColor: NSColor.white.withAlphaComponent(0.14),
-                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
-                            .kern: 0.3
+                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
                         ], range: nsRange)
-                        // Add spacing around badge so it doesn't touch adjacent text
-                        if nsRange.location > 0 {
-                            attributed.addAttribute(.kern, value: 4.0, range: NSRange(location: nsRange.location - 1, length: 1))
-                        }
-                        if NSMaxRange(nsRange) < fullRange.length {
-                            attributed.addAttribute(.kern, value: 4.0, range: NSRange(location: NSMaxRange(nsRange) - 1, length: 1))
-                        }
                     }
                 }
             }
