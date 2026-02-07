@@ -227,15 +227,23 @@ final class MirrorManager: ObservableObject {
             position: .unspecified
         )
 
-        let usableDevices = discovery.devices.filter { device in
-            device.isConnected && !device.isSuspended && !device.isInUseByAnotherApplication
+        let connectedDevices = discovery.devices.filter { device in
+            device.isConnected && !device.isSuspended
         }
 
-        if let front = usableDevices.first(where: { $0.position == .front }) {
-            return front
+        if let frontAvailable = connectedDevices.first(where: { $0.position == .front && !$0.isInUseByAnotherApplication }) {
+            return frontAvailable
         }
 
-        return usableDevices.first
+        if let anyAvailable = connectedDevices.first(where: { !$0.isInUseByAnotherApplication }) {
+            return anyAvailable
+        }
+
+        if let frontBusy = connectedDevices.first(where: { $0.position == .front }) {
+            return frontBusy
+        }
+
+        return connectedDevices.first
     }
 }
 
