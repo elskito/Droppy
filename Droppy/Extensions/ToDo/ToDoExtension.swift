@@ -14,13 +14,14 @@ struct ToDoExtension: ExtensionDefinition {
     static let category: ExtensionGroup = .productivity
     static let categoryColor: Color = .blue
     
-    static let description = "A lightweight task capture bar and checklist. Supports priorities and auto-cleanup of completed tasks."
+    static let description = "Capture tasks in natural language, mention lists and dates, and sync with Apple Reminders. Supports multilingual input, priorities, and auto-cleanup."
     
     static let features: [(icon: String, text: String)] = [
-        ("checkmark.circle.fill", "Quick task capture"),
-        ("list.bullet", "Priority levels with color coding"),
-        ("timer", "Auto-cleanup of completed tasks"),
-        ("keyboard", "Keyboard shortcuts for power users")
+        ("text.bubble", "Natural-language task capture"),
+        ("list.bullet.rectangle.portrait", "List support with list mentions"),
+        ("calendar.badge.clock", "Date mentions like tomorrow and next Friday"),
+        ("globe", "Multilingual task input"),
+        ("timer", "Priority levels and auto-cleanup")
     ]
     
     static let screenshotURL: URL? = URL(string: "https://getdroppy.app/assets/images/reminders-screenshot.gif")

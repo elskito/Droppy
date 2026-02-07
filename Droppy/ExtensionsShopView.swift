@@ -513,7 +513,7 @@ struct ExtensionsShopView: View {
                 id: "todo",
                 iconURL: "https://getdroppy.app/assets/icons/reminders.png",
                 title: "Reminders",
-                subtitle: "Quick task capture",
+                subtitle: "Natural language tasks",
                 category: .productivity,
                 isInstalled: isTodoInstalled,
                 analyticsKey: "todo",

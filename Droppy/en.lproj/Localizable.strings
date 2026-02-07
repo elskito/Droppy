@@ -8,13 +8,14 @@
 /* To-Do Extension Metadata */
 "todo.title" = "Reminders";
 "todo.subtitle" = "Tasks & Notes";
-"todo.description" = "A lightweight task capture bar and checklist. Supports priorities and auto-cleanup of completed tasks.";
+"todo.description" = "Capture tasks in natural language, mention lists and dates, and sync with Apple Reminders. Supports multilingual input, priorities, and auto-cleanup.";
 
 /* Features */
-"feature.capture" = "Quick task capture";
-"feature.priority" = "Priority levels with color coding";
-"feature.cleanup" = "Auto-cleanup of completed tasks";
-"feature.shortcuts" = "Keyboard shortcuts for power users";
+"feature.capture" = "Natural-language task capture";
+"feature.priority" = "List support with list mentions";
+"feature.cleanup" = "Date mentions like tomorrow and next Friday";
+"feature.shortcuts" = "Multilingual task input";
+"feature.todo.extra" = "Priority levels and auto-cleanup";
 
 /* UI General */
 "add_task_placeholder" = "Add a task...";

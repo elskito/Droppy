@@ -139,7 +139,7 @@ struct ToDoInfoView: View {
                     .background(Capsule().fill(Color.blue.opacity(0.15)))
             }
 
-            Text("Quick task capture and checklist")
+            Text("Natural-language tasks, lists, and dates")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             
@@ -169,10 +169,11 @@ struct ToDoInfoView: View {
 
     private var featuresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            featureRow(icon: "checkmark.circle.fill", text: "Quick task capture from the shelf")
-            featureRow(icon: "list.bullet", text: "Priority levels with color coding")
-            featureRow(icon: "timer", text: "Auto-cleanup of completed tasks")
-            featureRow(icon: "keyboard", text: "Keyboard shortcuts for power users")
+            featureRow(icon: "text.bubble", text: "Natural-language task capture")
+            featureRow(icon: "list.bullet.rectangle.portrait", text: "List support with list mentions")
+            featureRow(icon: "calendar.badge.clock", text: "Date mentions like tomorrow and next Friday")
+            featureRow(icon: "globe", text: "Multilingual task input")
+            featureRow(icon: "timer", text: "Priority levels and auto-cleanup")
 
             // Screenshot (animated GIF, same behavior as other GIF-based extension views)
             if let screenshotURL = ToDoExtension.screenshotURL {
