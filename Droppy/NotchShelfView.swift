@@ -303,10 +303,20 @@ struct NotchShelfView: View {
     
     /// Width when showing media player (wider for album art + controls)
     private let mediaPlayerWidth: CGFloat = 450
+
+    /// Width when showing mirror view (taller, less panoramic framing)
+    private let mirrorWidth: CGFloat = 510
     
     /// Current expanded width based on what's shown
     /// Apple Music gets extra width for shuffle, repeat, and love controls
     private var expandedWidth: CGFloat {
+        // Mirror uses a dedicated width to match the target camera preview framing.
+        let mirrorEnabled = UserDefaults.standard.preference(AppPreferenceKey.mirrorEnabled, default: PreferenceDefault.mirrorEnabled)
+        let mirrorShouldShow = UserDefaults.standard.preference(AppPreferenceKey.mirrorInstalled, default: PreferenceDefault.mirrorInstalled) && mirrorEnabled
+        if showMirrorView && mirrorShouldShow {
+            return mirrorWidth
+        }
+
         // Media player gets full width, shelf gets narrower width
         if showMediaPlayer && !musicManager.isPlayerIdle && !state.isDropTargeted && !dragMonitor.isDragging &&
            (musicManager.isMediaHUDForced || (autoOpenMediaHUDOnShelfExpand && !musicManager.isMediaHUDHidden) || ((musicManager.isPlaying || musicManager.wasRecentlyPlaying) && !musicManager.isMediaHUDHidden && state.items.isEmpty)) {
@@ -592,11 +602,11 @@ struct NotchShelfView: View {
         if showMirrorView && mirrorShouldShow {
             let isExternalNotchStyle = isExternalDisplay && !externalDisplayUseDynamicIsland
             if contentLayoutNotchHeight > 0 {
-                return contentLayoutNotchHeight + 220
+                return contentLayoutNotchHeight + 300
             } else if isExternalNotchStyle {
-                return 240
+                return 320
             } else {
-                return 240
+                return 320
             }
         }
         
@@ -863,6 +873,7 @@ struct NotchShelfView: View {
                                             terminalManager.hide()
                                             mirrorManager.show()
                                             cancelAutoShrinkTimer()
+                                            notchController.forceRecalculateAllWindowSizes()
                                         }
                                     }
                                 }) {
@@ -1311,6 +1322,7 @@ struct NotchShelfView: View {
         showMirrorView = false
         state.isMirrorPinnedOpen = false
         mirrorManager.hide()
+        notchController.forceRecalculateAllWindowSizes()
     }
     
     // MARK: - Glow Effect
@@ -1340,7 +1352,7 @@ struct NotchShelfView: View {
                 expandedShelfContent
                     // PREMIUM: Scale(0.8, anchor: .top) + blur + opacity - ultra-smooth feel
                     .notchTransition()
-                    .frame(width: expandedWidth, height: currentExpandedHeight)
+                    .frame(width: expandedWidth, height: currentExpandedHeight, alignment: .top)
                     // PREMIUM: Unified .smooth(0.35) for ALL state changes
                     .animation(.smooth(duration: 0.35), value: currentExpandedHeight)
                     .animation(.smooth(duration: 0.35), value: musicManager.isMediaHUDForced)

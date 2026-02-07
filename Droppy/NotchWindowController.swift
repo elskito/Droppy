@@ -97,6 +97,12 @@ final class NotchWindowController: NSObject, ObservableObject {
     
     /// Minimum interval between click actions (prevent rapid toggle)
     private let clickDebounceInterval: TimeInterval = 0.1 // 100ms
+
+    /// Overlay window width must be wider than any expanded content (Mirror now uses 510pt).
+    private let overlayWindowWidth: CGFloat = 540
+
+    /// Expanded interaction zone width should track the widest expanded content.
+    private let expandedInteractionWidth: CGFloat = 520
     
     /// System observers for wake/display changes
     private var systemObservers: [NSObjectProtocol] = []
@@ -184,7 +190,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         
         // Window needs to be wide enough for expanded shelf
         // Height is limited to avoid false hover detection in empty areas
-        let windowWidth: CGFloat = 500
+        let windowWidth: CGFloat = overlayWindowWidth
         let windowHeight: CGFloat = 280
 
         // Position at top center of screen (aligned with notch) using global coordinates
@@ -439,7 +445,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                 if let existingWindow = notchWindows[displayID] {
                     // RESOLUTION CHANGE FIX: Check if screen horizontal center changed
                     // Only check X position since height is dynamically managed based on content
-                    let windowWidth: CGFloat = 500
+                    let windowWidth: CGFloat = overlayWindowWidth
                     let expectedCenterX = screen.frame.origin.x + screen.frame.width / 2
                     let currentCenterX = existingWindow.frame.midX
                     
@@ -610,7 +616,7 @@ final class NotchWindowController: NSObject, ObservableObject {
             let isExpanded = DroppyState.shared.isExpanded
             var expandedShelfZone: NSRect = .zero
             if isExpanded {
-                let expandedWidth: CGFloat = 450
+                let expandedWidth: CGFloat = 520
                 let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
                 
                 // Issue #64: Use unified height calculator (single source of truth)
@@ -785,7 +791,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                 let isExpanded = DroppyState.shared.isExpanded
                 var expandedShelfZone: NSRect = .zero
                 if isExpanded {
-                    let expandedWidth: CGFloat = 450
+                    let expandedWidth: CGFloat = self.expandedInteractionWidth
                     let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
                     
                     // Issue #64: Use unified height calculator (single source of truth)
@@ -909,7 +915,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                 let mouseLocation = NSEvent.mouseLocation
                 if let (_, screen) = self?.findWindowForMouseLocation(mouseLocation) {
                     // Check if mouse is in the expanded shelf area
-                    let expandedWidth: CGFloat = 450
+                    let expandedWidth: CGFloat = self?.expandedInteractionWidth ?? 520
                     let centerX = screen.frame.origin.x + screen.frame.width / 2
                     let rowCount = ceil(Double(DroppyState.shared.items.count) / 5.0)
                     let expandedHeight: CGFloat = CGFloat(max(1, rowCount) * 110 + 100)
@@ -1039,6 +1045,7 @@ final class NotchWindowController: NSObject, ObservableObject {
             _ = DroppyState.shared.isMouseHovering
             _ = DroppyState.shared.isDropTargeted
             _ = DroppyState.shared.items.count  // Track item count for dynamic window sizing
+            _ = DroppyState.shared.isMirrorPinnedOpen  // Track mirror open/close for immediate height updates
         } onChange: {
             // onChange fires BEFORE the property changes.
             // dispatch async to run update AFTER the change is applied.
@@ -1801,7 +1808,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         var swipeZone: NSRect
         if DroppyState.shared.isExpanded {
             // EXPANDED: Cover the full expanded shelf area
-            let expandedWidth: CGFloat = 450
+            let expandedWidth: CGFloat = expandedInteractionWidth
             let centerX = screen.frame.origin.x + screen.frame.width / 2
             let rowCount = max(1, ceil(Double(DroppyState.shared.items.count) / 5.0))
             let expandedHeight = rowCount * 110 + 100  // Extra height for safety
@@ -2309,7 +2316,7 @@ class NotchWindow: NSPanel {
                 // When shelf is expanded ON THIS SCREEN, check if cursor is in the expanded shelf zone
                 // CRITICAL: Only check if THIS screen has the expanded shelf (not just any screen)
                 // If so, maintain hover state to prevent auto-collapse
-                let expandedWidth: CGFloat = 450
+                let expandedWidth: CGFloat = 520
                 let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
                 
                 // Issue #64: Use unified height calculator (single source of truth)
@@ -2407,7 +2414,7 @@ class NotchWindow: NSPanel {
             // Also accept if expanded and over the expanded shelf area
             // Use notchScreen for multi-monitor support
             if isExpanded && !isDragOverValidZone, let screen = notchScreen {
-                let expandedWidth: CGFloat = 450
+                let expandedWidth: CGFloat = 520
                 // Use global coordinates
                 let centerX = screen.frame.origin.x + screen.frame.width / 2
                 

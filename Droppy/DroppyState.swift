@@ -368,7 +368,7 @@ final class DroppyState {
         // Mirror height is only included when Mirror is actively open/pinned,
         // otherwise the global hit-test zone would be taller than the visible UI.
         let terminalHeight: CGFloat = 180 + topPaddingDelta
-        let mirrorHeight: CGFloat = DroppyState.shared.isMirrorPinnedOpen ? (240 + topPaddingDelta) : 0
+        let mirrorHeight: CGFloat = DroppyState.shared.isMirrorPinnedOpen ? (320 + topPaddingDelta) : 0
         let mediaPlayerHeight: CGFloat = 140 + topPaddingDelta
         // Use shelfDisplaySlotCount for correct row count - cap at 3 rows (scroll for rest)
         let rowCount = min(ceil(Double(DroppyState.shared.shelfDisplaySlotCount) / 5.0), 3)

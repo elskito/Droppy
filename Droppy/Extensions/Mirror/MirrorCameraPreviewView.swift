@@ -13,6 +13,7 @@ struct MirrorCameraPreviewView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> MirrorPreviewContainerView {
         let view = MirrorPreviewContainerView()
+        // Fill the entire rounded preview frame (no pillarboxing/side bars).
         view.previewLayer.videoGravity = .resizeAspectFill
         view.previewLayer.session = manager.session
         manager.configurePreviewConnection(view.previewLayer.connection)
