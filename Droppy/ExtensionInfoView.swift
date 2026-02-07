@@ -225,6 +225,7 @@ struct ExtensionInfoView: View {
         case .voiceTranscribe: return "Configure"
         case .ffmpegVideoCompression: return "Install"
         case .terminalNotch: return "Configure"
+        case .camera: return "Configure"
         case .quickshare: return "Manage"
         case .notificationHUD: return "Configure"
         case .caffeine: return "Configure"
@@ -245,6 +246,7 @@ struct ExtensionInfoView: View {
         case .voiceTranscribe: return "Configure"
         case .ffmpegVideoCompression: return "Install FFmpeg"
         case .terminalNotch: return "Configure"
+        case .camera: return "Configure"
         case .quickshare: return "Manage Uploads"
         case .notificationHUD: return "Configure"
         case .caffeine: return "Configure"
@@ -265,6 +267,7 @@ struct ExtensionInfoView: View {
         case .voiceTranscribe: return "mic.fill"
         case .ffmpegVideoCompression: return "arrow.down.circle.fill"
         case .terminalNotch: return "terminal"
+        case .camera: return "camera.fill"
         case .quickshare: return "tray.full"
         case .notificationHUD: return "bell.badge"
         case .caffeine: return "cup.and.saucer.fill"
@@ -281,5 +284,4 @@ struct ExtensionInfoView: View {
         print("Action")
     }
 }
-
 

@@ -13,7 +13,8 @@ cask "droppy" do
 
   postflight do
     system_command "/usr/bin/xattr",
-      args: ["-rd", "com.apple.quarantine", "#{appdir}/Droppy.app"],
+      args: ["-d", "com.apple.quarantine", "#{appdir}/Droppy.app"],
+      must_succeed: false,
       sudo: false
   end
 

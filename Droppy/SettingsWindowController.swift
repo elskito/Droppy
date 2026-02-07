@@ -34,6 +34,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// Shows the settings window with optional extension sheet
     /// - Parameter extensionType: If provided, will navigate to Extensions and open this extension's info sheet
     func showSettings(openingExtension extensionType: ExtensionType?) {
+        let licenseManager = LicenseManager.shared
+        if licenseManager.requiresLicenseEnforcement && !licenseManager.isActivated {
+            pendingExtensionToOpen = nil
+            pendingTabToOpen = nil
+            close()
+            LicenseWindowController.shared.show()
+            return
+        }
+
         // Store the pending extension before potentially creating the window
         pendingExtensionToOpen = extensionType
         

@@ -12,12 +12,12 @@ struct ToDoUndoToast: View {
     var onDismiss: () -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(systemName: "trash.fill")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.8))
             
-            Text("Task deleted")
+            Text("task_deleted")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white)
             
@@ -27,15 +27,9 @@ struct ToDoUndoToast: View {
                 HapticFeedback.medium.perform()
                 onUndo()
             } label: {
-                Text("Undo")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.blue)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.1))
-                    .clipShape(Capsule())
+                Text("undo")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(DroppyPillButtonStyle(size: .small))
             
             Button {
                 onDismiss()
@@ -46,18 +40,59 @@ struct ToDoUndoToast: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(minHeight: 36)
         .background(
             Capsule()
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.95))
+                .fill(AdaptiveColors.buttonBackgroundAuto.opacity(0.95))
         )
         .overlay(
             Capsule()
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                .strokeBorder(AdaptiveColors.subtleBorderAuto, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.3), radius: 8, y: 4)
         .frame(maxWidth: 300)
+    }
+}
+
+struct ToDoCleanupToast: View {
+    let count: Int
+    var onDismiss: () -> Void
+    
+    private var message: String {
+        String.localizedStringWithFormat(String(localized: "tasks_cleaned_up %lld"), Int64(count))
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.green.opacity(0.95))
+            
+            Text(message)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+            
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(Color.green.opacity(0.16))
+        )
+        .overlay(
+            Capsule()
+                .strokeBorder(Color.green.opacity(0.35), lineWidth: 1)
+        )
     }
 }

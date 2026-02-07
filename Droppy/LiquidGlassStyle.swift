@@ -7,6 +7,28 @@
 
 import SwiftUI
 
+private struct DroppyTextInputChromeModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
+    let backgroundOpacity: Double
+    let borderOpacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(AdaptiveColors.buttonBackgroundAuto.opacity(backgroundOpacity))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(AdaptiveColors.subtleBorderAuto.opacity(borderOpacity), lineWidth: 1)
+            )
+    }
+}
+
 /// The foundational modifier for macOS 26 UI elements
 struct LiquidGlassStyle: ViewModifier {
     var radius: CGFloat
@@ -75,6 +97,24 @@ extension View {
     
     func liquidGlass<S: Shape>(shape: S, depth: Double = 1.0, isConcave: Bool = false) -> some View {
         self.modifier(LiquidGlassStyle(shape: shape, depth: depth, isConcave: isConcave))
+    }
+
+    func droppyTextInputChrome(
+        cornerRadius: CGFloat = 8,
+        horizontalPadding: CGFloat = 12,
+        verticalPadding: CGFloat = 10,
+        backgroundOpacity: Double = 0.95,
+        borderOpacity: Double = 1.0
+    ) -> some View {
+        modifier(
+            DroppyTextInputChromeModifier(
+                cornerRadius: cornerRadius,
+                horizontalPadding: horizontalPadding,
+                verticalPadding: verticalPadding,
+                backgroundOpacity: backgroundOpacity,
+                borderOpacity: borderOpacity
+            )
+        )
     }
 }
 
@@ -149,12 +189,10 @@ struct LiquidTextField: View {
                 .font(.system(size: 16))
                 .focused($isFocused)
         }
-        .padding(DroppySpacing.lg)
-        // Note: isConcave is set to true
-        .liquidGlass(radius: 20, depth: 0.8, isConcave: true)
+        .droppyTextInputChrome(cornerRadius: 8)
         .overlay(
             // The "Focus Ring" is now a soft glow, not a sharp line
-            RoundedRectangle(cornerRadius: DroppyRadius.xl, style: .continuous)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color.accentColor.opacity(isFocused ? 0.5 : 0), lineWidth: 1.5)
                 .shadow(color: Color.accentColor.opacity(isFocused ? 0.4 : 0), radius: 8)
         )

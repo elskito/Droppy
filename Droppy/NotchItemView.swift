@@ -1280,6 +1280,7 @@ struct NotchItemView: View {
         // Set the text to filename without extension for easier editing
         state.beginFileOperation()
         state.isRenaming = true
+        renamingText = item.url.deletingPathExtension().lastPathComponent
         renamingItemId = item.id
     }
     
@@ -1456,40 +1457,21 @@ private struct NotchItemContent: View {
                 }
             }
             
-            // Filename or rename text field
-            if renamingItemId == item.id {
-                RenameTextField(
-                    text: $renamingText,
-                    isRenaming: Binding(
-                        get: { renamingItemId == item.id },
-                        set: { if !$0 { 
-                            renamingItemId = nil
-                            state.isRenaming = false
-                            state.endFileOperation()
-                        } }
-                    ),
-                    onRename: onRename
-                )
-                .onAppear {
-                    renamingText = item.url.deletingPathExtension().lastPathComponent
-                }
-            } else {
-                // FINDER-STYLE: Label with pill selection background
-                Text(item.name)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(width: 64)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: DroppyRadius.xs, style: .continuous)
-                                .fill(Color.accentColor)
-                        }
+            // FINDER-STYLE: Label with pill selection background
+            Text(item.name)
+                .font(.system(size: 11))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(width: 64)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: DroppyRadius.xs, style: .continuous)
+                            .fill(Color.accentColor)
                     }
-            }
+                }
         }
         .padding(.vertical, 2)
         .id(item.id)
@@ -1508,41 +1490,29 @@ private struct NotchItemContent: View {
                 pendingConvertedItem = nil
             }
         }
+        .popover(isPresented: renamePopoverPresented, arrowEdge: .top) {
+            RenameTooltipPopover(
+                text: $renamingText,
+                title: String(localized: "action.edit"),
+                placeholder: item.name,
+                onSave: onRename,
+                onCancel: {
+                    renamePopoverPresented.wrappedValue = false
+                }
+            )
+        }
     }
-}
 
-// MARK: - Rename Text Field with Auto-Select and Static Dotted Border
-private struct RenameTextField: View {
-    @Binding var text: String
-    @Binding var isRenaming: Bool
-    let onRename: () -> Void
-    
-    var body: some View {
-        AutoSelectTextField(
-            text: $text,
-            onSubmit: onRename,
-            onCancel: { isRenaming = false }
-        )
-        .font(.system(size: 11, weight: .medium))
-        .frame(width: 72)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                .fill(Color.black.opacity(0.3))
-        )
-        // Static dotted blue outline (no animation to save CPU)
-        .overlay(
-            RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                .stroke(
-                    Color.accentColor.opacity(0.8),
-                    style: StrokeStyle(
-                        lineWidth: 1.5,
-                        lineCap: .round,
-                        dash: [3, 3],
-                        dashPhase: 0
-                    )
-                )
+    private var renamePopoverPresented: Binding<Bool> {
+        Binding(
+            get: { renamingItemId == item.id },
+            set: { isPresented in
+                if !isPresented {
+                    renamingItemId = nil
+                    state.isRenaming = false
+                    state.endFileOperation()
+                }
+            }
         )
     }
 }
@@ -1560,8 +1530,8 @@ private struct AutoSelectTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.backgroundColor = .clear
         textField.textColor = .white
-        textField.font = .systemFont(ofSize: 11, weight: .medium)
-        textField.alignment = .center
+        textField.font = .systemFont(ofSize: 14, weight: .medium)
+        textField.alignment = .left
         textField.focusRingType = .none
         textField.stringValue = text
         
@@ -1613,5 +1583,55 @@ private struct AutoSelectTextField: NSViewRepresentable {
             }
             return false
         }
+    }
+}
+
+private struct RenameTooltipPopover: View {
+    @Binding var text: String
+    let title: String
+    let placeholder: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+            
+            AutoSelectTextField(
+                text: $text,
+                onSubmit: onSave,
+                onCancel: onCancel
+            )
+            .font(.system(size: 14, weight: .medium))
+            .droppyTextInputChrome()
+            .accessibilityLabel(Text(placeholder))
+            
+            HStack(spacing: 10) {
+                Button {
+                    onCancel()
+                } label: {
+                    Text(String(localized: "action.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DroppyPillButtonStyle(size: .small))
+                
+                Button {
+                    onSave()
+                } label: {
+                    Text(String(localized: "action.save"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DroppyAccentButtonStyle(color: .blue, size: .small))
+                .disabled(trimmedText.isEmpty)
+            }
+        }
+        .padding(14)
+        .frame(width: 260)
     }
 }

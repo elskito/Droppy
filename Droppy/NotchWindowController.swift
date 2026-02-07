@@ -146,6 +146,25 @@ final class NotchWindowController: NSObject, ObservableObject {
             window.level.rawValue >= NSWindow.Level.popUpMenu.rawValue && window.isVisible
         }
     }
+
+    /// Checks if a transient popover/aux panel is currently open.
+    func hasActivePopoverWindow() -> Bool {
+        NSApp.windows.contains { window in
+            guard window.isVisible else { return false }
+            let className = String(describing: type(of: window))
+            return className.contains("Popover")
+        }
+    }
+
+    private let shelfBaseWidth: CGFloat = 450
+
+    private func effectiveShelfCenterX(for screen: NSScreen) -> CGFloat {
+        screen.notchAlignedCenterX
+    }
+
+    fileprivate func currentExpandedShelfWidth() -> CGFloat {
+        shelfBaseWidth
+    }
     
     /// Sets up and shows the notch overlay window(s)
     /// Creates windows for all eligible screens based on user settings
@@ -188,7 +207,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         let windowHeight: CGFloat = 280
 
         // Position at top center of screen (aligned with notch) using global coordinates
-        let xPosition = screen.frame.origin.x + (screen.frame.width - windowWidth) / 2
+        let xPosition = effectiveShelfCenterX(for: screen) - (windowWidth / 2)
         let yPosition = screen.frame.origin.y + screen.frame.height - windowHeight
         
         let windowFrame = NSRect(
@@ -440,7 +459,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                     // RESOLUTION CHANGE FIX: Check if screen horizontal center changed
                     // Only check X position since height is dynamically managed based on content
                     let windowWidth: CGFloat = 500
-                    let expectedCenterX = screen.frame.origin.x + screen.frame.width / 2
+                    let expectedCenterX = effectiveShelfCenterX(for: screen)
                     let currentCenterX = existingWindow.frame.midX
                     
                     // If horizontal center shifted significantly, screen changed - recreate window
@@ -454,7 +473,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                         createWindowForScreen(screen)
                     } else {
                         // Just update X position, keep current height (managed by updateAllWindowsSize)
-                        let expectedX = screen.frame.origin.x + (screen.frame.width - windowWidth) / 2
+                        let expectedX = expectedCenterX - (windowWidth / 2)
                         if abs(existingWindow.frame.origin.x - expectedX) > 2 {
                             var newFrame = existingWindow.frame
                             newFrame.origin.x = expectedX
@@ -610,8 +629,8 @@ final class NotchWindowController: NSObject, ObservableObject {
             let isExpanded = DroppyState.shared.isExpanded
             var expandedShelfZone: NSRect = .zero
             if isExpanded {
-                let expandedWidth: CGFloat = 450
-                let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
+                let expandedWidth = self.currentExpandedShelfWidth()
+                let centerX = self.effectiveShelfCenterX(for: targetScreen)
                 
                 // Issue #64: Use unified height calculator (single source of truth)
                 let expandedHeight = DroppyState.expandedShelfHeight(for: targetScreen)
@@ -648,9 +667,14 @@ final class NotchWindowController: NSObject, ObservableObject {
                         DroppyState.shared.toggleShelfExpansion(for: targetScreen.displayID)
                     }
                 }
-            } else if isExpanded && !isInExpandedShelfZone && !self.hasActiveContextMenu() {
+            } else if isExpanded &&
+                        !isInExpandedShelfZone &&
+                        !self.hasActiveContextMenu() &&
+                        !ToDoManager.shared.isInteractingWithPopover &&
+                        !self.hasActivePopoverWindow() {
                 // CLICK OUTSIDE TO CLOSE: Shelf is open, click is outside shelf area
                 // Don't close if a context menu is active (user is interacting with submenu)
+                // Don't close if a To-do popover is active (date/edit interaction)
                 // Don't close if auto-collapse is disabled (user wants manual control)
                 // CRITICAL: Use object() ?? true to match @AppStorage default for new users
                 let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
@@ -661,6 +685,8 @@ final class NotchWindowController: NSObject, ObservableObject {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     // Check if drag started during the delay - if so, don't close
                     guard !DragMonitor.shared.isDragging else { return }
+                    guard !ToDoManager.shared.isInteractingWithPopover else { return }
+                    guard !self.hasActivePopoverWindow() else { return }
                     
                     withAnimation(DroppyAnimation.transition) {
                         DroppyState.shared.expandedDisplayID = nil
@@ -785,8 +811,8 @@ final class NotchWindowController: NSObject, ObservableObject {
                 let isExpanded = DroppyState.shared.isExpanded
                 var expandedShelfZone: NSRect = .zero
                 if isExpanded {
-                    let expandedWidth: CGFloat = 450
-                    let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
+                    let expandedWidth = self.currentExpandedShelfWidth()
+                    let centerX = self.effectiveShelfCenterX(for: targetScreen)
                     
                     // Issue #64: Use unified height calculator (single source of truth)
                     let expandedHeight = DroppyState.expandedShelfHeight(for: targetScreen)
@@ -808,7 +834,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                     // Calculate notification HUD area (centered on screen, larger than notch)
                     let notifWidth: CGFloat = 260  // expandedWidth used for notification
                     let notifHeight: CGFloat = 110 // Notification HUD height for built-in notch
-                    let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
+                    let centerX = self.effectiveShelfCenterX(for: targetScreen)
                     let notifZone = NSRect(
                         x: centerX - notifWidth / 2,
                         y: targetScreen.frame.maxY - notifHeight,
@@ -845,9 +871,14 @@ final class NotchWindowController: NSObject, ObservableObject {
                         }
                     }
                     return nil  // Consume the click event
-                } else if isExpanded && !isInExpandedShelfZone && !self.hasActiveContextMenu() {
+                } else if isExpanded &&
+                            !isInExpandedShelfZone &&
+                            !self.hasActiveContextMenu() &&
+                            !ToDoManager.shared.isInteractingWithPopover &&
+                            !self.hasActivePopoverWindow() {
                     // CLICK OUTSIDE TO CLOSE: Click is outside the shelf area
                     // Don't close if a context menu is active
+                    // Don't close if a To-do popover is active (date/edit interaction)
                     // Don't close if auto-collapse is disabled (user wants manual control)
                     // CRITICAL: Use object() ?? true to match @AppStorage default for new users
                     let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
@@ -857,6 +888,8 @@ final class NotchWindowController: NSObject, ObservableObject {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         // Check if drag started during the delay - if so, don't close
                         guard !DragMonitor.shared.isDragging else { return }
+                        guard !ToDoManager.shared.isInteractingWithPopover else { return }
+                        guard !self.hasActivePopoverWindow() else { return }
                         
                         withAnimation(DroppyAnimation.transition) {
                             DroppyState.shared.expandedDisplayID = nil
@@ -871,7 +904,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         
         // Keyboard monitor for spacebar Quick Look preview and Cmd+A select all
         // Local monitor - catches events when shelf is key window
-        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // Only handle when shelf is expanded and has items
             guard DroppyState.shared.isExpanded,
                   !DroppyState.shared.items.isEmpty else {
@@ -879,14 +912,20 @@ final class NotchWindowController: NSObject, ObservableObject {
             }
             
             // Spacebar triggers Quick Look (skip if rename is active)
-            if event.keyCode == 49, !DroppyState.shared.isRenaming {
+            if event.keyCode == 49 {
+                guard !DroppyState.shared.isRenaming,
+                      !(self?.isTextInputResponderActive() ?? false) else {
+                    return event
+                }
                 QuickLookHelper.shared.previewSelectedShelfItems()
                 return nil // Consume the event
             }
             
             // Cmd+A selects all shelf items (but NOT when terminal is visible - let text selection work)
             if event.keyCode == 0, event.modifierFlags.contains(.command),
-               !(TerminalNotchManager.shared.isInstalled && TerminalNotchManager.shared.isVisible) {
+               !(TerminalNotchManager.shared.isInstalled && TerminalNotchManager.shared.isVisible),
+               !DroppyState.shared.isRenaming,
+               !(self?.isTextInputResponderActive() ?? false) {
                 DroppyState.shared.selectAll()
                 return nil // Consume the event
             }
@@ -904,13 +943,17 @@ final class NotchWindowController: NSObject, ObservableObject {
             }
             
             // Only handle spacebar for Quick Look (not Cmd+A - that requires local focus)
-            if event.keyCode == 49, !DroppyState.shared.isRenaming {
+            if event.keyCode == 49 {
+                guard !DroppyState.shared.isRenaming,
+                      !(self?.isTextInputResponderActive() ?? false) else {
+                    return
+                }
                 // Check if mouse is over the shelf area (user intent to interact with shelf)
                 let mouseLocation = NSEvent.mouseLocation
-                if let (_, screen) = self?.findWindowForMouseLocation(mouseLocation) {
+                if let self, let (_, screen) = self.findWindowForMouseLocation(mouseLocation) {
                     // Check if mouse is in the expanded shelf area
-                    let expandedWidth: CGFloat = 450
-                    let centerX = screen.frame.origin.x + screen.frame.width / 2
+                    let expandedWidth = self.currentExpandedShelfWidth()
+                    let centerX = self.effectiveShelfCenterX(for: screen)
                     let rowCount = ceil(Double(DroppyState.shared.items.count) / 5.0)
                     let expandedHeight: CGFloat = CGFloat(max(1, rowCount) * 110 + 100)
                     
@@ -1015,6 +1058,14 @@ final class NotchWindowController: NSObject, ObservableObject {
             return event  // Pass event through
         }
     }
+
+    /// Returns true while an editable text responder is active (e.g. rename popover text field).
+    private func isTextInputResponderActive() -> Bool {
+        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView else {
+            return false
+        }
+        return textView.isEditable
+    }
     
     private func fullscreenMonitorLoop() {
         guard isFullscreenMonitoring else { return }
@@ -1039,6 +1090,11 @@ final class NotchWindowController: NSObject, ObservableObject {
             _ = DroppyState.shared.isMouseHovering
             _ = DroppyState.shared.isDropTargeted
             _ = DroppyState.shared.items.count  // Track item count for dynamic window sizing
+            _ = DroppyState.shared.shelfDisplaySlotCount  // Track row growth changes immediately
+            // Track To-do shelf bar expansion drivers so window height updates immediately.
+            _ = ToDoManager.shared.isShelfListExpanded
+            _ = ToDoManager.shared.items.count
+            _ = ToDoManager.shared.showUndoToast
         } onChange: {
             // onChange fires BEFORE the property changes.
             // dispatch async to run update AFTER the change is applied.
@@ -1047,7 +1103,20 @@ final class NotchWindowController: NSObject, ObservableObject {
                 guard let self = self, !self.isTemporarilyHidden else { return }
                 
                 self.updateAllWindowsMouseEventHandling()
-                self.updateAllWindowsSize()  // Resize windows to fit content
+                
+                // CONSTRAINT CASCADE SAFETY: Skip window resize while a drag session is active.
+                // During drag, DispatchQueue.main.async runs inside AppKit's nested drag run loop.
+                // Calling window.setFrame() there triggers NSDisplayCycleFlush →
+                // _willUpdateConstraintsForSubtree → setConstant: → constraintsDidChangeInEngine: →
+                // _postWindowNeedsUpdateConstraints re-entrantly → crash.
+                // Guard on BOTH flags:
+                // - isDropTargeted can be false for parts of an active drag gesture
+                // - DragMonitor.isDragging stays true for the full drag lifecycle
+                // This ensures we never resize inside AppKit's drag loop.
+                if !DroppyState.shared.isDropTargeted && !DragMonitor.shared.isDragging {
+                    self.updateAllWindowsSize()
+                }
+                
                 // Must re-register observation after it fires (one-shot)
                 self.setupStateObservation()
             }
@@ -1118,6 +1187,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         lastSizeUpdateTime[displayID] = Date()
         
         // Only resize if significantly different (avoid micro-updates)
+        // Keep this coarse to prevent update-constraints feedback loops.
         let currentHeight = window.frame.height
         if abs(newHeight - currentHeight) > 10 {
             // Resize from top - keep window anchored at screen top
@@ -1160,6 +1230,9 @@ final class NotchWindowController: NSObject, ObservableObject {
     /// Forces an immediate size recalculation and application for all windows
     /// Call this any time you need guaranteed correct sizing
     func forceRecalculateAllWindowSizes() {
+        // Never force frame changes inside an active drag session.
+        guard !DroppyState.shared.isDropTargeted, !DragMonitor.shared.isDragging else { return }
+
         for displayID in notchWindows.keys {
             guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else { continue }
             let correctHeight = calculateCorrectWindowHeight(for: screen)
@@ -1640,17 +1713,18 @@ final class NotchWindowController: NSObject, ObservableObject {
             // Find the target screen and check if mouse is in notch zone
             var isMouseOverNotchZone = false
             if let targetDisplayID = displayID,
-               let screen = NSScreen.screens.first(where: { $0.displayID == targetDisplayID }) {
-                // Calculate notch zone for this screen (generous zone for reliability)
-                let notchWidth: CGFloat = 220  // Approximate notch width
-                let centerX = screen.frame.origin.x + screen.frame.width / 2
-                let notchRect = NSRect(
-                    x: centerX - notchWidth / 2 - 30,  // 30px expansion on each side
-                    y: screen.frame.maxY - 50,         // Top 50px of screen
-                    width: notchWidth + 60,
-                    height: 50
+               let targetWindow = self?.notchWindows[targetDisplayID] {
+                // Use exact live notch rect from the target window instead of approximation.
+                let notchRect = targetWindow.getNotchRect()
+                let screenTopY = targetWindow.notchScreen?.frame.maxY ?? notchRect.maxY
+                let upwardExpansion = max(0, screenTopY - notchRect.maxY)
+                let hoverZone = NSRect(
+                    x: notchRect.origin.x - 10,
+                    y: notchRect.origin.y,
+                    width: notchRect.width + 20,
+                    height: notchRect.height + upwardExpansion
                 )
-                isMouseOverNotchZone = notchRect.contains(currentMouse)
+                isMouseOverNotchZone = hoverZone.contains(currentMouse)
             }
             
             // Also check DroppyState as backup
@@ -1777,7 +1851,7 @@ final class NotchWindowController: NSObject, ObservableObject {
         if TerminalNotchManager.shared.isInstalled && TerminalNotchManager.shared.isVisible {
             return
         }
-        
+
         // Reset accumulated scroll if too much time has passed (new gesture)
         if Date().timeIntervalSince(lastScrollTime) > 0.3 {
             accumulatedScrollX = 0
@@ -1795,14 +1869,23 @@ final class NotchWindowController: NSObject, ObservableObject {
         
         // Check if mouse is in notch/shelf area
         guard let (window, screen) = findWindowForMouseLocation(mouseLocation) else { return }
+        
+        // Block swipe switching only on the display that currently owns the expanded To-do list.
+        // Compact To-do bar and other displays should still allow swipe between shelf/media.
+        if ToDoManager.shared.isShelfListExpanded,
+           let expandedDisplayID = DroppyState.shared.expandedDisplayID,
+           expandedDisplayID == screen.displayID {
+            return
+        }
+
         let notchRect = window.getNotchRect()
         
         // Build swipe detection zone based on current state
         var swipeZone: NSRect
         if DroppyState.shared.isExpanded {
             // EXPANDED: Cover the full expanded shelf area
-            let expandedWidth: CGFloat = 450
-            let centerX = screen.frame.origin.x + screen.frame.width / 2
+            let expandedWidth = currentExpandedShelfWidth()
+            let centerX = screen.notchAlignedCenterX
             let rowCount = max(1, ceil(Double(DroppyState.shared.items.count) / 5.0))
             let expandedHeight = rowCount * 110 + 100  // Extra height for safety
             
@@ -1898,6 +1981,25 @@ extension NSScreen {
     func contains(point: NSPoint) -> Bool {
         return frame.contains(point)
     }
+
+    /// Returns the global X center aligned to physical notch geometry when available.
+    /// Falls back to frame midX for external displays or when notch metadata is unavailable.
+    var notchAlignedCenterX: CGFloat {
+        guard isBuiltIn,
+              let leftArea = auxiliaryTopLeftArea,
+              let rightArea = auxiliaryTopRightArea else {
+            return frame.midX
+        }
+
+        let gapMid = (leftArea.maxX + rightArea.minX) / 2
+        guard gapMid.isFinite else { return frame.midX }
+
+        // Auxiliary areas are screen-local in normal cases. If a global-space value slips in,
+        // normalize to local before converting back to global.
+        let localMid = (0...frame.width).contains(gapMid) ? gapMid : (gapMid - frame.origin.x)
+        let clampedLocalMid = min(max(localMid, 0), frame.width)
+        return frame.origin.x + clampedLocalMid
+    }
     
     /// Returns the Core Graphics display ID for this screen
     var displayID: CGDirectDisplayID {
@@ -1988,8 +2090,8 @@ class NotchWindow: NSPanel {
         // DYNAMIC ISLAND MODE: Floating pill centered below screen top edge
         if needsDynamicIsland {
             // Centered at top with margin (floating island effect like iPhone)
-            // Use screen.frame.origin for global coordinates (multi-monitor support)
-            let x = screen.frame.origin.x + (screen.frame.width - dynamicIslandWidth) / 2
+            // Use notch-aligned center so DI and notch modes share the same physical anchor.
+            let x = screen.notchAlignedCenterX - (dynamicIslandWidth / 2)
             let y = screen.frame.origin.y + screen.frame.height - dynamicIslandTopMargin - dynamicIslandHeight
 
             return NSRect(
@@ -2003,8 +2105,8 @@ class NotchWindow: NSPanel {
         // NOTCH MODE: Standard notch positioning
         var notchWidth: CGFloat = 180
         var notchHeight: CGFloat = NotchLayoutConstants.physicalNotchHeight  // Use fixed constant as default
-        // Use global screen coordinates for X position
-        var notchX: CGFloat = screen.frame.origin.x + screen.frame.width / 2 - notchWidth / 2  // Fallback
+        // Use notch-aligned center so frame stays physically centered.
+        let notchCenterX = screen.notchAlignedCenterX
 
         // Calculate true notch position and size from safe areas
         // The notch is the gap between the right edge of the left safe area
@@ -2013,9 +2115,6 @@ class NotchWindow: NSPanel {
            let rightArea = screen.auxiliaryTopRightArea {
             // Correct calculation: the gap between the two auxiliary areas
             notchWidth = max(rightArea.minX - leftArea.maxX, 180)
-            // Derive X position directly from auxiliary areas (already in screen-local coordinates)
-            // Convert to global coordinates by adding screen origin
-            notchX = screen.frame.origin.x + leftArea.maxX
         }
 
         // Get notch height - prefer safeAreaInsets but fall back to constant
@@ -2040,7 +2139,7 @@ class NotchWindow: NSPanel {
         let notchY = screen.frame.origin.y + screen.frame.height - notchHeight
 
         return NSRect(
-            x: notchX,
+            x: notchCenterX - (notchWidth / 2),
             y: notchY,
             width: notchWidth,
             height: notchHeight
@@ -2100,6 +2199,11 @@ class NotchWindow: NSPanel {
         // CRITICAL: Skip all hover tracking when a context menu is open
         // This prevents view re-renders that would dismiss submenus (Share, Compress, etc.)
         if NotchWindowController.shared.hasActiveContextMenu() {
+            return
+        }
+
+        // Keep hover state stable while interacting with To-do popovers/date pickers.
+        if ToDoManager.shared.isInteractingWithPopover || NotchWindowController.shared.hasActivePopoverWindow() {
             return
         }
         
@@ -2309,8 +2413,8 @@ class NotchWindow: NSPanel {
                 // When shelf is expanded ON THIS SCREEN, check if cursor is in the expanded shelf zone
                 // CRITICAL: Only check if THIS screen has the expanded shelf (not just any screen)
                 // If so, maintain hover state to prevent auto-collapse
-                let expandedWidth: CGFloat = 450
-                let centerX = targetScreen.frame.origin.x + targetScreen.frame.width / 2
+                let expandedWidth = NotchWindowController.shared.currentExpandedShelfWidth()
+                let centerX = targetScreen.notchAlignedCenterX
                 
                 // Issue #64: Use unified height calculator (single source of truth)
                 let expandedHeight = DroppyState.expandedShelfHeight(for: targetScreen)
@@ -2407,9 +2511,9 @@ class NotchWindow: NSPanel {
             // Also accept if expanded and over the expanded shelf area
             // Use notchScreen for multi-monitor support
             if isExpanded && !isDragOverValidZone, let screen = notchScreen {
-                let expandedWidth: CGFloat = 450
+                let expandedWidth = NotchWindowController.shared.currentExpandedShelfWidth()
                 // Use global coordinates
-                let centerX = screen.frame.origin.x + screen.frame.width / 2
+                let centerX = screen.notchAlignedCenterX
                 
                 // Issue #64: Use unified height calculator (single source of truth)
                 let expandedHeight = DroppyState.expandedShelfHeight(for: screen)

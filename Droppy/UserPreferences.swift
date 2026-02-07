@@ -115,6 +115,10 @@ enum AppPreferenceKey {
     static let hasCompletedOnboarding = "hasCompletedOnboarding"
     static let didMigrateShelfAirDropDefault = "didMigrateShelfAirDropDefault"
     static let enableFinderServices = "enableFinderServices"
+    static let gumroadLicenseActive = "gumroadLicenseActive"
+    static let gumroadLicenseEmail = "gumroadLicenseEmail"
+    static let gumroadLicenseKeyHint = "gumroadLicenseKeyHint"
+    static let gumroadLicenseLastValidatedAt = "gumroadLicenseLastValidatedAt"
     
     // MARK: - Extension: Element Capture
     static let editorBlurStrength = "elementCapture_blurStrength"  // Blur intensity (5-30, lower = stronger pixelation)
@@ -122,6 +126,10 @@ enum AppPreferenceKey {
     // MARK: - Extension: Terminal Notch
     static let terminalNotchInstalled = "terminalNotch_installed"
     static let terminalNotchEnabled = "terminalNotch_enabled"  // Whether to show in HUD section
+
+    // MARK: - Extension: Camera
+    static let cameraInstalled = "camera_installed"
+    static let cameraEnabled = "camera_enabled"  // Whether to show camera preview in expanded shelf
     
     // MARK: - Extension: Notification HUD
     static let notificationHUDInstalled = "notificationHUD_installed"
@@ -137,6 +145,9 @@ enum AppPreferenceKey {
     static let todoInstalled = "todo_installed"
     static let todoEnabled = "todo_enabled"  // Whether to show in shelf
     static let todoAutoCleanupHours = "todo_autoCleanupHours"  // Hours before completed items are removed
+    static let todoSyncCalendarEnabled = "todo_syncCalendarEnabled"
+    static let todoSyncRemindersEnabled = "todo_syncRemindersEnabled"
+    static let todoSyncRemindersListIDs = "todo_syncRemindersListIDs"  // JSON array of selected reminder list identifiers
     
     // MARK: - Extension: Video Compression (Legacy - migrated to Smart Export)
     static let compressionAutoSaveToFolder = "compressionAutoSaveToFolder"
@@ -260,6 +271,10 @@ enum PreferenceDefault {
     static let startAtLogin = false
     static let hasCompletedOnboarding = false
     static let enableFinderServices = true
+    static let gumroadLicenseActive = false
+    static let gumroadLicenseEmail = ""
+    static let gumroadLicenseKeyHint = ""
+    static let gumroadLicenseLastValidatedAt: Double = 0
     
     // MARK: - Extension: Element Capture
     static let editorBlurStrength: Double = 10  // 10x10 pixelation (lower = stronger blur)
@@ -267,6 +282,10 @@ enum PreferenceDefault {
     // MARK: - Extension: Terminal Notch
     static let terminalNotchInstalled = false
     static let terminalNotchEnabled = true  // Enabled by default when installed
+
+    // MARK: - Extension: Camera
+    static let cameraInstalled = false
+    static let cameraEnabled = true  // Enabled by default when installed
     
     // MARK: - Extension: Notification HUD
     static let notificationHUDInstalled = false
@@ -282,6 +301,9 @@ enum PreferenceDefault {
     static let todoInstalled = false  // Disabled by default, user installs from Extension Store
     static let todoEnabled = true  // Enabled by default when installed
     static let todoAutoCleanupHours = 5  // Completed items removed after 5 hours
+    static let todoSyncCalendarEnabled = false
+    static let todoSyncRemindersEnabled = false
+    static let todoSyncRemindersListIDs = "[]"
     
     // MARK: - Extension: Video Compression (Legacy)
     static let compressionAutoSaveToFolder = false

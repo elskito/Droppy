@@ -25,14 +25,13 @@ final class AIInstallManager: ObservableObject {
         // Load cached status immediately for instant UI response
         isInstalled = UserDefaults.standard.bool(forKey: installedCacheKey)
         
-        // Verify in background (only if cached as installed to avoid slow startup)
-        if isInstalled {
-            Task {
-                let actuallyInstalled = await checkTransparentBackgroundInstalled()
-                if actuallyInstalled != isInstalled {
-                    isInstalled = actuallyInstalled
-                    UserDefaults.standard.set(actuallyInstalled, forKey: installedCacheKey)
-                }
+        // Always verify in background — handles PearCleaner recovery (UserDefaults wiped
+        // but Python packages still on disk) and stale cache scenarios
+        Task {
+            let actual = await checkTransparentBackgroundInstalled()
+            if actual != isInstalled {
+                isInstalled = actual
+                UserDefaults.standard.set(actual, forKey: installedCacheKey)
             }
         }
     }
@@ -241,8 +240,14 @@ final class AIInstallManager: ObservableObject {
             checkInstallationStatus()
         }
         
+        // Use findPython3() — /usr/bin/python3 is a stub on macOS 26 Tahoe
+        guard let pythonPath = findPython3() else {
+            installError = "Python 3 not found. Cannot uninstall."
+            return
+        }
+        
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        process.executableURL = URL(fileURLWithPath: pythonPath)
         process.arguments = ["-m", "pip", "uninstall", "-y", "transparent-background"]
         
         do {

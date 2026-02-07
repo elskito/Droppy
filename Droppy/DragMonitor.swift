@@ -39,15 +39,6 @@ final class DragMonitor: ObservableObject {
     private var jiggleNotified = false
     private var dragEndNotified = false
     
-    // IDLE JIGGLE: Monitor mouse movement when NOT dragging to show hidden baskets
-    private var idleJiggleMonitor: Any?
-    private var idleLocalJiggleMonitor: Any?
-    private var lastIdleLocation: CGPoint = .zero
-    private var lastIdleDirection: CGPoint = .zero
-    private var idleDirectionChanges: [Date] = []
-    private var idleJiggleNotified = false
-    private var idleJiggleLastTriggeredAt: Date = .distantPast
-    
     // Optional shortcut to reveal basket during active drag
     private var dragRevealHotKey: GlobalHotKey?
     private var dragRevealShortcut: SavedShortcut?
@@ -116,124 +107,16 @@ final class DragMonitor: ObservableObject {
         lastDragDirection = .zero
     }
     
-    /// Resets idle jiggle state
-    func resetIdleJiggle() {
-        idleDirectionChanges.removeAll()
-        lastIdleDirection = .zero
-        idleJiggleNotified = false
-    }
+    // MARK: - Idle Jiggle Monitoring (Disabled)
     
-    // MARK: - Idle Jiggle Monitoring (No Drag)
-    
-    /// Starts monitoring mouse movement for jiggle when baskets are hidden
-    /// Call this when baskets are auto-hidden and we want jiggle to reveal them
+    /// Disabled: no-file jiggle reveal was removed in favor of the basket switcher shortcut.
     func startIdleJiggleMonitoring() {
-        guard idleJiggleMonitor == nil, idleLocalJiggleMonitor == nil else { return }
-        guard FloatingBasketWindowController.hasHiddenBasketsWithItems else { return }
-        
-        lastIdleLocation = NSEvent.mouseLocation
-        resetIdleJiggle()
-        
-        idleJiggleMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            self?.detectIdleJiggle(currentLocation: NSEvent.mouseLocation)
-        }
-        
-        idleLocalJiggleMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
-            self?.detectIdleJiggle(currentLocation: NSEvent.mouseLocation)
-            return event
-        }
+        // Intentionally no-op.
     }
     
-    /// Stops idle jiggle monitoring (call when baskets are shown)
+    /// Disabled: retained for compatibility with existing call sites.
     func stopIdleJiggleMonitoring() {
-        if let monitor = idleJiggleMonitor {
-            NSEvent.removeMonitor(monitor)
-            idleJiggleMonitor = nil
-        }
-        if let monitor = idleLocalJiggleMonitor {
-            NSEvent.removeMonitor(monitor)
-            idleLocalJiggleMonitor = nil
-        }
-        resetIdleJiggle()
-    }
-    
-    /// Detects jiggle from idle mouse movement (not during drag)
-    private func detectIdleJiggle(currentLocation: CGPoint) {
-        guard !dragActive, !isDragging else { return }
-        let floatingEnabled = UserDefaults.standard.preference(
-            AppPreferenceKey.enableFloatingBasket,
-            default: PreferenceDefault.enableFloatingBasket
-        )
-        let autoHideEnabled = UserDefaults.standard.preference(
-            AppPreferenceKey.enableBasketAutoHide,
-            default: PreferenceDefault.enableBasketAutoHide
-        )
-        guard floatingEnabled, autoHideEnabled else {
-            stopIdleJiggleMonitoring()
-            return
-        }
-        guard FloatingBasketWindowController.hasHiddenBasketsWithItems else {
-            stopIdleJiggleMonitoring()
-            return
-        }
-
-        let dx = currentLocation.x - lastIdleLocation.x
-        let dy = currentLocation.y - lastIdleLocation.y
-        let magnitude = sqrt(dx * dx + dy * dy)
-        
-        // Use same sensitivity setting as drag jiggle
-        let sensitivity = UserDefaults.standard.preference(
-            AppPreferenceKey.basketJiggleSensitivity,
-            default: PreferenceDefault.basketJiggleSensitivity
-        )
-        // Slightly easier than drag jiggle to keep no-drag reveal reliable.
-        let minimumMovement = max(2.0, min(7.0, 8.0 - (sensitivity * 1.2)))
-        
-        lastIdleLocation = currentLocation
-        
-        guard magnitude > minimumMovement else { return }
-        
-        let currentDirection = CGPoint(x: dx / magnitude, y: dy / magnitude)
-        
-        if lastIdleDirection != .zero {
-            let dot = currentDirection.x * lastIdleDirection.x + currentDirection.y * lastIdleDirection.y
-            
-            // Accept a broader reversal angle for idle shake detection.
-            if dot < 0.2 {
-                let now = Date()
-                idleDirectionChanges.append(now)
-                let idleJiggleTimeWindow: TimeInterval = 0.85
-                idleDirectionChanges = idleDirectionChanges.filter { now.timeIntervalSince($0) < idleJiggleTimeWindow }
-                let requiredDirectionChanges = max(2, min(4, Int(round(5.0 - sensitivity))))
-                
-                if idleDirectionChanges.count >= requiredDirectionChanges && !idleJiggleNotified {
-                    // Cooldown to avoid repeated accidental triggers.
-                    guard now.timeIntervalSince(idleJiggleLastTriggeredAt) > 0.6 else {
-                        return
-                    }
-                    idleJiggleLastTriggeredAt = now
-                    idleJiggleNotified = true
-                    
-                    // Prevent re-triggering for a bit
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                        self?.idleJiggleNotified = false
-                    }
-                    
-                    // Show all hidden baskets
-                    DispatchQueue.main.async {
-                        let enabled = UserDefaults.standard.preference(
-                            AppPreferenceKey.enableFloatingBasket,
-                            default: PreferenceDefault.enableFloatingBasket
-                        )
-                        if enabled {
-                            FloatingBasketWindowController.showAllHiddenBaskets()
-                        }
-                    }
-                }
-            }
-        }
-        
-        lastIdleDirection = currentDirection
+        // Intentionally no-op.
     }
     
     /// Called by settings when shortcut value changes.

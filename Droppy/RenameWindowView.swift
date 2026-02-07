@@ -10,12 +10,11 @@ struct RenameWindowView: View {
     @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
     @State private var isHoveringCancel = false
     @State private var isHoveringSave = false
-    // Static dotted border (no animation to save CPU)
     
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                // Text field with marching ants border
+                // Text field
                 RenameAutoSelectTextField(
                     text: $text,
                     onSubmit: {
@@ -23,20 +22,10 @@ struct RenameWindowView: View {
                     }
                 )
                 .font(.system(size: 14, weight: .medium))
-                .padding(DroppySpacing.md)
-                .background(Color.black.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                        .stroke(
-                            Color.accentColor,
-                            style: StrokeStyle(
-                                lineWidth: 1.5,
-                                lineCap: .round,
-                                dash: [3, 3],
-                                dashPhase: 0
-                            )
-                        )
+                .droppyTextInputChrome(
+                    cornerRadius: DroppyRadius.ml,
+                    horizontalPadding: DroppySpacing.md,
+                    verticalPadding: DroppySpacing.md
                 )
                 
                 // Buttons - matching DroppyAlertView style exactly (secondary left, spacer, primary right)

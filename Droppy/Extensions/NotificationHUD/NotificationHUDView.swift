@@ -280,10 +280,7 @@ struct NotificationHUDView: View {
         // - Built-in notch: notchHeight top, 30pt left/right, 20pt bottom
         // - External notch style: 20pt top/bottom, 30pt left/right
         // - Pure Island mode: 30pt on all 4 edges
-        .padding(NotchLayoutConstants.contentEdgeInsets(
-            notchHeight: contentLayoutNotchHeight,
-            isExternalWithNotchStyle: isExternalWithNotchStyle
-        ))
+        .padding(notificationContentInsets)
     }
     
     /// Content layout notch height - 0 for external displays (no physical notch)
@@ -306,6 +303,14 @@ struct NotificationHUDView: View {
         if screen.isBuiltIn { return false }
         let externalUseDI = (UserDefaults.standard.object(forKey: "externalDisplayUseDynamicIsland") as? Bool) ?? true
         return !externalUseDI
+    }
+
+    /// Notification content insets — uses SSOT for consistency with all HUDs.
+    private var notificationContentInsets: EdgeInsets {
+        NotchLayoutConstants.contentEdgeInsets(
+            notchHeight: contentLayoutNotchHeight,
+            isExternalWithNotchStyle: isExternalWithNotchStyle
+        )
     }
 
     // MARK: - Shared Components

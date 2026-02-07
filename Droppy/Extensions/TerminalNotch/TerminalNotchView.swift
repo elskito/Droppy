@@ -149,11 +149,10 @@ struct TerminalNotchView: View {
                             .frame(width: 16, height: 16)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: DroppyRadius.medium)
-                        .fill(Color.white.opacity(0.05))
+                .droppyTextInputChrome(
+                    cornerRadius: DroppyRadius.medium,
+                    horizontalPadding: 16,
+                    verticalPadding: 10
                 )
             }
             // Content padding inside the dotted outline
@@ -209,6 +208,11 @@ struct TerminalNotchView: View {
                         .frame(width: 16, height: 16)
                 }
             }
+            .droppyTextInputChrome(
+                cornerRadius: DroppyRadius.medium,
+                horizontalPadding: 12,
+                verticalPadding: 10
+            )
             
             // Output preview (if any)
             if !manager.lastOutput.isEmpty {
@@ -320,9 +324,11 @@ struct TerminalNotchView: View {
                             return .handled
                         }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.03))
+                .droppyTextInputChrome(
+                    cornerRadius: DroppyRadius.medium,
+                    horizontalPadding: 12,
+                    verticalPadding: 10
+                )
             }
             .frame(height: 300)
         }

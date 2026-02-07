@@ -234,63 +234,13 @@ struct SettingsSidebar: View {
             }
             
             Spacer()
-            
-            // Support button at bottom
-            supportButton
-            
+
             // Update button at bottom
             updateButton
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 12)
         .frame(minWidth: 200)
-    }
-    
-    private var supportButton: some View {
-        Link(destination: URL(string: "https://buymeacoffee.com/droppy")!) {
-            HStack(spacing: 10) {
-                // Premium gradient icon badge
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(hue: 0.08, saturation: 0.80, brightness: 0.98),
-                                    Color(hue: 0.06, saturation: 0.90, brightness: 0.85)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 28, height: 28)
-                    
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.25), Color.clear],
-                                startPoint: .top,
-                                endPoint: .center
-                            )
-                        )
-                        .frame(width: 28, height: 28)
-                    
-                    Image(systemName: "cup.and.saucer.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.2), radius: 0.5, x: 0, y: 0.5)
-                }
-                
-                Text("Support")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(Color.white.opacity(0.85))
-                
-                Spacer()
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        }
-        .buttonStyle(SettingsSidebarLinkStyle())
     }
     
     private var updateButton: some View {
@@ -345,7 +295,7 @@ struct SettingsSidebar: View {
 
 // MARK: - Sidebar Link Style
 
-/// Button style for sidebar links (Support, Update)
+/// Button style for sidebar links (Update)
 struct SettingsSidebarLinkStyle: ButtonStyle {
     @State private var isHovering = false
     

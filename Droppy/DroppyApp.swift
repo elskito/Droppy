@@ -41,6 +41,7 @@ struct DroppyMenuContent: View {
     // Check if Clipboard menu bar is enabled
     @AppStorage(AppPreferenceKey.showClipboardInMenuBar) private var showClipboardInMenuBar = PreferenceDefault.showClipboardInMenuBar
     @ObservedObject private var clipboardManager = ClipboardManager.shared
+    @ObservedObject private var licenseManager = LicenseManager.shared
     
     // Check if extensions are disabled
     private var isElementCaptureDisabled: Bool {
@@ -65,148 +66,165 @@ struct DroppyMenuContent: View {
     }
     
     var body: some View {
-        // Show/Hide Notch or Dynamic Island toggle (only when shelf is enabled)
-        if enableNotchShelf {
-            if notchController.isTemporarilyHidden {
-                Button {
-                    notchController.setTemporarilyHidden(false)
-                } label: {
-                    Label("Show \(notchController.displayModeLabel)", systemImage: "eye")
+        if licenseManager.requiresLicenseEnforcement && !licenseManager.isActivated {
+            Button {
+                LicenseWindowController.shared.show()
+            } label: {
+                Label("Activate License...", systemImage: "key.fill")
+            }
+
+            Divider()
+
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Label("Quit Droppy", systemImage: "power")
+            }
+            .keyboardShortcut("q", modifiers: .command)
+        } else {
+            // Show/Hide Notch or Dynamic Island toggle (only when shelf is enabled)
+            if enableNotchShelf {
+                if notchController.isTemporarilyHidden {
+                    Button {
+                        notchController.setTemporarilyHidden(false)
+                    } label: {
+                        Label("Show \(notchController.displayModeLabel)", systemImage: "eye")
+                    }
+                } else {
+                    Button {
+                        notchController.setTemporarilyHidden(true)
+                    } label: {
+                        Label("Hide \(notchController.displayModeLabel)", systemImage: "eye.slash")
+                    }
                 }
-            } else {
-                Button {
-                    notchController.setTemporarilyHidden(true)
-                } label: {
-                    Label("Hide \(notchController.displayModeLabel)", systemImage: "eye.slash")
-                }
+                
+                Divider()
+            }
+            
+            Button {
+                UpdateChecker.shared.checkAndNotify()
+            } label: {
+                Label("Check for Updates...", systemImage: "arrow.clockwise")
             }
             
             Divider()
-        }
-        
-        Button {
-            UpdateChecker.shared.checkAndNotify()
-        } label: {
-            Label("Check for Updates...", systemImage: "arrow.clockwise")
-        }
-        
-        Divider()
-        
-        if showQuickshareInMenuBar && !ExtensionType.quickshare.isRemoved {
-            Menu {
-                QuickshareMenuContent()
-            } label: {
-                Label("Quickshare", systemImage: "drop.fill")
+            
+            if showQuickshareInMenuBar && !ExtensionType.quickshare.isRemoved {
+                Menu {
+                    QuickshareMenuContent()
+                } label: {
+                    Label("Quickshare", systemImage: "drop.fill")
+                }
             }
-        }
-        
-        // Clipboard Menu (New)
-        if showClipboardInMenuBar {
-            Menu {
-                // Recent History
-                let history = clipboardManager.history.prefix(15)
-                
-                if history.isEmpty {
-                    Text("Clipboard is empty")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(history) { item in
-                        Button {
-                            clipboardManager.paste(item: item)
+            
+            // Clipboard Menu (New)
+            if showClipboardInMenuBar {
+                Menu {
+                    // Recent History
+                    let history = clipboardManager.history.prefix(15)
+                    
+                    if history.isEmpty {
+                        Text("Clipboard is empty")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(history) { item in
+                            Button {
+                                clipboardManager.paste(item: item)
+                            } label: {
+                                // Show icon based on type
+                                Label(item.title, systemImage: iconFor(item: item))
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            clipboardManager.history.removeAll()
                         } label: {
-                            // Show icon based on type
-                            Label(item.title, systemImage: iconFor(item: item))
+                            Label("Clear History", systemImage: "trash")
                         }
                     }
                     
                     Divider()
                     
-                    Button(role: .destructive) {
-                        clipboardManager.history.removeAll()
+                    Button {
+                        ClipboardWindowController.shared.show()
                     } label: {
-                        Label("Clear History", systemImage: "trash")
+                        Label("Manage...", systemImage: "list.bullet.rectangle")
                     }
-                }
-                
-                Divider()
-                
-                Button {
-                    ClipboardWindowController.shared.show()
+                    
                 } label: {
-                    Label("Manage...", systemImage: "list.bullet.rectangle")
+                    Label("Clipboard", systemImage: "clipboard")
                 }
-                
-            } label: {
-                Label("Clipboard", systemImage: "clipboard")
             }
-        }
-        
-        // Element Capture with native keyboard shortcut styling (hidden when disabled)
-        if !isElementCaptureDisabled {
-            elementCaptureButton
-                .id(shortcutRefreshId)  // Force rebuild when shortcut changes
-        }
-        
-        // Window Snap submenu with quick actions (hidden when disabled)
-        if !isWindowSnapDisabled {
-            Menu {
-                Button {
-                    WindowSnapManager.shared.executeAction(.leftHalf)
-                } label: {
-                    Label("Left Half", systemImage: "rectangle.lefthalf.filled")
-                }
-                Button {
-                    WindowSnapManager.shared.executeAction(.rightHalf)
-                } label: {
-                    Label("Right Half", systemImage: "rectangle.righthalf.filled")
-                }
-                Button {
-                    WindowSnapManager.shared.executeAction(.maximize)
-                } label: {
-                    Label("Maximize", systemImage: "arrow.up.left.and.arrow.down.right")
-                }
-                Button {
-                    WindowSnapManager.shared.executeAction(.center)
-                } label: {
-                    Label("Center", systemImage: "rectangle.center.inset.filled")
-                }
-                Divider()
-                Button {
-                    SettingsWindowController.shared.showSettings(openingExtension: .windowSnap)
-                } label: {
-                    Label("Configure Shortcuts...", systemImage: "keyboard")
-                }
-            } label: {
-                Label("Window Snap", systemImage: "rectangle.split.2x1")
+            
+            // Element Capture with native keyboard shortcut styling (hidden when disabled)
+            if !isElementCaptureDisabled {
+                elementCaptureButton
+                    .id(shortcutRefreshId)  // Force rebuild when shortcut changes
             }
-        }
-        
-        Divider()
-        
-        Button {
-            SettingsWindowController.shared.showSettings()
-        } label: {
-            Label("Settings...", systemImage: "gear")
-        }
-        .keyboardShortcut(",", modifiers: .command)
-        
-        Divider()
-        
-        Button {
-            NSApplication.shared.terminate(nil)
-        } label: {
-            Label("Quit Droppy", systemImage: "power")
-        }
-        .keyboardShortcut("q", modifiers: .command)
-        .onReceive(NotificationCenter.default.publisher(for: .elementCaptureShortcutChanged)) { _ in
-            shortcutRefreshId = UUID()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .windowSnapShortcutChanged)) { _ in
-            shortcutRefreshId = UUID()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .extensionStateChanged)) { _ in
-            // Refresh when extension is disabled/enabled
-            shortcutRefreshId = UUID()
+            
+            // Window Snap submenu with quick actions (hidden when disabled)
+            if !isWindowSnapDisabled {
+                Menu {
+                    Button {
+                        WindowSnapManager.shared.executeAction(.leftHalf)
+                    } label: {
+                        Label("Left Half", systemImage: "rectangle.lefthalf.filled")
+                    }
+                    Button {
+                        WindowSnapManager.shared.executeAction(.rightHalf)
+                    } label: {
+                        Label("Right Half", systemImage: "rectangle.righthalf.filled")
+                    }
+                    Button {
+                        WindowSnapManager.shared.executeAction(.maximize)
+                    } label: {
+                        Label("Maximize", systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
+                    Button {
+                        WindowSnapManager.shared.executeAction(.center)
+                    } label: {
+                        Label("Center", systemImage: "rectangle.center.inset.filled")
+                    }
+                    Divider()
+                    Button {
+                        SettingsWindowController.shared.showSettings(openingExtension: .windowSnap)
+                    } label: {
+                        Label("Configure Shortcuts...", systemImage: "keyboard")
+                    }
+                } label: {
+                    Label("Window Snap", systemImage: "rectangle.split.2x1")
+                }
+            }
+            
+            Divider()
+            
+            Button {
+                SettingsWindowController.shared.showSettings()
+            } label: {
+                Label("Settings...", systemImage: "gear")
+            }
+            .keyboardShortcut(",", modifiers: .command)
+            
+            Divider()
+            
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Label("Quit Droppy", systemImage: "power")
+            }
+            .keyboardShortcut("q", modifiers: .command)
+            .onReceive(NotificationCenter.default.publisher(for: .elementCaptureShortcutChanged)) { _ in
+                shortcutRefreshId = UUID()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .windowSnapShortcutChanged)) { _ in
+                shortcutRefreshId = UUID()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .extensionStateChanged)) { _ in
+                // Refresh when extension is disabled/enabled
+                shortcutRefreshId = UUID()
+            }
         }
     }
     
@@ -241,9 +259,12 @@ struct DroppyMenuContent: View {
 }
 
 /// App delegate to manage application lifecycle and notch window
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Must be stored as property to stay alive (services won't work if deallocated)
     private let serviceProvider = ServiceProvider()
+    private var didStartLicensedFeatures = false
+    private var didStartBackgroundUpdates = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // FIX #123: Force LaunchServices re-registration on first launch
@@ -261,6 +282,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppPreferenceKey.showMediaPlayer: PreferenceDefault.showMediaPlayer,
             AppPreferenceKey.enableClipboard: PreferenceDefault.enableClipboard,
             AppPreferenceKey.enableMultiBasket: PreferenceDefault.enableMultiBasket,
+            AppPreferenceKey.gumroadLicenseActive: PreferenceDefault.gumroadLicenseActive,
+            AppPreferenceKey.gumroadLicenseEmail: PreferenceDefault.gumroadLicenseEmail,
+            AppPreferenceKey.gumroadLicenseKeyHint: PreferenceDefault.gumroadLicenseKeyHint,
+            AppPreferenceKey.gumroadLicenseLastValidatedAt: PreferenceDefault.gumroadLicenseLastValidatedAt,
         ])
         
         
@@ -288,7 +313,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Register Finder Services (right-click menu integration)
         // Note: User must manually enable in System Settings > Keyboard > Keyboard Shortcuts > Services
         NSApp.servicesProvider = serviceProvider
-        NSUpdateDynamicServices()  // Refresh Services cache so menu items appear in the list
+        // Never block launch on services refresh.
+        DispatchQueue.global(qos: .utility).async {
+            NSUpdateDynamicServices()  // Refresh Services cache so menu items appear in the list
+        }
         
         // Register for URL scheme events (droppy://)
         NSAppleEventManager.shared().setEventHandler(
@@ -310,45 +338,106 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = ClipboardWindowController.shared
         _ = ThumbnailCache.shared  // Warmup QuickLook Metal shaders early
         
+        // Start analytics (anonymous launch tracking)
+        AnalyticsService.shared.logAppLaunch()
+
+        configureLicenseFlow()
+    }
+
+    private func configureLicenseFlow() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleLicenseStateDidChange(_:)),
+            name: .licenseStateDidChange,
+            object: nil
+        )
+
+        let licenseManager = LicenseManager.shared
+        licenseManager.bootstrap()
+
+        if !licenseManager.requiresLicenseEnforcement || licenseManager.isActivated {
+            startLicensedFeaturesIfNeeded()
+            showOnboardingIfNeeded()
+        } else {
+            stopLicensedFeatures()
+            ClipboardManager.shared.stopMonitoring()
+            SettingsWindowController.shared.close()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                LicenseWindowController.shared.show()
+            }
+        }
+    }
+
+    @objc
+    private func handleLicenseStateDidChange(_ notification: Notification) {
+        let licenseManager = LicenseManager.shared
+        guard licenseManager.requiresLicenseEnforcement else { return }
+
+        if licenseManager.isActivated {
+            let licenseWindowWasVisible = LicenseWindowController.shared.isVisible
+            startLicensedFeaturesIfNeeded()
+            if !licenseWindowWasVisible {
+                showOnboardingIfNeeded()
+            }
+        } else {
+            stopLicensedFeatures()
+            SettingsWindowController.shared.close()
+            DispatchQueue.main.async {
+                LicenseWindowController.shared.show()
+            }
+        }
+    }
+
+    private func startLicensedFeaturesIfNeeded() {
+        guard !didStartLicensedFeatures else { return }
+        didStartLicensedFeatures = true
+
+        if !didStartBackgroundUpdates {
+            didStartBackgroundUpdates = true
+            UpdateChecker.shared.startBackgroundChecking()
+        }
+
         // Load Element Capture and Window Snap shortcuts (after all other singletons are ready)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.didStartLicensedFeatures else { return }
             ElementCaptureManager.shared.loadAndStartMonitoring()
             WindowSnapManager.shared.loadAndStartMonitoring()
-            
+
             // Initialize Voice Transcribe (restores menu bar if it was enabled)
             _ = VoiceTranscribeManager.shared
-            
+
             // Initialize Menu Bar Manager (restores status items if it was enabled)
             _ = MenuBarManager.shared
         }
-        
-        // Start analytics (anonymous launch tracking)
-        AnalyticsService.shared.logAppLaunch()
-        
+
         // Start monitoring for drag events (polling-based, safe)
         DragMonitor.shared.startMonitoring()
-        
+        if ClipboardManager.shared.isEnabled {
+            ClipboardManager.shared.startMonitoring()
+        }
+
         // Setup UI components on main thread
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.didStartLicensedFeatures else { return }
             // 1. Notch Window (needed for Shelf, HUD replacement, and Media Player)
             // The notch window is required for any of these features to work
             let enableNotch = UserDefaults.standard.bool(forKey: "enableNotchShelf")
             let notchIsSet = UserDefaults.standard.object(forKey: "enableNotchShelf") != nil
             let notchShelfEnabled = enableNotch || !notchIsSet  // Default true
-            
+
             let hudEnabled = UserDefaults.standard.object(forKey: "enableHUDReplacement") == nil
                 ? true
                 : UserDefaults.standard.bool(forKey: "enableHUDReplacement")
-            
+
             let mediaEnabled = UserDefaults.standard.object(forKey: "showMediaPlayer") == nil
                 ? true
                 : UserDefaults.standard.bool(forKey: "showMediaPlayer")
-            
+
             // Create notch window if ANY of these features are enabled
             if notchShelfEnabled || hudEnabled || mediaEnabled {
                 NotchWindowController.shared.setupNotchWindow()
             }
-            
+
             // 2. Clipboard Global Shortcut
             // This MUST start even if no windows are visible
             // Default to enabled if key not set
@@ -359,7 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print("⌨️ Droppy: Starting Global Clipboard Monitor")
                 ClipboardWindowController.shared.startMonitoringShortcut()
             }
-            
+
             // 3. Media Key Interceptor for HUD replacement
             // Start if HUD replacement is enabled to suppress system HUD
             // (hudEnabled already calculated above)
@@ -367,7 +456,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🎛️ Droppy: Starting Media Key Interceptor for HUD")
                 MediaKeyInterceptor.shared.start()
             }
-            
+
             // 4. AirPods HUD monitoring (Bluetooth connection detection)
             let airPodsEnabled = UserDefaults.standard.object(forKey: "enableAirPodsHUD") == nil
                 ? true
@@ -376,7 +465,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🎧 Droppy: Starting AirPods Connection Monitor")
                 AirPodsManager.shared.startMonitoring()
             }
-            
+
             // 5. Lock Screen Media Widget - DISABLED
             // DISABLED: Lock screen features (Skylight API and window recreation) causing serious issues.
             // Force-disable for ALL users regardless of previous settings.
@@ -388,14 +477,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             //     print("🔒 Droppy: Initializing Lock Screen Media Widget")
             //     LockScreenMediaPanelManager.shared.configure(musicManager: MusicManager.shared)
             // }
-            
+
             // 6. Tracked Folders (monitors folders for new files)
             let folderObservationEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.enableTrackedFolders)
             if folderObservationEnabled {
                 print("📁 Droppy: Starting Tracked Folders Monitor")
                 TrackedFoldersManager.shared.startMonitoring()
             }
-            
+
             // 7. Notification HUD (captures macOS notifications for notch display)
             let notificationHUDInstalled = UserDefaults.standard.bool(forKey: AppPreferenceKey.notificationHUDInstalled)
             let notificationHUDEnabled = !ExtensionType.notificationHUD.isRemoved
@@ -403,24 +492,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🔔 Droppy: Starting Notification HUD Monitor")
                 NotificationHUDManager.shared.startMonitoring()
             }
-            
+
             // 8. Hide Physical Notch (black bar to hide the notch cutout)
             let hidePhysicalNotchEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.hidePhysicalNotch)
             if hidePhysicalNotchEnabled {
                 print("⬛ Droppy: Enabling Hide Physical Notch")
                 HideNotchManager.shared.enable()
             }
-            
+
             // 6. AUTO-PROMPT FOR PERMISSIONS
             // If any accessibility-dependent feature is enabled but permission not granted, prompt
             let needsAccessibility = hudEnabled || clipboardEnabled
             let axTrusted = AXIsProcessTrusted()
             let cacheValue = UserDefaults.standard.bool(forKey: "accessibilityGranted")
             let isGranted = PermissionManager.shared.isAccessibilityGranted
-            
+
             print("🔐 DEBUG: needsAccessibility=\(needsAccessibility) hudEnabled=\(hudEnabled) clipboardEnabled=\(clipboardEnabled)")
             print("🔐 DEBUG: AXIsProcessTrusted()=\(axTrusted) cache=\(cacheValue) isGranted=\(isGranted)")
-            
+
             if needsAccessibility && !isGranted {
                 print("🔐 Droppy: Accessibility needed for enabled features - prompting...")
                 PermissionManager.shared.requestAccessibility()
@@ -428,19 +517,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🔐 DEBUG: NOT prompting - needsAccessibility=\(needsAccessibility) isGranted=\(isGranted)")
             }
         }
-        
-        // Start background update scheduler (checks once per day)
-        UpdateChecker.shared.startBackgroundChecking()
-        
-        // Show onboarding wizard for first-time users
-        if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                OnboardingWindowController.shared.show()
-            }
+    }
+
+    private func stopLicensedFeatures() {
+        guard didStartLicensedFeatures else { return }
+        didStartLicensedFeatures = false
+
+        DragMonitor.shared.stopMonitoring()
+        AirPodsManager.shared.stopMonitoring()
+        TrackedFoldersManager.shared.stopMonitoring()
+        NotificationHUDManager.shared.stopMonitoring()
+        ClipboardManager.shared.stopMonitoring()
+        ClipboardWindowController.shared.stopMonitoringShortcut()
+        MediaKeyInterceptor.shared.stop()
+        VoiceTranscribeManager.shared.stopGlobalKeyMonitoring()
+        MenuBarManager.shared.disable()
+        ElementCaptureManager.shared.stopMonitoringAllShortcuts()
+        WindowSnapManager.shared.stopMonitoringAllShortcuts()
+        HideNotchManager.shared.disable()
+        NotchWindowController.shared.closeWindow()
+    }
+
+    private func showOnboardingIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: AppPreferenceKey.hasCompletedOnboarding) else {
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            OnboardingWindowController.shared.show()
         }
     }
     
     func applicationDidBecomeActive(_ notification: Notification) {
+        let licenseManager = LicenseManager.shared
+        if licenseManager.requiresLicenseEnforcement && !licenseManager.isActivated {
+            LicenseWindowController.shared.show()
+            return
+        }
+
         // Poll for accessibility permission in case user just returned from System Settings
         // This handles the "TCC delay" where permission is granted but system API returns false for a few seconds
         PermissionManager.shared.startPollingForAccessibility()
@@ -496,27 +610,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !UserDefaults.standard.bool(forKey: launchServicesRegisteredKey) else {
             return
         }
+        let registeredKey = launchServicesRegisteredKey
         
         // The lsregister tool is in the CoreServices framework
         let lsregisterPath = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
         
-        // Run lsregister to re-register the app with LaunchServices
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: lsregisterPath)
-        task.arguments = ["-f", Bundle.main.bundlePath]
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
+        // Run lsregister asynchronously so app launch can never block on this system tool.
+        DispatchQueue.global(qos: .utility).async {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: lsregisterPath)
+            task.arguments = ["-f", Bundle.main.bundlePath]
+
+            let finished = DispatchSemaphore(value: 0)
+            task.terminationHandler = { _ in
+                finished.signal()
+            }
+
+            do {
+                try task.run()
+            } catch {
+                print("⚠️ LaunchServices: Failed to run lsregister - \(error.localizedDescription)")
+                return
+            }
+
+            // Guard against lsregister hanging on some systems.
+            let timeoutResult = finished.wait(timeout: .now() + 5)
+            if timeoutResult == .timedOut {
+                task.terminate()
+                print("⚠️ LaunchServices: lsregister timed out after 5s; skipping to avoid launch stalls")
+                return
+            }
+
             if task.terminationStatus == 0 {
                 print("✅ LaunchServices: Successfully registered Droppy with LaunchServices (Fix #123)")
-                UserDefaults.standard.set(true, forKey: launchServicesRegisteredKey)
+                UserDefaults.standard.set(true, forKey: registeredKey)
             } else {
                 print("⚠️ LaunchServices: lsregister exited with status \(task.terminationStatus)")
             }
-        } catch {
-            print("⚠️ LaunchServices: Failed to run lsregister - \(error.localizedDescription)")
         }
     }
 }

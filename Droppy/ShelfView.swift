@@ -27,6 +27,11 @@ struct ShelfView: View {
                 emptyStateView
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard hasContent else { return }
+            state.deselectAll()
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(useTransparentBackground ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.black))
         .dropDestination(for: URL.self) { urls, _ in
@@ -119,4 +124,3 @@ struct ShelfView: View {
     ShelfView(state: DroppyState.shared)
         .frame(width: 400, height: 150)
 }
-

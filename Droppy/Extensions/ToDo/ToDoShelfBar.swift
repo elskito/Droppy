@@ -7,33 +7,63 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
+import AppKit
 
 struct ToDoShelfBar: View {
+    static let hostHorizontalInset: CGFloat = 30
+    static let hostBottomInset: CGFloat = 20
+
     var manager: ToDoManager
     @Binding var isListExpanded: Bool
     var notchHeight: CGFloat = 0  // Height of physical notch to clear
+    @AppStorage(AppPreferenceKey.useTransparentBackground) private var useTransparentBackground = PreferenceDefault.useTransparentBackground
 
     @State private var inputText: String = ""
     @State private var inputPriority: ToDoPriority = .normal
+    @State private var inputDueDate: Date?
+    @State private var inputReminderListID: String?
+    @State private var showingInputDueDatePicker = false
     @State private var isInputBarHovered = false
+    @State private var activeListMentionQuery: String?
+    @State private var showingMentionPicker = false
+
+    private enum Layout {
+        static let internalBottomPadding: CGFloat = 0
+        static let inputBarHeight: CGFloat = 36
+        static let inputHorizontalPadding: CGFloat = 4
+        static let leadingSlotWidth: CGFloat = 64
+        static let trailingSlotWidth: CGFloat = 70
+        static let sideControlHeight: CGFloat = 28
+        static let roundControlFrame: CGFloat = 28
+        static let textHorizontalInset: CGFloat = 2
+        static let textFieldHeight: CGFloat = 26
+        static let sideControlContentPadding: CGFloat = 4
+        static let listBottomSpacing: CGFloat = 8
+        static let emptyListBottomSpacing: CGFloat = 0
+        static let listHeight: CGFloat = 180
+        static let listTopPadding: CGFloat = 12
+        static let listBottomPadding: CGFloat = 8
+        static let listHorizontalPadding: CGFloat = inputHorizontalPadding
+        static let emptyStateHeight: CGFloat = 80
+        static let undoToastBottomPadding: CGFloat = 56
+        static let undoToastTopPadding: CGFloat = 8
+        static let undoToastEmptyStateClearance: CGFloat = 38
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Task list (expandable) - appears above input bar
             if isListExpanded {
                 taskListSection
-                    .transition(.asymmetric(
-                        insertion: .push(from: .bottom).combined(with: .opacity),
-                        removal: .push(from: .top).combined(with: .opacity)
-                    ))
+                    .notchTransitionBlurOnly()
             }
 
             // Input bar (always visible)
             inputBar
         }
-        .padding(.bottom, 4)
-        .overlay(alignment: .bottom) {
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.bottom, Layout.internalBottomPadding)
+        .overlay(alignment: undoToastAlignment) {
             if manager.showUndoToast {
                 ToDoUndoToast(
                     onUndo: {
@@ -45,38 +75,84 @@ struct ToDoShelfBar: View {
                         }
                     }
                 )
-                .padding(.bottom, 60) // Position above input bar
+                .padding(undoToastPadding)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(DroppyAnimation.expandOpen, value: isListExpanded)
+        .overlay(alignment: .top) {
+            if manager.showCleanupToast {
+                ToDoCleanupToast(count: manager.cleanupCount) {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        manager.showCleanupToast = false
+                    }
+                }
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.smooth(duration: 0.35), value: isListExpanded)
+        .animation(.smooth(duration: 0.35), value: manager.items.count)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: manager.showUndoToast)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: manager.showCleanupToast)
+        .onAppear {
+            if manager.isRemindersSyncEnabled {
+                manager.syncExternalSourcesNow()
+                manager.refreshReminderListsNow()
+            }
+        }
+        .onChange(of: showingInputDueDatePicker) { _, showing in
+            manager.isInteractingWithPopover = showing
+        }
+        .onChange(of: showingMentionPicker) { _, showing in
+            manager.isInteractingWithPopover = showing
+        }
+        .onChange(of: isListExpanded) { _, expanded in
+            manager.isShelfListExpanded = expanded
+            NotchWindowController.shared.forceRecalculateAllWindowSizes()
+            guard expanded else { return }
+            if manager.isRemindersSyncEnabled {
+                manager.syncExternalSourcesNow()
+            }
+        }
+        .onDisappear {
+            manager.isInteractingWithPopover = false
+            manager.isEditingText = false
+        }
+        .onChange(of: inputText) { _, newValue in
+            refreshListMentionState(for: newValue)
+        }
+        .onChange(of: manager.availableReminderLists) { _, _ in
+            showingMentionPicker = shouldShowMentionTooltip
+        }
 
     }
 
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(spacing: DroppySpacing.smd) {
+        HStack(spacing: 0) {
             // Priority indicator (left)
-            priorityDot
+            priorityControl
+                .frame(width: Layout.leadingSlotWidth)
 
             // Text input (center)
             textField
+                .padding(.horizontal, Layout.textHorizontalInset)
 
             // Task count + list toggle (right)
             listToggle
+                .frame(width: Layout.trailingSlotWidth)
         }
-        .padding(.horizontal, DroppySpacing.smd)
-        .padding(.vertical, 4)
+        .padding(.horizontal, Layout.inputHorizontalPadding)
+        .frame(height: Layout.inputBarHeight)
         .background(
             Capsule()
-                .fill(Color.black.opacity(0.6))
+                .fill(AdaptiveColors.buttonBackgroundAuto.opacity(0.95))
         )
         .overlay(
             Capsule()
                 .strokeBorder(
-                    Color.white.opacity(isInputBarHovered ? 0.15 : 0.08),
+                    AdaptiveColors.subtleBorderAuto.opacity(isInputBarHovered ? 1.4 : 1.0),
                     lineWidth: 1
                 )
         )
@@ -85,6 +161,31 @@ struct ToDoShelfBar: View {
             isInputBarHovered = hovering
         }
         .animation(DroppyAnimation.hoverQuick, value: isInputBarHovered)
+    }
+
+    private var priorityControl: some View {
+        HStack(spacing: 0) {
+            priorityDot
+                .frame(width: Layout.sideControlHeight, height: Layout.sideControlHeight)
+            ToDoDueDateCircleButtonLocal(
+                tint: inputPriority.color.opacity(inputPriority == .normal ? 0.3 : 0.6)
+            ) {
+                showingInputDueDatePicker.toggle()
+            }
+            .help(inputDueDate == nil ? "Set due date" : "Edit due date")
+            .popover(isPresented: $showingInputDueDatePicker) {
+                ToDoDueDatePopoverContentLocal(
+                    dueDate: $inputDueDate,
+                    primaryButtonTitle: "Done",
+                    onPrimary: { showingInputDueDatePicker = false },
+                    setInteractingPopover: { manager.isInteractingWithPopover = $0 }
+                )
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Layout.sideControlContentPadding)
+        .frame(maxWidth: .infinity)
+        .frame(height: Layout.sideControlHeight)
     }
 
     private var priorityDot: some View {
@@ -96,7 +197,7 @@ struct ToDoShelfBar: View {
                 // Hit area
                 Circle()
                     .fill(Color.clear)
-                    .frame(width: 28, height: 28)
+                    .frame(width: Layout.roundControlFrame, height: Layout.roundControlFrame)
 
                 // Outer ring (subtle, shows priority)
                 Circle()
@@ -113,8 +214,8 @@ struct ToDoShelfBar: View {
         }
         .buttonStyle(.plain)
         .help(priorityHelpText)
-        .accessibilityLabel("Set priority")
-        .accessibilityValue(inputPriority.rawValue)
+        .accessibilityLabel(String(localized: "action.set_priority"))
+        .accessibilityValue(priorityAccessibilityValue)
         .animation(DroppyAnimation.bounce, value: inputPriority)
     }
 
@@ -134,54 +235,92 @@ struct ToDoShelfBar: View {
         }
     }
 
+    private var priorityAccessibilityValue: String {
+        switch inputPriority {
+        case .normal: return String(localized: "priority.normal")
+        case .medium: return String(localized: "priority.medium")
+        case .high: return String(localized: "priority.high")
+        }
+    }
+
     private var textField: some View {
-        // Use custom NSTextField wrapper to avoid SwiftUI TextField constraint warnings
-        // SwiftUI's TextField has a known bug with floating-point precision during animations
-        StableTextField(
+        ToDoStableTextField(
             text: $inputText,
             placeholder: String(localized: "add_task_placeholder"),
-            onSubmit: submitTask
+            onSubmit: submitTask,
+            onEditingChanged: { isEditing in
+                manager.isEditingText = isEditing
+            },
+            highlightSpansProvider: { text in
+                let dateSpans = ToDoInputIntelligence.detectedDateRanges(in: text).map {
+                    ToDoTextHighlightSpan(range: $0, style: .detectedDate)
+                }
+                let tokenSpans = ToDoInputIntelligence.listMentionTokenRanges(in: text).map {
+                    ToDoTextHighlightSpan(range: $0, style: .listMentionToken)
+                }
+                return dateSpans + tokenSpans
+            }
         )
-        .frame(height: 20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: Layout.textFieldHeight, alignment: .center)
+            .popover(isPresented: $showingMentionPicker, arrowEdge: .bottom) {
+                ToDoReminderListMentionTooltip(
+                    options: mentionOptions,
+                    selectedID: inputReminderListID,
+                    onSelect: applyMentionSelection
+                )
+            }
     }
 
     private var listToggle: some View {
         Button {
             HapticFeedback.medium.perform()
-            withAnimation(DroppyAnimation.expandOpen) {
-                isListExpanded.toggle()
+            let nextExpanded = !isListExpanded
+            // Keep the window-size source of truth in sync BEFORE animating the visual expansion,
+            // so physical-notch layouts stay top-pinned without a one-frame top gap.
+            manager.isShelfListExpanded = nextExpanded
+            NotchWindowController.shared.forceRecalculateAllWindowSizes()
+            withAnimation(.smooth(duration: 0.35)) {
+                isListExpanded = nextExpanded
+            }
+            // Apply once more on the next runloop tick to catch any deferred layout pass.
+            DispatchQueue.main.async {
+                NotchWindowController.shared.forceRecalculateAllWindowSizes()
             }
         } label: {
             HStack(spacing: DroppySpacing.xs) {
                 // Task count badge
-                let incompleteCount = manager.items.filter { !$0.isCompleted }.count
                 if incompleteCount > 0 {
-                    Text("\(incompleteCount)")
+                    Text(incompleteCountLabel)
                         .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 5)
                         .padding(.vertical, 2)
+                        .frame(minWidth: 19)
                         .background(Capsule().fill(Color.blue.opacity(0.9)))
                         .transition(.scale.combined(with: .opacity))
                 }
 
                 Image(systemName: isListExpanded ? "chevron.down" : "checklist")
                     .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 12, height: 12)
                     .foregroundStyle(isListExpanded ? .white : .white.opacity(0.6))
                     .contentTransition(.symbolEffect(.replace))
             }
-            .padding(.horizontal, DroppySpacing.smd)
-            .padding(.vertical, DroppySpacing.xsm)
+            .padding(.horizontal, Layout.sideControlContentPadding)
+            .frame(maxWidth: .infinity)
+            .frame(height: Layout.sideControlHeight)
             .background(
                 Capsule()
-                    .fill(isListExpanded ? Color.blue.opacity(0.8) : Color.white.opacity(0.08))
+                    .fill(isListExpanded ? Color.blue.opacity(0.8) : AdaptiveColors.buttonBackgroundAuto)
             )
         }
         .buttonStyle(.plain)
-        .help(isListExpanded ? "Hide task list" : "Show task list")
-        .accessibilityLabel(isListExpanded ? "Hide tasks" : "Show tasks")
+        .help(String(localized: isListExpanded ? "action.hide_tasks" : "action.show_tasks"))
+        .accessibilityLabel(String(localized: isListExpanded ? "action.hide_tasks" : "action.show_tasks"))
         .animation(DroppyAnimation.state, value: isListExpanded)
-        .animation(DroppyAnimation.state, value: manager.items.filter { !$0.isCompleted }.count)
+        .animation(DroppyAnimation.state, value: incompleteCount)
     }
 
     // MARK: - Task List
@@ -191,34 +330,46 @@ struct ToDoShelfBar: View {
             if manager.items.isEmpty {
                 // Empty state with notch clearance built-in
                 emptyState
-                    .padding(.top, notchHeight > 0 ? notchHeight + 4 : 0)
+                    .padding(.top, emptyStateTopPadding)
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     // CRITICAL FIX: Use VStack instead of LazyVStack to prevent NSGenericException layout loops during drag
                     VStack(alignment: .leading, spacing: 1) {
                         ForEach(manager.sortedItems, id: \.id) { item in
-                            TaskRow(item: item, manager: manager)
+                            TaskRow(
+                                item: item,
+                                manager: manager,
+                                reminderListOptions: reminderListMenuOptions
+                            )
                                 .id("\(item.id)-\(item.isCompleted)-\(item.priority.rawValue)")
                             
                             // Subtle separator
                             if item.id != manager.sortedItems.last?.id {
                                 Divider()
-                                    .background(Color.white.opacity(0.1))
-                                    .padding(.leading, 32)
+                                    .background(Color.white.opacity(0.06))
+                                    .padding(.horizontal, 24)
                             }
                         }
                     }
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-                    .padding(.horizontal, 8)
+                    .padding(.top, Layout.listTopPadding)
+                    .padding(.bottom, Layout.listBottomPadding)
+                    .padding(.horizontal, Layout.listHorizontalPadding)
                 }
-                .frame(height: 180)
+                .frame(height: Layout.listHeight)
+                .clipShape(Rectangle())
+                .overlay(alignment: .bottom) {
+                    if showsBottomListScrim {
+                        bottomListScrim
+                            .transition(.opacity)
+                    }
+                }
             }
 
             // Spacer between list and input bar
             Spacer()
-                .frame(height: 8)
+                .frame(height: manager.items.isEmpty ? Layout.emptyListBottomSpacing : Layout.listBottomSpacing)
         }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private var emptyState: some View {
@@ -241,9 +392,43 @@ struct ToDoShelfBar: View {
             Text("no_tasks_yet")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.3))
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 80) // Fixed height for consistent layout
+        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(height: Layout.emptyStateHeight, alignment: .center) // Fixed height for consistent layout
+    }
+
+    private var bottomListScrim: some View {
+        LinearGradient(
+            colors: useTransparentBackground
+                ? [
+                    Color.clear,
+                    Color.white.opacity(0.03),
+                    Color.white.opacity(0.07)
+                ]
+                : [
+                    Color.clear,
+                    Color.black.opacity(0.12),
+                    Color.black.opacity(0.24)
+                ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(height: 6)
+        .compositingGroup()
+        .mask(
+            LinearGradient(
+                colors: [.clear, .white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .allowsHitTesting(false)
+    }
+
+    private var reminderListMenuOptions: [ToDoReminderListOption] {
+        guard manager.isRemindersSyncEnabled else { return [] }
+        return manager.availableReminderLists
     }
 
     // MARK: - Actions
@@ -259,20 +444,530 @@ struct ToDoShelfBar: View {
     }
 
     private func submitTask() {
-        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsed = ToDoInputIntelligence.parseTaskDraft(inputText)
+        let trimmed = parsed.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+
+        let resolvedDueDate = parsed.dueDate ?? inputDueDate
+        let resolvedReminderListID = resolveReminderListID(from: parsed.reminderListQuery)
 
         HapticFeedback.drop()
 
         withAnimation(DroppyAnimation.itemInsertion) {
-            manager.addItem(title: trimmed, priority: inputPriority)
+            manager.addItem(
+                title: trimmed,
+                priority: inputPriority,
+                dueDate: resolvedDueDate,
+                reminderListID: resolvedReminderListID
+            )
         }
 
         // Reset with animation
         withAnimation(DroppyAnimation.state) {
             inputText = ""
             inputPriority = .normal
+            inputDueDate = nil
+            inputReminderListID = nil
+            activeListMentionQuery = nil
+            showingMentionPicker = false
         }
+    }
+
+    private var mentionOptions: [ToDoReminderListOption] {
+        guard manager.isRemindersSyncEnabled, let query = activeListMentionQuery else { return [] }
+        return manager.reminderLists(matching: query)
+    }
+
+    private var shouldShowMentionTooltip: Bool {
+        !mentionOptions.isEmpty
+    }
+
+    private func refreshListMentionState(for text: String) {
+        activeListMentionQuery = ToDoInputIntelligence.activeListMentionQuery(in: text)
+        if let tokenQuery = ToDoInputIntelligence.lastListMentionTokenQuery(in: text),
+           let tokenListID = manager.resolveReminderList(matching: tokenQuery)?.id {
+            inputReminderListID = tokenListID
+        } else if !text.contains("@") {
+            inputReminderListID = nil
+        }
+        guard manager.isRemindersSyncEnabled, activeListMentionQuery != nil else {
+            showingMentionPicker = false
+            return
+        }
+        if manager.availableReminderLists.isEmpty {
+            manager.refreshReminderListsNow()
+        }
+        showingMentionPicker = shouldShowMentionTooltip
+    }
+
+    private func applyMentionSelection(_ option: ToDoReminderListOption) {
+        inputReminderListID = option.id
+        inputText = ToDoInputIntelligence.applyListMentionToken(option.title, to: inputText)
+        activeListMentionQuery = nil
+        showingMentionPicker = false
+    }
+
+    private func resolveReminderListID(from parsedQuery: String?) -> String? {
+        if let explicit = inputReminderListID {
+            return explicit
+        }
+        guard let parsedQuery else { return nil }
+        return manager.resolveReminderList(matching: parsedQuery)?.id
+    }
+}
+
+
+enum ToDoTextHighlightStyle {
+    case detectedDate
+    case listMentionToken
+}
+
+struct ToDoTextHighlightSpan {
+    let range: Range<String.Index>
+    let style: ToDoTextHighlightStyle
+}
+
+private extension NSAttributedString.Key {
+    static let toDoBadgeColor = NSAttributedString.Key("toDoBadgeColor")
+}
+
+private final class ToDoRoundedBadgeLayoutManager: NSLayoutManager {
+    override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
+        super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
+
+        guard let storage = textStorage else { return }
+        let charRange = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
+
+        storage.enumerateAttribute(.toDoBadgeColor, in: charRange) { value, range, _ in
+            guard let color = value as? NSColor else { return }
+            let glyphRange = self.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+            let visible = NSIntersectionRange(glyphRange, glyphsToShow)
+            guard visible.length > 0 else { return }
+
+            for container in self.textContainers {
+                self.enumerateEnclosingRects(
+                    forGlyphRange: visible,
+                    withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
+                    in: container
+                ) { rect, _ in
+                    var badgeRect = rect.offsetBy(dx: origin.x, dy: origin.y)
+                    badgeRect = badgeRect.insetBy(dx: -4, dy: -1)
+                    let radius = min(badgeRect.height / 2.0, 8)
+                    let path = NSBezierPath(roundedRect: badgeRect, xRadius: radius, yRadius: radius)
+                    color.setFill()
+                    path.fill()
+                }
+            }
+        }
+    }
+}
+
+struct ToDoStableTextField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let onSubmit: () -> Void
+    let onEditingChanged: (Bool) -> Void
+    var highlightSpansProvider: ((String) -> [ToDoTextHighlightSpan])? = nil
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let textField = NSTextField(string: "")
+        textField.isBordered = false
+        textField.isBezeled = false
+        textField.drawsBackground = false
+        textField.focusRingType = .none
+        textField.font = .systemFont(ofSize: 13, weight: .medium)
+        textField.textColor = NSColor.white.withAlphaComponent(0.9)
+        textField.cell?.lineBreakMode = .byTruncatingTail
+        textField.cell?.usesSingleLineMode = true
+        textField.cell?.wraps = false
+        textField.cell?.isScrollable = true
+        textField.allowsEditingTextAttributes = true
+        textField.delegate = context.coordinator
+        textField.placeholderAttributedString = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.5),
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium)
+            ]
+        )
+        return textField
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        context.coordinator.applyHighlight(to: nsView)
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: ToDoStableTextField
+        private var isApplyingHighlight = false
+
+        init(_ parent: ToDoStableTextField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard !isApplyingHighlight else { return }
+            guard let field = obj.object as? NSTextField else { return }
+            parent.text = field.stringValue
+            applyHighlight(to: field)
+        }
+
+        func controlTextDidBeginEditing(_ notification: Notification) {
+            if let field = notification.object as? NSTextField,
+               let editor = field.currentEditor() as? NSTextView {
+                installRoundedBadgeLayoutManagerIfNeeded(on: editor)
+            }
+            parent.onEditingChanged(true)
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            parent.onEditingChanged(false)
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            return false
+        }
+
+        func applyHighlight(to field: NSTextField) {
+            guard let provider = parent.highlightSpansProvider else { return }
+            let text = field.stringValue
+            guard !text.isEmpty else { return }
+
+            let attributed = NSMutableAttributedString(string: text)
+            let fullRange = NSRange(location: 0, length: (text as NSString).length)
+            let baseAttributes: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.9),
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium)
+            ]
+            attributed.setAttributes(baseAttributes, range: fullRange)
+
+            let spans = provider(text)
+            for span in spans {
+                let nsRange = NSRange(span.range, in: text)
+                if nsRange.location != NSNotFound, nsRange.length > 0 {
+                    switch span.style {
+                    case .detectedDate:
+                        attributed.addAttributes([
+                            .foregroundColor: NSColor.white.withAlphaComponent(0.95),
+                            .toDoBadgeColor: NSColor.white.withAlphaComponent(0.18),
+                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
+                        ], range: nsRange)
+                    case .listMentionToken:
+                        attributed.addAttributes([
+                            .foregroundColor: NSColor.white.withAlphaComponent(0.95),
+                            .toDoBadgeColor: NSColor.white.withAlphaComponent(0.14),
+                            .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
+                        ], range: nsRange)
+                    }
+                }
+            }
+
+            isApplyingHighlight = true
+            if let editor = field.currentEditor() as? NSTextView {
+                installRoundedBadgeLayoutManagerIfNeeded(on: editor)
+                let selectedRange = editor.selectedRange()
+                editor.textStorage?.setAttributedString(attributed)
+                editor.selectedRange = selectedRange
+            } else {
+                field.attributedStringValue = attributed
+            }
+            isApplyingHighlight = false
+        }
+
+        private func installRoundedBadgeLayoutManagerIfNeeded(on editor: NSTextView) {
+            guard let storage = editor.textStorage,
+                  let existingLayout = editor.layoutManager else {
+                return
+            }
+
+            if existingLayout is ToDoRoundedBadgeLayoutManager {
+                return
+            }
+
+            let containers = existingLayout.textContainers
+            storage.removeLayoutManager(existingLayout)
+
+            let roundedLayout = ToDoRoundedBadgeLayoutManager()
+            roundedLayout.allowsNonContiguousLayout = existingLayout.allowsNonContiguousLayout
+            storage.addLayoutManager(roundedLayout)
+
+            for container in containers {
+                roundedLayout.addTextContainer(container)
+            }
+        }
+    }
+}
+
+private struct ToDoDueDateCircleButtonLocal: View {
+    var tint: Color
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Color.clear
+                    .frame(width: 28, height: 28)
+
+                Image(systemName: "clock")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+                    .foregroundStyle(tint)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ToDoDueDatePopoverContentLocal: View {
+    @Binding var dueDate: Date?
+    var primaryButtonTitle: String? = "Done"
+    var onPrimary: (() -> Void)? = nil
+    var isEmbedded: Bool = false
+    var setInteractingPopover: ((Bool) -> Void)? = nil
+    @State private var manualTimeText: String = ""
+    @State private var isEditingTimeText = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Due date")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                quickPresetButton("Today") { setPreset(daysFromToday: 0) }
+                quickPresetButton("Tomorrow") { setPreset(daysFromToday: 1) }
+                quickPresetButton("+1 Week") { setPreset(daysFromToday: 7) }
+            }
+            .frame(maxWidth: .infinity)
+
+            HStack(spacing: 8) {
+                stepButton("chevron.left") { shiftDays(-1) }
+                Text(resolvedDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                stepButton("chevron.right") { shiftDays(1) }
+            }
+            .padding(.horizontal, 6)
+            .frame(height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AdaptiveColors.buttonBackgroundAuto.opacity(0.9))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+
+            HStack(spacing: 8) {
+                stepButton("minus") { shiftMinutes(-15) }
+                TextField("HH:mm", text: $manualTimeText, onEditingChanged: { editing in
+                    isEditingTimeText = editing
+                    if editing && manualTimeText.isEmpty {
+                        manualTimeText = formatTime(resolvedDate)
+                    }
+                    if !editing {
+                        applyTypedTime()
+                    }
+                })
+                .textFieldStyle(.plain)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .multilineTextAlignment(.center)
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .onSubmit {
+                    applyTypedTime()
+                }
+                stepButton("plus") { shiftMinutes(15) }
+                Button {
+                    dueDate = nil
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(AdaptiveColors.buttonBackgroundAuto.opacity(0.95))
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.16), lineWidth: 1)
+                            )
+                            .frame(width: 22, height: 22)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(dueDate == nil)
+                .opacity(dueDate == nil ? 0.45 : 1.0)
+                .help("Clear due date")
+                .accessibilityLabel("Clear due date")
+            }
+            .padding(.horizontal, 6)
+            .frame(height: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AdaptiveColors.buttonBackgroundAuto.opacity(0.9))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+
+            HStack(spacing: 10) {
+                Spacer(minLength: 0)
+                if let primaryButtonTitle {
+                    Button(primaryButtonTitle) {
+                        onPrimary?()
+                    }
+                    .buttonStyle(DroppyAccentButtonStyle(color: .blue, size: .small))
+                }
+            }
+        }
+        .padding(isEmbedded ? 0 : 14)
+        .frame(width: isEmbedded ? nil : 260)
+        .onAppear {
+            manualTimeText = formatTime(resolvedDate)
+            setInteractingPopover?(true)
+        }
+        .onChange(of: dueDate) { _, newValue in
+            guard !isEditingTimeText else { return }
+            manualTimeText = formatTime(newValue ?? Date())
+        }
+        .onDisappear {
+            setInteractingPopover?(false)
+        }
+    }
+
+    private var resolvedDate: Date {
+        dueDate ?? Date()
+    }
+
+    private func quickPresetButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .frame(height: 22)
+                .background(
+                    Capsule()
+                        .fill(AdaptiveColors.hoverBackgroundAuto.opacity(0.78))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func stepButton(_ systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 20, height: 20)
+                .background(
+                    Circle()
+                        .fill(AdaptiveColors.hoverBackgroundAuto.opacity(0.7))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func setPreset(daysFromToday: Int) {
+        let calendar = Calendar.current
+        let now = Date()
+        let targetDay = calendar.date(byAdding: .day, value: daysFromToday, to: now) ?? now
+        let timeSource = dueDate ?? now
+        var components = calendar.dateComponents([.year, .month, .day], from: targetDay)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: timeSource)
+        components.hour = timeComponents.hour
+        components.minute = timeComponents.minute
+        let updated = calendar.date(from: components) ?? targetDay
+        dueDate = updated
+        manualTimeText = formatTime(updated)
+    }
+
+    private func shiftDays(_ value: Int) {
+        let base = dueDate ?? Date()
+        let updated = Calendar.current.date(byAdding: .day, value: value, to: base) ?? base
+        dueDate = updated
+        manualTimeText = formatTime(updated)
+    }
+
+    private func shiftMinutes(_ value: Int) {
+        let base = dueDate ?? Date()
+        let updated = Calendar.current.date(byAdding: .minute, value: value, to: base) ?? base
+        dueDate = updated
+        manualTimeText = formatTime(updated)
+    }
+
+    private func applyTypedTime() {
+        let trimmed = manualTimeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            manualTimeText = formatTime(resolvedDate)
+            return
+        }
+        guard let (hour, minute) = parseTime(trimmed) else {
+            manualTimeText = formatTime(resolvedDate)
+            return
+        }
+
+        let base = dueDate ?? Date()
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: base)
+        components.hour = hour
+        components.minute = minute
+        if let updated = Calendar.current.date(from: components) {
+            dueDate = updated
+            manualTimeText = formatTime(updated)
+        } else {
+            manualTimeText = formatTime(base)
+        }
+    }
+
+    private func parseTime(_ input: String) -> (Int, Int)? {
+        let normalized = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ".", with: ":")
+            .uppercased()
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+
+        for format in ["HH:mm", "H:mm", "HHmm", "Hmm", "H", "h:mm a", "h:mma", "ha"] {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: normalized) {
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+                if let hour = comps.hour, let minute = comps.minute {
+                    return (hour, minute)
+                }
+            }
+        }
+        return nil
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }
 
@@ -283,7 +978,11 @@ struct ToDoShelfBar: View {
 private struct TaskRow: View {
     let item: ToDoItem
     let manager: ToDoManager
+    let reminderListOptions: [ToDoReminderListOption]
     @State private var isHovering = false
+    @State private var isEditing = false
+    @State private var editText = ""
+    @State private var editDueDate: Date?
 
     var body: some View {
         HStack(spacing: DroppySpacing.smd) {
@@ -333,10 +1032,37 @@ private struct TaskRow: View {
             Text(item.title)
                 .font(.system(size: 13, weight: item.isCompleted ? .regular : .medium))
                 .strikethrough(item.isCompleted, color: .white.opacity(0.4))
-                .foregroundStyle(item.isCompleted ? .white.opacity(0.35) : (item.priority == .normal ? .white.opacity(0.9) : item.priority.color))
+                .foregroundStyle(item.isCompleted ? .white.opacity(0.35) : .white.opacity(0.9))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .animation(DroppyAnimation.state, value: item.isCompleted)
+
+            if item.externalSource != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "applelogo")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.48))
+                        .help(externalIconHelp)
+                    if let reminderListColor {
+                        Image(systemName: "list.bullet.circle.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(reminderListColor.opacity(0.9))
+                            .help(reminderListHelp)
+                    }
+                }
+            }
+
+            if let dueDate = item.dueDate, !item.isCompleted {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                    if dueDateHasTime(dueDate) {
+                        Image(systemName: "bell.fill")
+                    }
+                    Text(formattedDueDateText(dueDate))
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
+            }
 
             // Priority indicator (only for non-normal, non-completed)
             if item.priority != .normal && !item.isCompleted {
@@ -380,38 +1106,144 @@ private struct TaskRow: View {
         .contentShape(Rectangle()) // Full width hit testing
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isHovering ? Color.white.opacity(0.08) : Color.clear)
+                .fill(isHovering ? AdaptiveColors.hoverBackgroundAuto.opacity(0.65) : Color.clear)
         )
         .onHover { hovering in
             if hovering { HapticFeedback.hover() }
             isHovering = hovering
         }
         .animation(DroppyAnimation.hoverQuick, value: isHovering)
+        .popover(isPresented: $isEditing) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(String(localized: "action.edit"))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                
+                TextField(String(localized: "task_title"), text: $editText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14, weight: .medium))
+                    .droppyTextInputChrome()
+                    .onSubmit {
+                        let trimmed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        manager.updateTitle(for: item, to: trimmed)
+                        manager.updateDueDate(for: item, to: editDueDate)
+                        isEditing = false
+                    }
+
+                ToDoDueDatePopoverContentLocal(
+                    dueDate: $editDueDate,
+                    primaryButtonTitle: nil,
+                    onPrimary: nil,
+                    isEmbedded: true,
+                    setInteractingPopover: { manager.isInteractingWithPopover = $0 }
+                )
+                
+                HStack(spacing: 10) {
+                    Button {
+                        isEditing = false
+                    } label: {
+                        Text(String(localized: "action.cancel"))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DroppyPillButtonStyle(size: .small))
+                    
+                    Button {
+                        let trimmed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        manager.updateTitle(for: item, to: trimmed)
+                        manager.updateDueDate(for: item, to: editDueDate)
+                        isEditing = false
+                    } label: {
+                        Text(String(localized: "action.save"))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DroppyAccentButtonStyle(color: .blue, size: .small))
+                    .disabled(editText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding(14)
+            .frame(width: 260)
+        }
+        .onChange(of: isEditing) { _, presented in
+            manager.isInteractingWithPopover = presented
+        }
+        .onDisappear {
+            manager.isInteractingWithPopover = false
+        }
         .contextMenu {
-            Button("priority.high") {
+            Button {
+                editText = item.title
+                editDueDate = item.dueDate
+                isEditing = true
+            } label: {
+                Label(String(localized: "action.edit"), systemImage: "pencil")
+            }
+            .keyboardShortcut("e", modifiers: [.command])
+            Divider()
+
+            Button {
                 HapticFeedback.medium.perform()
                 withAnimation(DroppyAnimation.state) {
                     manager.updatePriority(for: item, to: .high)
                 }
+            } label: {
+                Label(String(localized: "priority.high"), systemImage: "exclamationmark.circle.fill")
             }
-            Button("priority.medium") {
+            Button {
                 HapticFeedback.medium.perform()
                 withAnimation(DroppyAnimation.state) {
                     manager.updatePriority(for: item, to: .medium)
                 }
+            } label: {
+                Label(String(localized: "priority.medium"), systemImage: "exclamationmark.circle")
             }
-            Button("priority.normal") {
+            Button {
                 HapticFeedback.medium.perform()
                 withAnimation(DroppyAnimation.state) {
                     manager.updatePriority(for: item, to: .normal)
                 }
+            } label: {
+                Label(String(localized: "priority.normal"), systemImage: "circle")
+            }
+
+            if !reminderListOptions.isEmpty {
+                Divider()
+                Menu {
+                    ForEach(reminderListOptions) { list in
+                        Button {
+                            HapticFeedback.medium.perform()
+                            manager.updateReminderList(for: item, to: list.id)
+                        } label: {
+                            Label(
+                                list.title,
+                                systemImage: item.externalListIdentifier == list.id ? "checkmark.circle.fill" : "circle"
+                            )
+                        }
+                    }
+
+                    Divider()
+                    Button {
+                        HapticFeedback.medium.perform()
+                        manager.updateReminderList(for: item, to: nil)
+                    } label: {
+                        Label(
+                            "Default List",
+                            systemImage: item.externalListIdentifier == nil ? "checkmark.circle.fill" : "circle"
+                        )
+                    }
+                } label: {
+                    Label("Reminder List", systemImage: "list.bullet.rectangle")
+                }
             }
             Divider()
-            Button("action.delete", role: .destructive) {
+            Button(role: .destructive) {
                 HapticFeedback.delete()
                 withAnimation(DroppyAnimation.itemInsertion) {
                     manager.removeItem(item)
                 }
+            } label: {
+                Label(String(localized: "action.delete"), systemImage: "trash")
             }
         }
     }
@@ -423,85 +1255,90 @@ private struct TaskRow: View {
         return item.priority == .normal ? .white.opacity(0.3) : item.priority.color.opacity(0.7)
     }
 
-    private var backgroundColor: Color {
-        if isHovering {
-            return Color.white.opacity(0.08)
+    private var externalIconHelp: String {
+        switch item.externalSource {
+        case .calendar:
+            return "Synced from Apple Calendar"
+        case .reminders:
+            return "Synced from Apple Reminders"
+        case .none:
+            return ""
         }
-        return Color.white.opacity(0.04)
+    }
+
+    private var reminderListColor: Color? {
+        colorFromHex(item.externalListColorHex)
+    }
+
+    private var reminderListHelp: String {
+        if let title = item.externalListTitle, !title.isEmpty {
+            return "Apple Reminders list: \(title)"
+        }
+        return "Apple Reminders list"
+    }
+
+    private func colorFromHex(_ hex: String?) -> Color? {
+        guard let hex else { return nil }
+        let trimmed = hex.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "#", with: "")
+        guard trimmed.count == 6, let value = Int(trimmed, radix: 16) else { return nil }
+        let red = Double((value >> 16) & 0xFF) / 255.0
+        let green = Double((value >> 8) & 0xFF) / 255.0
+        let blue = Double(value & 0xFF) / 255.0
+        return Color(red: red, green: green, blue: blue)
+    }
+
+    private func dueDateHasTime(_ date: Date) -> Bool {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) != 0 || (components.minute ?? 0) != 0
+    }
+
+    private func formattedDueDateText(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.current
+        if dueDateHasTime(date) {
+            formatter.setLocalizedDateFormatFromTemplate("d MMM HH:mm")
+        } else if calendar.component(.year, from: date) == calendar.component(.year, from: Date()) {
+            formatter.setLocalizedDateFormatFromTemplate("d MMM")
+        } else {
+            formatter.setLocalizedDateFormatFromTemplate("d MMM yyyy")
+        }
+        return formatter.string(from: date)
     }
 }
 
-// MARK: - Stable TextField (NSViewRepresentable)
-
-/// Custom NSTextField subclass that returns a fixed intrinsic content size
-/// This prevents SwiftUI's layout system from causing constraint warnings during animations
-private class FixedSizeTextField: NSTextField {
-    override var intrinsicContentSize: NSSize {
-        // Return a fixed size to prevent layout thrashing during animations
-        return NSSize(width: NSView.noIntrinsicMetric, height: 20)
-    }
-}
-
-/// Custom NSTextField wrapper that avoids SwiftUI's TextField constraint warnings
-/// SwiftUI's TextField has a bug where floating-point precision issues during animations
-/// cause spurious "min <= max" constraint warnings. This wrapper uses AppKit directly
-/// with a fixed intrinsic content size.
-private struct StableTextField: NSViewRepresentable {
-    @Binding var text: String
-    var placeholder: String
-    var onSubmit: () -> Void
-
-    func makeNSView(context: Context) -> NSTextField {
-        let textField = FixedSizeTextField()
-        textField.delegate = context.coordinator
-        textField.placeholderString = placeholder
-        textField.font = NSFont.systemFont(ofSize: 13, weight: .regular)
-        textField.textColor = NSColor.white.withAlphaComponent(0.9)
-        textField.backgroundColor = .clear
-        textField.isBordered = false
-        textField.focusRingType = .none
-        textField.drawsBackground = false
-        textField.cell?.isScrollable = true
-        textField.cell?.wraps = false
-        textField.lineBreakMode = .byTruncatingTail
-        textField.translatesAutoresizingMaskIntoConstraints = false
-        // Completely disable content size priorities to prevent ANY constraint conflicts
-        textField.setContentHuggingPriority(.init(1), for: .horizontal)
-        textField.setContentHuggingPriority(.init(1), for: .vertical)
-        textField.setContentCompressionResistancePriority(.init(1), for: .horizontal)
-        textField.setContentCompressionResistancePriority(.init(1), for: .vertical)
-        return textField
+private extension ToDoShelfBar {
+    var showsBottomListScrim: Bool {
+        isListExpanded && manager.sortedItems.count > 4
     }
 
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        if nsView.stringValue != text {
-            nsView.stringValue = text
-        }
+    var incompleteCount: Int {
+        manager.items.reduce(0) { $0 + ($1.isCompleted ? 0 : 1) }
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+    var incompleteCountLabel: String {
+        incompleteCount > 99 ? "99+" : "\(incompleteCount)"
     }
 
-    class Coordinator: NSObject, NSTextFieldDelegate {
-        var parent: StableTextField
+    var shouldLiftUndoToast: Bool {
+        isListExpanded && manager.items.isEmpty && manager.showUndoToast
+    }
 
-        init(_ parent: StableTextField) {
-            self.parent = parent
-        }
+    var undoToastAlignment: Alignment {
+        shouldLiftUndoToast ? .top : .bottom
+    }
 
-        func controlTextDidChange(_ obj: Notification) {
-            guard let textField = obj.object as? NSTextField else { return }
-            parent.text = textField.stringValue
+    var undoToastPadding: EdgeInsets {
+        if shouldLiftUndoToast {
+            return EdgeInsets(top: Layout.undoToastTopPadding, leading: 0, bottom: 0, trailing: 0)
         }
+        return EdgeInsets(top: 0, leading: 0, bottom: Layout.undoToastBottomPadding, trailing: 0)
+    }
 
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-                parent.onSubmit()
-                return true
-            }
-            return false
-        }
+    var emptyStateTopPadding: CGFloat {
+        let undoInset = shouldLiftUndoToast ? Layout.undoToastEmptyStateClearance : 0
+        return undoInset
     }
 }
 
@@ -509,32 +1346,23 @@ private struct StableTextField: NSViewRepresentable {
 
 extension ToDoShelfBar {
     /// Returns the height this bar needs when expanded
-    static func expandedHeight(isListExpanded: Bool, itemCount: Int, notchHeight: CGFloat = 0) -> CGFloat {
-        // Input bar height
-        let inputBarHeight: CGFloat = 32
+    static func expandedHeight(isListExpanded: Bool, itemCount: Int, notchHeight: CGFloat = 0, showsUndoToast: Bool = false) -> CGFloat {
+        // Includes the host view bottom inset used in NotchShelfView so content sizing stays in sync.
+        let totalBottomInset = Layout.internalBottomPadding + hostBottomInset
+        let collapsedHeight = Layout.inputBarHeight + totalBottomInset
 
         if !isListExpanded {
-            return inputBarHeight
+            return collapsedHeight
         }
 
-        // Separator: 1pt line + 4pt bottom padding
-        let separatorHeight: CGFloat = 5
-        
-        // CRITICAL FIX: Add safe bottom padding to prevent clipping when window corner radius is large
-        // This ensures the input bar always sits comfortably above the window edge
-        let safeBottomPadding: CGFloat = 12
-
-        // Empty state
         if itemCount == 0 {
-            let emptyStateHeight: CGFloat = 80
-            let notchPadding: CGFloat = notchHeight > 0 ? notchHeight + 4 : 0
-            return inputBarHeight + emptyStateHeight + separatorHeight + notchPadding + safeBottomPadding
+            let spacingToInput = Layout.emptyListBottomSpacing
+            let undoClearance: CGFloat = showsUndoToast ? Layout.undoToastEmptyStateClearance : 0
+            return Layout.emptyStateHeight + undoClearance + spacingToInput + collapsedHeight
         }
 
-        // Task list - fixed height of 180 (scrollable when content exceeds)
-        let listHeight: CGFloat = 180
-
-        return inputBarHeight + listHeight + separatorHeight + safeBottomPadding
+        let spacingToInput = Layout.listBottomSpacing
+        return Layout.listHeight + spacingToInput + collapsedHeight
     }
 }
 

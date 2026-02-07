@@ -185,11 +185,7 @@ final class FloatingBasketWindowController: NSObject {
             shared.showBasket(atLastPosition: true)
         }
         
-        if shared.basketWindow?.isVisible == true {
-            DragMonitor.shared.stopIdleJiggleMonitoring()
-        } else if !shared.basketState.items.isEmpty {
-            DragMonitor.shared.startIdleJiggleMonitoring()
-        }
+        DragMonitor.shared.stopIdleJiggleMonitoring()
         
         DroppyState.shared.isBasketVisible = shared.basketWindow?.isVisible == true
         DroppyState.shared.isBasketTargeted = false
@@ -324,24 +320,23 @@ final class FloatingBasketWindowController: NSObject {
         basketState.ownerController = self
     }
     
-    /// Called by DragMonitor when jiggle is detected
-    /// - If not dragging a file: show last/primary basket only (no spawning)
+    /// Called by DragMonitor when jiggle is detected during an active drag
     /// - If dragging + 1 basket visible: spawn new basket (if multi-basket enabled)
     /// - If dragging + 2+ baskets visible: show basket switcher
     /// - If no basket visible: show primary basket
     func onJiggleDetected() {
         guard !isShowingOrHiding else { return }
+        guard DragMonitor.shared.isDragging else { return }
         
         let multiBasketEnabled = Self.isMultiBasketEnabled
         if !multiBasketEnabled && !Self.activeBaskets.isEmpty {
             Self.enforceSingleBasketMode()
         }
-        let isDragging = DragMonitor.shared.isDragging
         let hiddenWithItems = Self.basketsWithItems.filter { $0.basketWindow?.isVisible != true }
         
         if Self.isAnyBasketVisible {
             // Basket(s) already visible
-            if multiBasketEnabled && isDragging {
+            if multiBasketEnabled {
                 // DRAGGING a file with basket visible
                 if !hiddenWithItems.isEmpty {
                     // STEP 1: Show hidden baskets first
@@ -369,7 +364,7 @@ final class FloatingBasketWindowController: NSObject {
                     }
                 }
             }
-            // NOT dragging: do nothing (basket already visible)
+            // Already visible and single-basket mode: keep current basket.
         } else {
             // No basket visible - show hidden baskets or primary basket
             if !hiddenWithItems.isEmpty {
@@ -383,7 +378,7 @@ final class FloatingBasketWindowController: NSObject {
     /// Shows all previously auto-hidden baskets that still have items
     /// Positions them side-by-side horizontally so they don't overlap
     static func showAllHiddenBaskets() {
-        // Stop idle jiggle monitoring since baskets are being revealed
+        // Ensure legacy idle-jiggle monitor stays off.
         DragMonitor.shared.stopIdleJiggleMonitoring()
         
         // Single-basket mode should reveal only one basket.
@@ -798,8 +793,14 @@ final class FloatingBasketWindowController: NSObject {
                 return event
             }
             
-            // Spacebar triggers Quick Look (but not during rename)
-            if event.keyCode == 49, !DroppyState.shared.isRenaming {
+            // Spacebar triggers Quick Look (but never while renaming or typing)
+            if event.keyCode == 49 {
+                let shouldBlockQuickLook = (self?.basketState.isRenaming ?? false) ||
+                    DroppyState.shared.isRenaming ||
+                    (self?.isTextInputResponderActive() ?? false)
+                guard !shouldBlockQuickLook else {
+                    return event
+                }
                 let selectedItems = self?.basketState.items.filter { self?.basketState.selectedItems.contains($0.id) == true } ?? []
                 let urls: [URL]
                 if selectedItems.isEmpty {
@@ -815,6 +816,12 @@ final class FloatingBasketWindowController: NSObject {
             
             // Cmd+A selects all basket items
             if event.keyCode == 0, event.modifierFlags.contains(.command) {
+                let shouldBlockSelectAll = (self?.basketState.isRenaming ?? false) ||
+                    DroppyState.shared.isRenaming ||
+                    (self?.isTextInputResponderActive() ?? false)
+                guard !shouldBlockSelectAll else {
+                    return event
+                }
                 self?.basketState.selectedItems = Set(self?.basketState.items.map(\.id) ?? [])
                 return nil // Consume the event
             }
@@ -831,7 +838,13 @@ final class FloatingBasketWindowController: NSObject {
             }
             
             // Only handle spacebar for Quick Look (not Cmd+A - that requires local focus)
-            if event.keyCode == 49, !DroppyState.shared.isRenaming {
+            if event.keyCode == 49 {
+                let shouldBlockQuickLook = (self?.basketState.isRenaming ?? false) ||
+                    DroppyState.shared.isRenaming ||
+                    (self?.isTextInputResponderActive() ?? false)
+                guard !shouldBlockQuickLook else {
+                    return
+                }
                 // Check if mouse is over the basket window (user intent to interact with basket)
                 if let basketFrame = self?.basketWindow?.frame {
                     let mouseLocation = NSEvent.mouseLocation
@@ -863,6 +876,14 @@ final class FloatingBasketWindowController: NSObject {
             NSEvent.removeMonitor(monitor)
             globalKeyboardMonitor = nil
         }
+    }
+
+    /// Returns true while an editable text responder is active (e.g. rename popover field).
+    private func isTextInputResponderActive() -> Bool {
+        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView else {
+            return false
+        }
+        return textView.isEditable
     }
     
     /// Hides the basket window.
@@ -959,10 +980,6 @@ final class FloatingBasketWindowController: NSObject {
             DroppyState.shared.isBasketTargeted = false
             self.isShowingOrHiding = false
 
-            // Allow no-drag jiggle reveal when user manually hid all visible baskets.
-            if !Self.isAnyBasketVisible && !self.basketState.items.isEmpty {
-                DragMonitor.shared.startIdleJiggleMonitoring()
-            }
         })
     }
     
@@ -1063,7 +1080,7 @@ final class FloatingBasketWindowController: NSObject {
     }
     
     /// Auto-hides the basket (replaces slideToEdge peek behavior)
-    /// Simply hides the basket - can be restored via jiggle
+    /// Simply hides the basket; users can reopen via drag jiggle or switcher shortcut.
     func autoHideBasket() {
         guard isAutoHideEnabled else { return }
         if hideDeadline == nil {
@@ -1127,12 +1144,9 @@ final class FloatingBasketWindowController: NSObject {
         // Store current position for restoration
         fullSizeFrame = panel.frame
         
-        // Mark as auto-hidden so jiggle can restore it
+        // Mark as auto-hidden so it can be restored via drag jiggle or shortcut workflow.
         isInPeekMode = true
         isPeekAnimating = true
-        
-        // Start idle jiggle monitoring so user can jiggle without files to reveal
-        DragMonitor.shared.startIdleJiggleMonitoring()
         
         // Fade out animation
         NSAnimationContext.runAnimationGroup { context in

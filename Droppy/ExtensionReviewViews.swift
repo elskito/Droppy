@@ -167,23 +167,10 @@ struct ExtensionReviewsSheet: View {
                                 .buttonStyle(DroppyAccentButtonStyle(color: extensionType.categoryColor, size: .small))
                                 .disabled(isSubmittingRating)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                                    .fill(Color.black.opacity(0.3))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                                    .stroke(
-                                        extensionType.categoryColor.opacity(0.6),
-                                        style: StrokeStyle(
-                                            lineWidth: 1.5,
-                                            lineCap: .round,
-                                            dash: [3, 3],
-                                            dashPhase: 0
-                                        )
-                                    )
+                            .droppyTextInputChrome(
+                                cornerRadius: DroppyRadius.ml,
+                                horizontalPadding: 12,
+                                verticalPadding: 10
                             )
                         }
                         .transition(.opacity.combined(with: .move(edge: .top)))

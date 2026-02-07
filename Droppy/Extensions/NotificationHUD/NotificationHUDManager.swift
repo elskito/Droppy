@@ -82,6 +82,9 @@ final class NotificationHUDManager {
     
     // Serial queue to ensure thread-safe SQLite and state access (fixes crashes #152, #156)
     private let databaseQueue = DispatchQueue(label: "app.getdroppy.NotificationHUD.database")
+    
+    // Darwin notification observer to pre-trigger database polling for lower latency.
+    private var isDarwinObserverActive = false
 
     // App bundle IDs to ignore (Droppy itself, system apps, etc.)
     private let ignoredBundleIDs: Set<String> = [
@@ -123,6 +126,9 @@ final class NotificationHUDManager {
 
         // PRIMARY: Start file system monitoring for instant notification detection
         startFileMonitoring()
+        
+        // ACCELERATOR: Darwin pre-trigger can fire before file events on some systems.
+        startDarwinObserver()
 
         // BACKUP: Slow polling timer as fallback (in case file monitoring misses something)
         pollingTimer = Timer.scheduledTimer(withTimeInterval: pollingInterval, repeats: true) { [weak self] _ in
@@ -131,12 +137,18 @@ final class NotificationHUDManager {
             }
         }
 
-        print("NotificationHUD: Started monitoring for notifications (file watcher + backup polling)")
+        print("NotificationHUD: Started monitoring for notifications (Darwin + file watcher + backup polling)")
     }
 
     /// Start monitoring the notification database file for changes
     /// This provides near-instant notification detection
     private func startFileMonitoring() {
+        // Guard against double-start (prevents duplicate monitors + fd leaks)
+        guard fileMonitorSource == nil, walMonitorSource == nil else {
+            print("NotificationHUD: File monitoring already active")
+            return
+        }
+
         let dbPath = Self.notificationDatabasePath
         let walPath = dbPath + "-wal"  // SQLite Write-Ahead Log file
 
@@ -212,10 +224,50 @@ final class NotificationHUDManager {
         // File descriptors are closed in the cancel handlers
     }
     
+    // MARK: - Darwin Pre-Trigger
+    
+    private func startDarwinObserver() {
+        guard !isDarwinObserverActive else { return }
+        
+        let observer = Unmanaged.passUnretained(self).toOpaque()
+        let notificationName = "com.apple.notificationcenterui.bulletin_added" as CFString
+        
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer else { return }
+                let manager = Unmanaged<NotificationHUDManager>.fromOpaque(observer).takeUnretainedValue()
+                manager.databaseQueue.async {
+                    manager.pollForNewNotifications()
+                }
+            },
+            notificationName,
+            nil,
+            .deliverImmediately
+        )
+        
+        isDarwinObserverActive = true
+        print("NotificationHUD: ✅ Darwin observer started")
+    }
+    
+    private func stopDarwinObserver() {
+        guard isDarwinObserverActive else { return }
+        
+        CFNotificationCenterRemoveEveryObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            Unmanaged.passUnretained(self).toOpaque()
+        )
+        
+        isDarwinObserverActive = false
+        print("NotificationHUD: Darwin observer stopped")
+    }
+    
     func stopMonitoring() {
         pollingTimer?.invalidate()
         pollingTimer = nil
         stopFileMonitoring()  // Stop file system monitoring
+        stopDarwinObserver()
         closeDatabase()
 
         DispatchQueue.main.async { [weak self] in

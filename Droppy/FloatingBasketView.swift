@@ -1203,8 +1203,6 @@ private struct RenameTextField: View {
     @Binding var isRenaming: Bool
     let onRename: () -> Void
     
-    @State private var dashPhase: CGFloat = 0
-    
     var body: some View {
         AutoSelectTextField(
             text: $text,
@@ -1213,31 +1211,11 @@ private struct RenameTextField: View {
         )
         .font(.system(size: 11, weight: .medium))
         .frame(width: 72)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                .fill(Color.black.opacity(0.3))
+        .droppyTextInputChrome(
+            cornerRadius: DroppyRadius.ml,
+            horizontalPadding: 8,
+            verticalPadding: 5
         )
-        // Animated dotted blue outline
-        .overlay(
-            RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                .stroke(
-                    Color.accentColor.opacity(0.8),
-                    style: StrokeStyle(
-                        lineWidth: 1.5,
-                        lineCap: .round,
-                        dash: [3, 3],
-                        dashPhase: dashPhase
-                    )
-                )
-        )
-        .onAppear {
-            // Animate the marching ants
-            withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
-                dashPhase = 6
-            }
-        }
     }
 }
 

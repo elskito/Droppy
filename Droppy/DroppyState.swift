@@ -363,26 +363,63 @@ final class DroppyState {
         // Calculate ALL possible content heights
         let terminalHeight: CGFloat = 180 + topPaddingDelta
         let mediaPlayerHeight: CGFloat = 140 + topPaddingDelta
+
+        // TODO shelf bar contributes to expanded height and must be part of hit testing.
+        let todoInstalled = UserDefaults.standard.preference(AppPreferenceKey.todoInstalled, default: PreferenceDefault.todoInstalled)
+        let todoActive = todoInstalled && !ExtensionType.todo.isRemoved &&
+            DroppyState.shared.shelfDisplaySlotCount == 0
+
         // Use shelfDisplaySlotCount for correct row count - cap at 3 rows (scroll for rest)
         let rowCount = min(ceil(Double(DroppyState.shared.shelfDisplaySlotCount) / 5.0), 3)
-        let shelfHeight: CGFloat = max(1, rowCount) * 110 + notchCompensation
+        let todoBarHeight: CGFloat = todoActive
+            ? ToDoShelfBar.expandedHeight(
+                isListExpanded: ToDoManager.shared.isShelfListExpanded,
+                itemCount: ToDoManager.shared.items.count,
+                notchHeight: notchCompensation,
+                showsUndoToast: ToDoManager.shared.showUndoToast
+            )
+            : 0
+        let shouldSkipBaseShelfHeight = DroppyState.shared.shelfDisplaySlotCount == 0 &&
+            ToDoManager.shared.isShelfListExpanded &&
+            todoBarHeight > 0
+        let shelfBaseHeight: CGFloat = shouldSkipBaseShelfHeight
+            ? notchCompensation
+            : max(1, rowCount) * 110 + notchCompensation
+        let shelfHeight: CGFloat = shelfBaseHeight + todoBarHeight
         
         // Use MAXIMUM of all possible heights - guarantees we cover the actual visual
         var height = max(terminalHeight, max(mediaPlayerHeight, shelfHeight))
+
+        // Keep the expanded shadow fully visible.
+        // Must match the extra bottom padding in NotchShelfView.morphingBackground.
+        let expandedShadowOverflow: CGFloat = 18
+        height += expandedShadowOverflow
         
         // DYNAMIC BUTTON SPACE: Only add padding when floating buttons are actually visible
         // TermiNotch button shows when INSTALLED (not just when terminal output is visible)
         // Buttons visible when: TermiNotch is installed OR auto-collapse is disabled OR dragging (Quick Actions bar)
         // Issue #134 FIX: Include isDragging since Quick Actions bar appears during file drags
-        let terminalButtonVisible = TerminalNotchManager.shared.isInstalled
+        let terminalInstalled = UserDefaults.standard.preference(AppPreferenceKey.terminalNotchInstalled, default: PreferenceDefault.terminalNotchInstalled)
+        let terminalEnabled = UserDefaults.standard.preference(AppPreferenceKey.terminalNotchEnabled, default: PreferenceDefault.terminalNotchEnabled)
+        let terminalButtonVisible = terminalInstalled && terminalEnabled
         let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
-        let caffeineInstalled = UserDefaults.standard.bool(forKey: AppPreferenceKey.caffeineInstalled)
-        let caffeineEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.caffeineEnabled)
-        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || DragMonitor.shared.isDragging || (caffeineInstalled && caffeineEnabled)
+        let caffeineInstalled = UserDefaults.standard.preference(AppPreferenceKey.caffeineInstalled, default: PreferenceDefault.caffeineInstalled)
+        let caffeineEnabled = UserDefaults.standard.preference(AppPreferenceKey.caffeineEnabled, default: PreferenceDefault.caffeineEnabled)
+        let caffeineButtonVisible = caffeineInstalled && caffeineEnabled
+        let isDragging = DragMonitor.shared.isDragging
+        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || isDragging || caffeineButtonVisible
         
         if hasFloatingButtons {
-            // Button offset (12 gap + 6 island) + button height (46) + extra margin = 100pt
-            height += 100
+            // Reserve space for offset + button/bar size + hover/animation headroom.
+            // This is dynamic per mode and only applied when controls are actually shown.
+            let islandCompensation: CGFloat = isDynamicIsland ? NotchLayoutConstants.floatingButtonIslandCompensation : 0
+            let controlHeight: CGFloat = isDragging ? 44 : 32
+            let floatingControlsReserve =
+                NotchLayoutConstants.floatingButtonGap +
+                islandCompensation +
+                controlHeight +
+                12
+            height += floatingControlsReserve
         }
         
         return height

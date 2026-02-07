@@ -42,6 +42,10 @@ struct ClipboardManagerView: View {
     // Range selection anchor for Shift+Click
     @State private var lastClickedItemId: UUID?
     
+    // Rename popover state (tooltip style like ToDo edit)
+    @State private var renamingItemId: UUID?
+    @State private var renamingText = ""
+    
     // Tag Filter State
     @State private var selectedTagFilter: UUID? = nil  // nil = show all
     @State private var isTagPopoverVisible = false
@@ -541,6 +545,7 @@ struct ClipboardManagerView: View {
                         .textFieldStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
                         .focused($isSearchFocused)
+                        .frame(maxWidth: .infinity)
                     
                     if !searchText.isEmpty {
                         Button {
@@ -551,23 +556,10 @@ struct ClipboardManagerView: View {
                         .buttonStyle(DroppyCircleButtonStyle(size: 20))
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                        .fill(Color.black.opacity(0.3))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                        .stroke(
-                            Color.accentColor.opacity(0.8),
-                            style: StrokeStyle(
-                                lineWidth: 1.5,
-                                lineCap: .round,
-                                dash: [3, 3],
-                                dashPhase: 0  // Static dotted border (no animation)
-                            )
-                        )
+                .droppyTextInputChrome(
+                    cornerRadius: DroppyRadius.large,
+                    horizontalPadding: 10,
+                    verticalPadding: 8
                 )
                 .padding(.horizontal, 20)
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -682,9 +674,8 @@ struct ClipboardManagerView: View {
                                         }
                                     },
                                     onDoubleClick: {
-                                        RenameWindowController.shared.show(itemTitle: item.title) { newName in
-                                            manager.rename(item: item, to: newName)
-                                        }
+                                        renamingText = item.title
+                                        renamingItemId = item.id
                                     },
                                     onRightClick: {
                                         // CRITICAL: Defer selection to AFTER menu opens to avoid view recreation lag
@@ -700,7 +691,13 @@ struct ClipboardManagerView: View {
                                 ) {
                                     ClipboardItemRow(
                                         item: item, 
-                                        isSelected: selectedItems.contains(item.id)
+                                        isSelected: selectedItems.contains(item.id),
+                                        renamingItemId: $renamingItemId,
+                                        renamingText: $renamingText,
+                                        onRename: { newName in
+                                            manager.rename(item: item, to: newName)
+                                            updateSortedHistory()
+                                        }
                                     )
                                     .frame(width: 360)  // Fixed width to prevent text expansion
                                 }
@@ -822,9 +819,8 @@ struct ClipboardManagerView: View {
                                         
                                         Divider()
                                         Button {
-                                            RenameWindowController.shared.show(itemTitle: item.title) { newName in
-                                                manager.rename(item: item, to: newName)
-                                            }
+                                            renamingText = item.title
+                                            renamingItemId = item.id
                                         } label: {
                                             Label("Rename", systemImage: "pencil")
                                         }
@@ -1284,11 +1280,15 @@ struct FlaggedGridItemView: View {
 struct ClipboardItemRow: View {
     let item: ClipboardItem
     let isSelected: Bool
+    @Binding var renamingItemId: UUID?
+    @Binding var renamingText: String
+    let onRename: (String) -> Void
     
     @AppStorage(AppPreferenceKey.clipboardTagsEnabled) private var tagsEnabled = PreferenceDefault.clipboardTagsEnabled
     @State private var isHovering = false
     @State private var dashPhase: CGFloat = 0
     @State private var cachedThumbnail: NSImage? // Async-loaded thumbnail
+    @FocusState private var isRenameFocused: Bool
     
     var body: some View {
         HStack(spacing: 10) {
@@ -1397,6 +1397,41 @@ struct ClipboardItemRow: View {
             isHovering = hovering
         }
         .animation(DroppyAnimation.hoverBouncy, value: isHovering)
+        .popover(isPresented: renamePopoverPresented, arrowEdge: .top) {
+            ClipboardRenamePopover(
+                text: $renamingText,
+                title: String(localized: "action.edit"),
+                placeholder: item.title,
+                isFocused: $isRenameFocused,
+                onSave: performRename,
+                onCancel: {
+                    renamePopoverPresented.wrappedValue = false
+                }
+            )
+        }
+        .onChange(of: renamingItemId) { _, newValue in
+            if newValue == item.id {
+                renamingText = item.title
+            }
+        }
+    }
+    
+    private var renamePopoverPresented: Binding<Bool> {
+        Binding(
+            get: { renamingItemId == item.id },
+            set: { isPresented in
+                if !isPresented {
+                    renamingItemId = nil
+                }
+            }
+        )
+    }
+    
+    private func performRename() {
+        let trimmed = renamingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        onRename(trimmed)
+        renamingItemId = nil
     }
     
     func iconName(for type: ClipboardType) -> String {
@@ -1406,6 +1441,62 @@ struct ClipboardItemRow: View {
         case .file: return "doc"
         case .url: return "link"
         case .color: return "paintpalette"
+        }
+    }
+}
+
+private struct ClipboardRenamePopover: View {
+    @Binding var text: String
+    let title: String
+    let placeholder: String
+    @FocusState.Binding var isFocused: Bool
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+            
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, weight: .medium))
+                .focused($isFocused)
+                .droppyTextInputChrome()
+                .onSubmit {
+                    onSave()
+                }
+            
+            HStack(spacing: 10) {
+                Button {
+                    onCancel()
+                } label: {
+                    Text(String(localized: "action.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DroppyPillButtonStyle(size: .small))
+                
+                Button {
+                    onSave()
+                } label: {
+                    Text(String(localized: "action.save"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DroppyAccentButtonStyle(color: .blue, size: .small))
+                .disabled(trimmedText.isEmpty)
+            }
+        }
+        .padding(14)
+        .frame(width: 260)
+        .onAppear {
+            DispatchQueue.main.async {
+                isFocused = true
+            }
         }
     }
 }
@@ -1622,7 +1713,11 @@ struct ClipboardPreviewView: View {
                             .font(.system(.body, design: .monospaced))
                             .scrollContentBackground(.hidden)
                             .foregroundStyle(.white)
-                            .padding(DroppySpacing.md)
+                            .droppyTextInputChrome(
+                                cornerRadius: DroppyRadius.ml,
+                                horizontalPadding: 10,
+                                verticalPadding: 10
+                            )
 
                     } else {
                         ScrollView {
@@ -1659,7 +1754,11 @@ struct ClipboardPreviewView: View {
                             .font(.system(.body, design: .monospaced))
                             .scrollContentBackground(.hidden)
                             .foregroundStyle(.white)
-                            .padding(DroppySpacing.md)
+                            .droppyTextInputChrome(
+                                cornerRadius: DroppyRadius.ml,
+                                horizontalPadding: 10,
+                                verticalPadding: 10
+                            )
                     } else {
                         URLPreviewCard(
                             item: item,
@@ -1926,19 +2025,11 @@ struct ClipboardPreviewView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                    .fill(isEditing ? Color.black.opacity(0.3) : Color.white.opacity(0.05))
+                    .fill(isEditing ? AdaptiveColors.buttonBackgroundAuto.opacity(0.95) : Color.white.opacity(0.05))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                    .strokeBorder(
-                        Color.accentColor.opacity(isEditing ? 0.8 : 0),
-                        style: StrokeStyle(
-                            lineWidth: 1.5,
-                            lineCap: .round,
-                            dash: [3, 3],
-                            dashPhase: 0  // Static dotted border (no animation)
-                        )
-                    )
+                    .strokeBorder(isEditing ? AdaptiveColors.subtleBorderAuto : .clear, lineWidth: 1)
             )
             .animation(DroppyAnimation.viewChange, value: isEditing)
             .onChange(of: isEditing) { _, editing in
@@ -3330,24 +3421,10 @@ struct TagManagementSheet: View {
                     .opacity(newTagName.isEmpty ? 0 : 1)
                     .disabled(newTagName.isEmpty)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                        .fill(Color.black.opacity(0.3))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: DroppyRadius.large, style: .continuous)
-                        .stroke(
-                            isTextFieldFocused ? selectedColor.opacity(0.8) : Color.white.opacity(0.2),
-                            style: StrokeStyle(
-                                lineWidth: 1.5,
-                                lineCap: .round,
-                                dash: [3, 3],
-                                dashPhase: 0
-                            )
-                        )
-                        .animation(.easeInOut(duration: 0.2), value: selectedColorIndex)
+                .droppyTextInputChrome(
+                    cornerRadius: DroppyRadius.large,
+                    horizontalPadding: 10,
+                    verticalPadding: 8
                 )
                 
                 // Color picker grid
@@ -3547,6 +3624,7 @@ struct TagRowView: View {
                     .font(.system(size: 13, weight: .medium))
                     .frame(maxWidth: 80)
                     .focused($isEditFocused)
+                    .droppyTextInputChrome(horizontalPadding: 8, verticalPadding: 6)
                     .onSubmit { onSaveEdit() }
                     .onAppear { isEditFocused = true }
                 

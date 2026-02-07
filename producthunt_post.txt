@@ -93,4 +93,4 @@ QUICK LINKS:
 Website: https://iordv.github.io/Droppy
 GitHub: https://github.com/iordv/Droppy
 Install: brew install iordv/tap/droppy
-Discord: https://discord.gg/uxqynmJb
+Discord: https://discord.gg/uvA6PUj4

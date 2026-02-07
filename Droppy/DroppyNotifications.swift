@@ -50,6 +50,11 @@ extension Notification.Name {
     
     /// Posted when Window Snap shortcuts are changed
     static let windowSnapShortcutChanged = Notification.Name("windowSnapShortcutChanged")
+
+    // MARK: - Licensing
+
+    /// Posted when Gumroad license activation state changes
+    static let licenseStateDidChange = Notification.Name("licenseStateDidChange")
     
     // MARK: - Shelf
     

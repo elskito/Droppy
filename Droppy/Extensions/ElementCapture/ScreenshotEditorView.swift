@@ -630,13 +630,10 @@ struct ScreenshotEditorView: View {
                 TextField("Enter text...", text: $textInput)
                     .textFieldStyle(.plain)
                     .font(.custom(selectedFont == "SF Pro" ? ".AppleSystemUIFont" : selectedFont, size: 14))
-                    .padding(12)
-                    .background(Color.white.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DroppyRadius.medium, style: .continuous)
-                            .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                            .foregroundColor(.yellow.opacity(0.6))
+                    .droppyTextInputChrome(
+                        cornerRadius: DroppyRadius.medium,
+                        horizontalPadding: 12,
+                        verticalPadding: 12
                     )
                 
                 // Font picker

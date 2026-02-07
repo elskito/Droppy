@@ -651,12 +651,8 @@ class NotchDragContainer: NSView {
         }()
         
         // Remove highlight state
-        DispatchQueue.main.async {
-            withAnimation(DroppyAnimation.state) {
-                DroppyState.shared.isDropTargeted = false
-                DroppyState.shared.dropTargetDisplayID = nil
-            }
-        }
+        DroppyState.shared.isDropTargeted = false
+        DroppyState.shared.dropTargetDisplayID = nil
         
         // Check if drop is in AirDrop zone - feature removed, now handled by quick actions
         
@@ -683,7 +679,6 @@ class NotchDragContainer: NSView {
                 if !savedFiles.isEmpty {
                     withAnimation(DroppyAnimation.transition) {
                         DroppyState.shared.addItems(from: savedFiles)
-                        // Ensure shelf expands on the CORRECT display (where drop occurred)
                         if let displayID = targetDisplayID {
                             DroppyState.shared.expandShelf(for: displayID)
                         }
@@ -742,7 +737,6 @@ class NotchDragContainer: NSView {
                     DispatchQueue.main.async {
                         withAnimation(DroppyAnimation.transition) {
                             DroppyState.shared.addItems(from: [fileURL])
-                            // Ensure shelf expands on the CORRECT display (where drop occurred)
                             if let displayID = targetDisplayID {
                                 DroppyState.shared.expandShelf(for: displayID)
                             }
@@ -758,12 +752,17 @@ class NotchDragContainer: NSView {
             .urlReadingFileURLsOnly: true
         ]) as? [URL], !urls.isEmpty {
             DispatchQueue.main.async {
-                withAnimation(DroppyAnimation.transition) {
+                // CONSTRAINT CASCADE SAFETY: Do NOT animate addItems.
+                // Adding items triggers simultaneous view transitions (notchTransition)
+                // whose animated scaleEffect causes re-entrant _postWindowNeedsUpdateConstraints
+                // during NSDisplayCycleFlush → constraint update pass → crash.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
                     DroppyState.shared.addItems(from: urls)
-                    // Ensure shelf expands on the CORRECT display (where drop occurred)
-                    if let displayID = targetDisplayID {
-                        DroppyState.shared.expandShelf(for: displayID)
-                    }
+                }
+                if let displayID = targetDisplayID {
+                    DroppyState.shared.expandShelf(for: displayID)
                 }
             }
             return true
@@ -785,12 +784,13 @@ class NotchDragContainer: NSView {
             do {
                 try text.write(to: fileURL, atomically: true, encoding: .utf8)
                 DispatchQueue.main.async {
-                    withAnimation(DroppyAnimation.transition) {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
                         DroppyState.shared.addItems(from: [fileURL])
-                        // Ensure shelf expands on the CORRECT display (where drop occurred)
-                        if let displayID = targetDisplayID {
-                            DroppyState.shared.expandShelf(for: displayID)
-                        }
+                    }
+                    if let displayID = targetDisplayID {
+                        DroppyState.shared.expandShelf(for: displayID)
                     }
                 }
                 return true

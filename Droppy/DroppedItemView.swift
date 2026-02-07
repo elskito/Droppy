@@ -181,7 +181,9 @@ struct DroppedItemView: View {
                 Label("Remove from Shelf", systemImage: "xmark")
             }
         }
-        .draggable(item)
+        .onDrag {
+            NSItemProvider(object: item.url as NSURL)
+        }
         .task {
             // Load thumbnail from cache (no delay - cache handles throttling)
             thumbnail = await ThumbnailCache.shared.loadThumbnailAsync(for: item, size: CGSize(width: 128, height: 128))

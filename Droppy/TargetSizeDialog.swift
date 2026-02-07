@@ -66,21 +66,10 @@ struct TargetSizeDialogView: View {
                             onCancel: onCancel
                         )
                         .frame(width: 120)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(AdaptiveColors.buttonBackgroundAuto)
-                        .clipShape(RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DroppyRadius.ml, style: .continuous)
-                                .stroke(
-                                    Color.accentColor.opacity(0.8),
-                                    style: StrokeStyle(
-                                        lineWidth: 1.5,
-                                        lineCap: .round,
-                                        dash: [3, 3],
-                                        dashPhase: 0  // Static dotted border (no animation)
-                                    )
-                                )
+                        .droppyTextInputChrome(
+                            cornerRadius: DroppyRadius.ml,
+                            horizontalPadding: 12,
+                            verticalPadding: 8
                         )
                         
                         Text("MB")
@@ -309,4 +298,3 @@ class CompressPanel: NSPanel {
         return true
     }
 }
-
