@@ -26,6 +26,7 @@ struct ExtensionsShopView: View {
     private var isNotificationHUDInstalled: Bool { UserDefaults.standard.bool(forKey: AppPreferenceKey.notificationHUDInstalled) }
     private var isCaffeineInstalled: Bool { UserDefaults.standard.bool(forKey: AppPreferenceKey.caffeineInstalled) }
     private var isMenuBarManagerInstalled: Bool { MenuBarManager.shared.isEnabled }
+    private var isMirrorInstalled: Bool { UserDefaults.standard.bool(forKey: AppPreferenceKey.mirrorInstalled) }
 
     
     var body: some View {
@@ -489,6 +490,21 @@ struct ExtensionsShopView: View {
                 AnyView(MenuBarManagerInfoView(
                     installCount: extensionCounts["menuBarManager"],
                     rating: extensionRatings["menuBarManager"]
+                ))
+            },
+            ExtensionListItem(
+                id: "mirror",
+                iconURL: "https://getdroppy.app/assets/icons/targeted-video-size.jpg",
+                title: "Mirror",
+                subtitle: "Live notch camera mirror",
+                category: .productivity,
+                isInstalled: isMirrorInstalled,
+                analyticsKey: "mirror",
+                extensionType: .mirror
+            ) {
+                AnyView(MirrorInfoView(
+                    installCount: extensionCounts["mirror"],
+                    rating: extensionRatings["mirror"]
                 ))
             },
 

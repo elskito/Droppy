@@ -51,6 +51,8 @@ struct SettingsView: View {
     @AppStorage(AppPreferenceKey.terminalNotchEnabled) private var enableTerminalNotch = PreferenceDefault.terminalNotchEnabled
     @AppStorage(AppPreferenceKey.caffeineInstalled) private var isCaffeineInstalled = PreferenceDefault.caffeineInstalled
     @AppStorage(AppPreferenceKey.caffeineEnabled) private var enableCaffeine = PreferenceDefault.caffeineEnabled
+    @AppStorage(AppPreferenceKey.mirrorInstalled) private var isMirrorInstalled = PreferenceDefault.mirrorInstalled
+    @AppStorage(AppPreferenceKey.mirrorEnabled) private var enableMirror = PreferenceDefault.mirrorEnabled
     @AppStorage(AppPreferenceKey.enableLockScreenMediaWidget) private var enableLockScreenMediaWidget = PreferenceDefault.enableLockScreenMediaWidget
     @AppStorage(AppPreferenceKey.showMediaPlayer) private var showMediaPlayer = PreferenceDefault.showMediaPlayer
     @AppStorage(AppPreferenceKey.autoFadeMediaHUD) private var autoFadeMediaHUD = PreferenceDefault.autoFadeMediaHUD
@@ -2223,6 +2225,46 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // Mirror Extension
+                if isMirrorInstalled {
+                    HStack(spacing: 12) {
+                        ExtensionIconView<MirrorExtension>(definition: MirrorExtension.self, size: 40)
+                            .opacity(enableMirror ? 1.0 : 0.5)
+
+                        Toggle(isOn: $enableMirror) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Mirror")
+                                Text("Show camera mirror action in shelf")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } else {
+                    Button {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("OpenExtensionStore"),
+                            object: nil,
+                            userInfo: ["extension": MirrorExtension.id]
+                        )
+                    } label: {
+                        HStack(spacing: 12) {
+                            ExtensionIconView<MirrorExtension>(definition: MirrorExtension.self, size: 40)
+                                .opacity(0.5)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Mirror")
+                                    .foregroundStyle(.secondary)
+                                Text("Enable in Extension Store")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
             } header: {
                 Text("Extensions")
             }
@@ -2335,6 +2377,9 @@ struct SettingsView: View {
                 } else if extensionType == .menuBarManager {
                     // Menu Bar Manager has its own configuration view
                     MenuBarManagerInfoView(installCount: nil, rating: nil)
+                } else if extensionType == .mirror {
+                    // Mirror has its own configuration view
+                    MirrorInfoView(installCount: nil, rating: nil)
                 } else {
                     // All other extensions use ExtensionInfoView
                     ExtensionInfoView(extensionType: extensionType) {
@@ -2350,7 +2395,7 @@ struct SettingsView: View {
                             SpotifyAuthManager.shared.startAuthentication()
                         case .appleMusic:
                             AppleMusicController.shared.refreshState()
-                        case .elementCapture, .aiBackgroundRemoval, .windowSnap, .voiceTranscribe, .ffmpegVideoCompression, .terminalNotch, .quickshare, .notificationHUD, .caffeine, .menuBarManager:
+                        case .elementCapture, .aiBackgroundRemoval, .windowSnap, .voiceTranscribe, .ffmpegVideoCompression, .terminalNotch, .quickshare, .notificationHUD, .caffeine, .menuBarManager, .mirror:
                             break // No action needed - these have their own configuration UI
                         }
                     }

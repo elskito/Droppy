@@ -229,6 +229,7 @@ struct ExtensionInfoView: View {
         case .notificationHUD: return "Configure"
         case .caffeine: return "Configure"
         case .menuBarManager: return "Configure"
+        case .mirror: return "Configure"
         }
     }
     
@@ -248,6 +249,7 @@ struct ExtensionInfoView: View {
         case .notificationHUD: return "Configure"
         case .caffeine: return "Configure"
         case .menuBarManager: return "Configure"
+        case .mirror: return "Configure"
         }
     }
     
@@ -267,6 +269,7 @@ struct ExtensionInfoView: View {
         case .notificationHUD: return "bell.badge"
         case .caffeine: return "cup.and.saucer.fill"
         case .menuBarManager: return "menubar.rectangle"
+        case .mirror: return "camera.fill"
         }
     }
 }
@@ -278,5 +281,4 @@ struct ExtensionInfoView: View {
         print("Action")
     }
 }
-
 

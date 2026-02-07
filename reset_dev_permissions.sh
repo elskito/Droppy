@@ -14,12 +14,14 @@ echo "2. Resetting TCC database..."
 tccutil reset Accessibility iordv.Droppy
 tccutil reset ScreenCapture iordv.Droppy
 tccutil reset ListenEvent iordv.Droppy
+tccutil reset Camera iordv.Droppy
 
 # 3. Clear Droppy's UserDefaults cache
 echo "3. Clearing permission cache..."
 defaults delete iordv.Droppy accessibilityGranted 2>/dev/null || true
 defaults delete iordv.Droppy screenRecordingGranted 2>/dev/null || true
 defaults delete iordv.Droppy inputMonitoringGranted 2>/dev/null || true
+defaults delete iordv.Droppy cameraGranted 2>/dev/null || true
 defaults delete iordv.Droppy permissionCacheVersion 2>/dev/null || true
 
 # 4. Clean Xcode build

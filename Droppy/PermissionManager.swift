@@ -17,6 +17,7 @@
 import Foundation
 import AppKit
 import Combine
+@preconcurrency import AVFoundation
 
 /// Centralized permission manager with persistent caching
 final class PermissionManager: ObservableObject {
@@ -26,6 +27,7 @@ final class PermissionManager: ObservableObject {
     private let accessibilityGrantedKey = "accessibilityGranted"
     private let screenRecordingGrantedKey = "screenRecordingGranted"
     private let inputMonitoringGrantedKey = "inputMonitoringGranted"
+    private let cameraGrantedKey = "cameraGranted"
     
     // Polling timer for detecting permission changes
     private var pollingTimer: Timer?
@@ -76,6 +78,14 @@ final class PermissionManager: ObservableObject {
         print("🔐 INPUT MONITORING:")
         print("🔐   Cache = \(imCache)")
         print("🔐   (Runtime check done via GlobalHotKey)")
+
+        // Camera
+        let cameraStatus = cameraAuthorizationStatus
+        let cameraCache = UserDefaults.standard.bool(forKey: cameraGrantedKey)
+        print("🔐 CAMERA:")
+        print("🔐   AVCaptureDevice.authorizationStatus = \(cameraStatus.rawValue)")
+        print("🔐   Cache = \(cameraCache)")
+        print("🔐   isCameraGranted = \(isCameraGranted)")
         
         print("🔐 =========================================")
     }
@@ -266,6 +276,85 @@ final class PermissionManager: ObservableObject {
             print("🔐 PermissionManager: Input Monitoring marked as granted")
         }
     }
+
+    // MARK: - Camera
+
+    var cameraAuthorizationStatus: AVAuthorizationStatus {
+        AVCaptureDevice.authorizationStatus(for: .video)
+    }
+
+    /// Camera permission should rely on TCC status directly.
+    var isCameraGranted: Bool {
+        let status = cameraAuthorizationStatus
+
+        if status == .authorized {
+            if !UserDefaults.standard.bool(forKey: cameraGrantedKey) {
+                UserDefaults.standard.set(true, forKey: cameraGrantedKey)
+                DispatchQueue.main.async { self.objectWillChange.send() }
+                print("🔐 PermissionManager: Camera granted! (TCC confirmed, cache updated)")
+            }
+            return true
+        }
+
+        // Keep cache in sync if revoked or reset.
+        if UserDefaults.standard.bool(forKey: cameraGrantedKey) {
+            UserDefaults.standard.set(false, forKey: cameraGrantedKey)
+        }
+
+        return false
+    }
+
+    /// Request camera permission (shows macOS dialog when status is .notDetermined)
+    func requestCameraPermission(completion: @escaping (Bool) -> Void) {
+        switch cameraAuthorizationStatus {
+        case .authorized:
+            if !UserDefaults.standard.bool(forKey: cameraGrantedKey) {
+                UserDefaults.standard.set(true, forKey: cameraGrantedKey)
+                DispatchQueue.main.async { self.objectWillChange.send() }
+            }
+            DispatchQueue.main.async {
+                completion(true)
+            }
+        case .denied, .restricted:
+            if UserDefaults.standard.bool(forKey: cameraGrantedKey) {
+                UserDefaults.standard.set(false, forKey: cameraGrantedKey)
+            }
+            DispatchQueue.main.async {
+                completion(false)
+            }
+        case .notDetermined:
+            let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
+            let bundlePath = Bundle.main.bundlePath
+            print("🔐 PermissionManager: Requesting camera permission (showing macOS dialog)... bundleID=\(bundleID) bundlePath=\(bundlePath)")
+
+            // LSUIElement apps can fail to surface TCC prompts when not frontmost.
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+
+                AVCaptureDevice.requestAccess(for: .video) { granted in
+                    let statusAfterPrompt = AVCaptureDevice.authorizationStatus(for: .video)
+
+                    if granted {
+                        if !UserDefaults.standard.bool(forKey: self.cameraGrantedKey) {
+                            UserDefaults.standard.set(true, forKey: self.cameraGrantedKey)
+                            DispatchQueue.main.async { self.objectWillChange.send() }
+                        }
+                    } else if UserDefaults.standard.bool(forKey: self.cameraGrantedKey) {
+                        UserDefaults.standard.set(false, forKey: self.cameraGrantedKey)
+                    }
+
+                    print("🔐 PermissionManager: Camera request completed granted=\(granted) status=\(statusAfterPrompt.rawValue)")
+                    DispatchQueue.main.async {
+                        completion(granted)
+                    }
+                }
+            }
+        @unknown default:
+            DispatchQueue.main.async {
+                completion(false)
+            }
+        }
+    }
     
     // MARK: - Settings URLs
     
@@ -286,6 +375,13 @@ final class PermissionManager: ObservableObject {
     func openInputMonitoringSettings() {
         print("🔐 PermissionManager: Opening Input Monitoring settings...")
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func openCameraSettings() {
+        print("🔐 PermissionManager: Opening Camera settings...")
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
             NSWorkspace.shared.open(url)
         }
     }

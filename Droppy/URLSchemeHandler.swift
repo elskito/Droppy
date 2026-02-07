@@ -12,7 +12,7 @@ import SwiftUI
 /// URL Format:
 /// - droppy://add?target=shelf&path=/path/to/file1&path=/path/to/file2
 /// - droppy://add?target=basket&path=/path/to/file
-/// - droppy://extension/{id} - Opens extension info sheet (ai-bg, alfred, finder, element-capture, spotify, window-snap, voice-transcribe)
+/// - droppy://extension/{id} - Opens extension info sheet (ai-bg, alfred, finder, element-capture, spotify, window-snap, voice-transcribe, mirror)
 ///
 /// Parameters:
 /// - target: "shelf" or "basket" - where to add the files
@@ -110,7 +110,7 @@ struct URLSchemeHandler {
     
     /// Handles extension deep links from the website
     /// URL Format: droppy://extension/{id}
-    /// Supported IDs: ai-bg, alfred, finder, element-capture, spotify, window-snap
+    /// Supported IDs: ai-bg, alfred, finder, element-capture, spotify, window-snap, mirror
     private static func handleExtensionAction(url: URL) {
         // Extract extension ID from path (e.g., "/ai-bg" -> "ai-bg")
         let pathComponents = url.pathComponents.filter { $0 != "/" }
@@ -144,6 +144,8 @@ struct URLSchemeHandler {
             extensionType = .terminalNotch
         case "quickshare", "quick-share":
             extensionType = .quickshare
+        case "mirror", "mirror-extension":
+            extensionType = .mirror
         default:
             print("⚠️ URLSchemeHandler: Unknown extension ID '\(extensionId)'")
             extensionType = nil

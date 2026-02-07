@@ -654,7 +654,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                 // Don't close if auto-collapse is disabled (user wants manual control)
                 // CRITICAL: Use object() ?? true to match @AppStorage default for new users
                 let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
-                guard autoCollapseEnabled else { return }
+                guard autoCollapseEnabled, !DroppyState.shared.isMirrorPinnedOpen else { return }
                 
                 // DELAYED CLOSE: Wait 150ms to see if a drag operation starts
                 // This prevents shelf from closing when user clicks to start dragging a file
@@ -851,7 +851,7 @@ final class NotchWindowController: NSObject, ObservableObject {
                     // Don't close if auto-collapse is disabled (user wants manual control)
                     // CRITICAL: Use object() ?? true to match @AppStorage default for new users
                     let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
-                    guard autoCollapseEnabled else { return event }
+                    guard autoCollapseEnabled, !DroppyState.shared.isMirrorPinnedOpen else { return event }
                     
                     // DELAYED CLOSE: Wait 150ms to see if a drag operation starts
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {

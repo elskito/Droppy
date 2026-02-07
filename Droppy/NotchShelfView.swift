@@ -63,10 +63,12 @@ struct NotchShelfView: View {
     @ObservedObject private var lockScreenManager = LockScreenManager.shared
     @ObservedObject private var dndManager = DNDManager.shared
     @ObservedObject private var terminalManager = TerminalNotchManager.shared
+    @ObservedObject private var mirrorManager = MirrorManager.shared
     var caffeineManager = CaffeineManager.shared  // @Observable - no wrapper needed
     var hudManager = HUDManager.shared  // @Observable - needed for notification HUD visibility tracking
     var notificationHUDManager = NotificationHUDManager.shared  // @Observable - needed for current notification tracking
     @AppStorage(AppPreferenceKey.caffeineEnabled) private var caffeineEnabled = PreferenceDefault.caffeineEnabled
+    @AppStorage(AppPreferenceKey.mirrorEnabled) private var mirrorEnabled = PreferenceDefault.mirrorEnabled
     @State private var showVolumeHUD = false
     @State private var showBrightnessHUD = false
     @State private var hudWorkItem: DispatchWorkItem?
@@ -123,6 +125,7 @@ struct NotchShelfView: View {
     
     // Caffeine extension view state
     @State private var showCaffeineView: Bool = false
+    @State private var showMirrorView: Bool = false
     
     // MORPH: Namespace for album art morphing between HUD and expanded player
     @Namespace private var albumArtNamespace
@@ -582,6 +585,20 @@ struct NotchShelfView: View {
                 return 180
             }
         }
+
+        // MIRROR: Expanded height for live camera preview
+        let mirrorEnabled = UserDefaults.standard.preference(AppPreferenceKey.mirrorEnabled, default: PreferenceDefault.mirrorEnabled)
+        let mirrorShouldShow = UserDefaults.standard.preference(AppPreferenceKey.mirrorInstalled, default: PreferenceDefault.mirrorInstalled) && mirrorEnabled
+        if showMirrorView && mirrorShouldShow {
+            let isExternalNotchStyle = isExternalDisplay && !externalDisplayUseDynamicIsland
+            if contentLayoutNotchHeight > 0 {
+                return contentLayoutNotchHeight + 220
+            } else if isExternalNotchStyle {
+                return 240
+            } else {
+                return 240
+            }
+        }
         
         // HIGH ALERT (CAFFEINE): Compact height for toggle + 2 rows of timer buttons
         // Timer buttons = 2 rows × 34pt + 8pt spacing = 76pt total content height
@@ -740,9 +757,25 @@ struct NotchShelfView: View {
         ZStack(alignment: .top) {
             shelfContent
                 .onChange(of: isExpandedOnThisScreen) { _, isExpanded in
-                    // RESET RULE: When shelf collapses, reset Caffeine view so next open shows default shelf
+                    // RESET RULE: When shelf collapses, reset extension views so next open shows default shelf
                     if !isExpanded {
                         showCaffeineView = false
+                        deactivateMirrorView()
+                    }
+                }
+                .onChange(of: mirrorEnabled) { _, enabled in
+                    if !enabled && showMirrorView {
+                        deactivateMirrorView()
+                    }
+                }
+                .onChange(of: terminalManager.isVisible) { _, isVisible in
+                    if isVisible && showMirrorView {
+                        deactivateMirrorView()
+                    }
+                }
+                .onChange(of: mirrorManager.isInstalled) { _, isInstalled in
+                    if !isInstalled && showMirrorView {
+                        deactivateMirrorView()
                     }
                 }
             
@@ -754,8 +787,11 @@ struct NotchShelfView: View {
             let caffeineInstalled = UserDefaults.standard.preference(AppPreferenceKey.caffeineInstalled, default: PreferenceDefault.caffeineInstalled)
             let caffeineEnabled = UserDefaults.standard.preference(AppPreferenceKey.caffeineEnabled, default: PreferenceDefault.caffeineEnabled)
             let terminalEnabled = UserDefaults.standard.preference(AppPreferenceKey.terminalNotchEnabled, default: PreferenceDefault.terminalNotchEnabled)
+            let mirrorInstalled = UserDefaults.standard.preference(AppPreferenceKey.mirrorInstalled, default: PreferenceDefault.mirrorInstalled)
+            let mirrorEnabled = UserDefaults.standard.preference(AppPreferenceKey.mirrorEnabled, default: PreferenceDefault.mirrorEnabled)
             let caffeineShouldShow = caffeineInstalled && caffeineEnabled
             let terminalShouldShow = terminalManager.isInstalled && terminalEnabled
+            let mirrorShouldShow = mirrorInstalled && mirrorEnabled
             if enableNotchShelf && isExpandedOnThisScreen {
                 // FLOATING BUTTONS: ZStack enables smooth crossfade between button states
                 // - Quick Actions: Shown when dragging files
@@ -783,7 +819,7 @@ struct NotchShelfView: View {
                     }
                     
                     // Regular floating buttons (caffeine/terminal/close) - appear when NOT dragging
-                    if !dragMonitor.isDragging && (caffeineShouldShow || terminalShouldShow || !autoCollapseShelf) {
+                    if !dragMonitor.isDragging && (caffeineShouldShow || terminalShouldShow || mirrorShouldShow || !autoCollapseShelf) {
                         HStack(spacing: 12) {
                             // Caffeine button (if extension installed AND enabled)
                             if caffeineShouldShow {
@@ -796,6 +832,7 @@ struct NotchShelfView: View {
                                         // If activating caffeine view, close terminal if open
                                         if showCaffeineView {
                                             terminalManager.hide()
+                                            deactivateMirrorView()
                                         }
                                     }
                                 }) {
@@ -807,6 +844,36 @@ struct NotchShelfView: View {
                                     solidFill: isHighlight ? .orange : (isDynamicIslandMode ? dynamicIslandGray : .black)
                                 ))
                                 .help(CaffeineManager.shared.isActive ? "High Alert: \(CaffeineManager.shared.formattedRemaining)" : "High Alert")
+                                .transition(.scale(scale: 0.8).combined(with: .opacity))
+                            }
+
+                            // Mirror button (if extension installed AND enabled)
+                            if mirrorShouldShow {
+                                let isHighlight = showMirrorView
+
+                                Button(action: {
+                                    HapticFeedback.tap()
+                                    withAnimation(DroppyAnimation.notchState) {
+                                        if showMirrorView {
+                                            deactivateMirrorView()
+                                        } else {
+                                            showMirrorView = true
+                                            state.isMirrorPinnedOpen = true
+                                            showCaffeineView = false
+                                            terminalManager.hide()
+                                            mirrorManager.show()
+                                            cancelAutoShrinkTimer()
+                                        }
+                                    }
+                                }) {
+                                    Image(systemName: "camera.fill")
+                                }
+                                .buttonStyle(DroppyCircleButtonStyle(
+                                    size: 32,
+                                    useTransparent: shouldUseFloatingButtonTransparent,
+                                    solidFill: isHighlight ? .cyan : (isDynamicIslandMode ? dynamicIslandGray : .black)
+                                ))
+                                .help("Mirror")
                                 .transition(.scale(scale: 0.8).combined(with: .opacity))
                             }
                             
@@ -837,6 +904,10 @@ struct NotchShelfView: View {
                                 // Toggle terminal button (shows terminal icon when hidden, X when visible)
                                 Button(action: {
                                     withAnimation(DroppyAnimation.listChange) {
+                                        if !terminalManager.isVisible {
+                                            showCaffeineView = false
+                                            deactivateMirrorView()
+                                        }
                                         terminalManager.toggle()
                                     }
                                 }) {
@@ -1165,6 +1236,7 @@ struct NotchShelfView: View {
         // Check if auto-collapse is enabled (new toggle)
         guard autoCollapseShelf else { return }
         guard isExpandedOnThisScreen else { return }
+        guard !state.isMirrorPinnedOpen else { return }
         
         // Cancel any existing timer
         autoShrinkWorkItem?.cancel()
@@ -1198,7 +1270,7 @@ struct NotchShelfView: View {
             // Only shrink if still expanded and not hovering over the content
             // Check BOTH SwiftUI hover state AND geometric fallback
             let isHoveringAnyMethod = isHoveringExpandedContent || isHoveringOnThisScreen || isMouseInExpandedZone
-            guard isExpandedOnThisScreen && !isHoveringAnyMethod && !state.isDropTargeted else {
+            guard isExpandedOnThisScreen && !isHoveringAnyMethod && !state.isDropTargeted && !state.isMirrorPinnedOpen else {
                 print("⏳ AUTO-SHRINK SKIPPED: conditions not met (isHoveringAnyMethod=\(isHoveringAnyMethod))")
                 return
             }
@@ -1233,6 +1305,12 @@ struct NotchShelfView: View {
     /// Cancels the auto-shrink timer (called when hovering over the notch)
     private func cancelAutoShrinkTimer() {
         autoShrinkWorkItem?.cancel()
+    }
+
+    private func deactivateMirrorView() {
+        showMirrorView = false
+        state.isMirrorPinnedOpen = false
+        mirrorManager.hide()
     }
     
     // MARK: - Glow Effect
@@ -1909,6 +1987,10 @@ struct NotchShelfView: View {
         // TERMINOTCH: Don't show morphing overlays when terminal is visible (and enabled)
         let terminalEnabled = UserDefaults.standard.preference(AppPreferenceKey.terminalNotchEnabled, default: PreferenceDefault.terminalNotchEnabled)
         guard !(terminalManager.isInstalled && terminalEnabled && terminalManager.isVisible) else { return false }
+        // MIRROR: Don't show morphing overlays when mirror view is visible (and enabled)
+        let mirrorEnabled = UserDefaults.standard.preference(AppPreferenceKey.mirrorEnabled, default: PreferenceDefault.mirrorEnabled)
+        let mirrorShouldShow = UserDefaults.standard.preference(AppPreferenceKey.mirrorInstalled, default: PreferenceDefault.mirrorInstalled) && mirrorEnabled
+        guard !(showMirrorView && mirrorShouldShow) else { return false }
         // HIGH ALERT: Don't show morphing overlays when caffeine view is visible (and enabled)
         let caffeineEnabled = UserDefaults.standard.preference(AppPreferenceKey.caffeineEnabled, default: PreferenceDefault.caffeineEnabled)
         let caffeineShouldShow = UserDefaults.standard.preference(AppPreferenceKey.caffeineInstalled, default: PreferenceDefault.caffeineInstalled) && caffeineEnabled
@@ -2187,7 +2269,9 @@ struct NotchShelfView: View {
         // Check both installed AND enabled for each extension
         let terminalEnabled = UserDefaults.standard.preference(AppPreferenceKey.terminalNotchEnabled, default: PreferenceDefault.terminalNotchEnabled)
         let caffeineEnabled = UserDefaults.standard.preference(AppPreferenceKey.caffeineEnabled, default: PreferenceDefault.caffeineEnabled)
+        let mirrorEnabled = UserDefaults.standard.preference(AppPreferenceKey.mirrorEnabled, default: PreferenceDefault.mirrorEnabled)
         let caffeineShouldShow = UserDefaults.standard.preference(AppPreferenceKey.caffeineInstalled, default: PreferenceDefault.caffeineInstalled) && caffeineEnabled
+        let mirrorShouldShow = UserDefaults.standard.preference(AppPreferenceKey.mirrorInstalled, default: PreferenceDefault.mirrorInstalled) && mirrorEnabled
         
         return ZStack {
             // TERMINAL VIEW: Highest priority - takes over the shelf when active
@@ -2197,6 +2281,13 @@ struct NotchShelfView: View {
                     .frame(height: currentExpandedHeight, alignment: .top)
                     .id("terminal-view")
                     // PREMIUM: Scale(0.8, anchor: .top) + blur + opacity - ultra-smooth feel
+                    .notchTransition()
+            }
+            // MIRROR VIEW: Show when user clicks mirror button in shelf
+            else if showMirrorView && mirrorShouldShow {
+                MirrorNotchView(manager: mirrorManager, notchHeight: contentLayoutNotchHeight, isExternalWithNotchStyle: isExternalDisplay && !externalDisplayUseDynamicIsland)
+                    .frame(height: currentExpandedHeight, alignment: .top)
+                    .id("mirror-view")
                     .notchTransition()
             }
             // CAFFEINE VIEW: Show when user clicks caffeine button in shelf

@@ -154,6 +154,10 @@ final class DroppyState {
     /// Tracks which screen (by displayID) has the shelf expanded
     /// Only one screen can have the shelf expanded at a time to prevent mirroring
     var expandedDisplayID: CGDirectDisplayID? = nil
+
+    /// Keeps the shelf pinned open while Mirror is active.
+    /// Used by both SwiftUI auto-collapse timers and AppKit outside-click handlers.
+    var isMirrorPinnedOpen: Bool = false
     
     /// Convenience property for backwards compatibility - true if ANY screen has shelf expanded
     var isExpanded: Bool {
@@ -360,15 +364,18 @@ final class DroppyState {
         let topPaddingDelta: CGFloat = isDynamicIsland ? 0 : (notchHeight - 20)
         let notchCompensation: CGFloat = isDynamicIsland ? 0 : notchHeight
         
-        // Calculate ALL possible content heights
+        // Calculate possible content heights for currently reachable states.
+        // Mirror height is only included when Mirror is actively open/pinned,
+        // otherwise the global hit-test zone would be taller than the visible UI.
         let terminalHeight: CGFloat = 180 + topPaddingDelta
+        let mirrorHeight: CGFloat = DroppyState.shared.isMirrorPinnedOpen ? (240 + topPaddingDelta) : 0
         let mediaPlayerHeight: CGFloat = 140 + topPaddingDelta
         // Use shelfDisplaySlotCount for correct row count - cap at 3 rows (scroll for rest)
         let rowCount = min(ceil(Double(DroppyState.shared.shelfDisplaySlotCount) / 5.0), 3)
         let shelfHeight: CGFloat = max(1, rowCount) * 110 + notchCompensation
         
         // Use MAXIMUM of all possible heights - guarantees we cover the actual visual
-        var height = max(terminalHeight, max(mediaPlayerHeight, shelfHeight))
+        var height = max(terminalHeight, max(mirrorHeight, max(mediaPlayerHeight, shelfHeight)))
         
         // DYNAMIC BUTTON SPACE: Only add padding when floating buttons are actually visible
         // TermiNotch button shows when INSTALLED (not just when terminal output is visible)
@@ -378,7 +385,9 @@ final class DroppyState {
         let autoCollapseEnabled = (UserDefaults.standard.object(forKey: "autoCollapseShelf") as? Bool) ?? true
         let caffeineInstalled = UserDefaults.standard.bool(forKey: AppPreferenceKey.caffeineInstalled)
         let caffeineEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.caffeineEnabled)
-        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || DragMonitor.shared.isDragging || (caffeineInstalled && caffeineEnabled)
+        let mirrorInstalled = UserDefaults.standard.bool(forKey: AppPreferenceKey.mirrorInstalled)
+        let mirrorEnabled = UserDefaults.standard.bool(forKey: AppPreferenceKey.mirrorEnabled)
+        let hasFloatingButtons = terminalButtonVisible || !autoCollapseEnabled || DragMonitor.shared.isDragging || (caffeineInstalled && caffeineEnabled) || (mirrorInstalled && mirrorEnabled)
         
         if hasFloatingButtons {
             // Button offset (12 gap + 6 island) + button height (46) + extra margin = 100pt

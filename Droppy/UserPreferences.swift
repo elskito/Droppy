@@ -132,6 +132,10 @@ enum AppPreferenceKey {
     static let caffeineInstalled = "caffeine_installed"
     static let caffeineEnabled = "caffeine_enabled"  // Whether to show in HUD section
     static let caffeineMode = "caffeine_mode"  // CaffeineMode rawValue
+
+    // MARK: - Extension: Mirror
+    static let mirrorInstalled = "mirror_installed"
+    static let mirrorEnabled = "mirror_enabled"  // Whether to show in shelf action row
     
     // MARK: - Extension: Video Compression (Legacy - migrated to Smart Export)
     static let compressionAutoSaveToFolder = "compressionAutoSaveToFolder"
@@ -272,6 +276,10 @@ enum PreferenceDefault {
     static let caffeineInstalled = false  // Disabled by default, user installs from Extension Store
     static let caffeineEnabled = true  // Enabled by default when installed
     static let caffeineMode = "Both"  // CaffeineMode.both.rawValue
+
+    // MARK: - Extension: Mirror
+    static let mirrorInstalled = false  // Disabled by default, user installs from Extension Store
+    static let mirrorEnabled = true  // Enabled by default when installed
     
     // MARK: - Extension: Video Compression (Legacy)
     static let compressionAutoSaveToFolder = false
